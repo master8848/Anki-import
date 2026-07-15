@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Example: all five built-in Anki note types in one file.
+
+  The default deck is set on <anki>; individual <note> elements may
+  override it. Tags are space-separated.
+-->
+<anki deck="AI Import::Biology">
+
+  <!-- 1. Basic -->
+  <note type="Basic" tags="biology cells">
+    <front>What is the powerhouse of the cell?</front>
+    <back>Mitochondrion</back>
+  </note>
+
+  <!-- 2. Basic (and reversed card): Anki automatically generates the
+       reverse direction, so we only need front/back. -->
+  <note type="Basic (and reversed card)" tags="spanish vocab">
+    <front>Hola</front>
+    <back>Hello</back>
+  </note>
+
+  <!-- 3. Basic (optional reversed card): user explicitly opts in via
+       <addReverse>yes</addReverse>. <extra> is only shown when the
+       reverse direction is generated. -->
+  <note type="Basic (optional reversed card)" tags="geography capitals">
+    <front>Nepal</front>
+    <back>Kathmandu</back>
+    <addReverse>yes</addReverse>
+    <extra>Capital city</extra>
+  </note>
+
+  <note type="Basic (optional reversed card)" tags="geography capitals">
+    <front>France</front>
+    <back>Paris</back>
+    <addReverse>no</addReverse>
+  </note>
+
+  <!-- 4. Basic (type in the answer): same field shape as Basic; the
+       difference is how Anki renders the question (typing box instead
+       of just showing the answer). -->
+  <note type="Basic (type in the answer)" tags="chemistry elements">
+    <front>Chemical symbol for sodium</front>
+    <back>Na</back>
+  </note>
+
+  <!-- 5. Cloze -->
+  <note type="Cloze" tags="history moon-landing">
+    <text>The first humans landed on the {{c1::Moon}} in {{c2::1969}}.</text>
+    <extra>Apollo 11, July 20, 1969</extra>
+  </note>
+
+</anki>

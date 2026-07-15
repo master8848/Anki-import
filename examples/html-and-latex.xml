@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Example: rich HTML, MathJax, native [latex], CDATA, and line breaks.
+
+  Demonstrates the four common "awkward escaping" situations that this
+  tool exists to handle cleanly.
+-->
+<anki deck="AI Import::Math">
+
+  <!-- Plain HTML inline markup is preserved verbatim. -->
+  <note type="Basic" tags="derivatives">
+    <front>State the chain rule for <i>f</i>(<i>g</i>(<i>x</i>)).</front>
+    <back><b>(f &deg; g)&#39;(x) = f&#39;(g(x)) &middot; g&#39;(x)</b></back>
+  </note>
+
+  <!-- MathJax inline math with \( ... \). Backslashes are stable
+       inside CDATA, so we don't have to double-escape them. -->
+  <note type="Basic" tags="mathjax quadratic">
+    <front><![CDATA[Solve \(x^2 - 5x + 6 = 0\).]]></front>
+    <back><![CDATA[\(x = 2\) or \(x = 3\). Factor: \((x-2)(x-3)\).]]></back>
+  </note>
+
+  <!-- MathJax display math with \[ ... \]. -->
+  <note type="Basic" tags="mathjax integral">
+    <front><![CDATA[Evaluate the integral:
+
+\[
+\int_0^1 x^2 \, dx
+\]
+]]></front>
+    <back><![CDATA[\[
+\int_0^1 x^2 \, dx = \left[\frac{x^3}{3}\right]_0^1 = \frac{1}{3}.
+\]]]></back>
+  </note>
+
+  <!-- Native Anki LaTeX [latex]...[/latex] survives CDATA untouched. -->
+  <note type="Basic" tags="anki-native-latex">
+    <front><![CDATA[What is the [latex]\(E = mc^2\)[/latex] formula?]]></front>
+    <back><![CDATA[It's Einstein's mass-energy equivalence:
+
+[latex]
+E = mc^2
+[/latex]]]></back>
+  </note>
+
+  <!-- Multi-line answers: use <br> for explicit line breaks. -->
+  <note type="Basic" tags="biology mnemonics">
+    <front>Mnemonic for the cranial nerves in order</front>
+    <back>Oh, Oh, Oh, To Touch And Feel Very Good Velvet, Ah, Heaven!<br>
+On, Old, Olympus' Towering Top, A Famous Vocal German Viewed Some Hops.</back>
+  </note>
+
+  <!-- Mixed CDATA + nested HTML tags inside one field. -->
+  <note type="Cloze" tags="physics units">
+    <text><![CDATA[
+      Speed of light in vacuum: <b>{{c1::299,792,458}}</b> m/s.
+    ]]></text>
+    <extra>Exactly defined since 1983.</extra>
+  </note>
+
+  <!-- Two cloze markers in one note (Cloze Overlaps). -->
+  <note type="Cloze" tags="anatomy heart">
+    <text>The {{c1::left ventricle}} pumps blood to the {{c2::aorta}}.</text>
+    <extra>Systemic circulation begins here.</extra>
+  </note>
+
+  <!-- HTML entities pass through verbatim in regular markup. -->
+  <note type="Basic" tags="punctuation">
+    <front>True or false: &quot;It's&quot; uses an apostrophe.</front>
+    <back>True. &#39;It's&#39; = &quot;it is&quot;.</back>
+  </note>
+
+</anki>
