@@ -20,6 +20,12 @@ export interface ImportOptions {
   ankiConnectUrl?: string;
   /** Override `fetch` for tests. Defaults to the global. */
   fetchImpl?: typeof fetch;
+  /**
+   * Validate only — never contact AnkiConnect. The returned
+   * `result.created` is always `0` because no notes were created.
+   * `validCount` reflects how many notes *would* have been sent.
+   */
+  dryRun?: boolean;
 }
 
 export interface ImportOutcome {
@@ -27,6 +33,11 @@ export interface ImportOutcome {
   result: ImportResult;
   /** Structural problems found before contacting AnkiConnect. */
   validationErrors: { noteNumber: number; message: string }[];
+  /**
+   * Number of notes that passed validation. In dry-run mode this is the
+   * number of notes that *would* have been sent to AnkiConnect.
+   */
+  validCount: number;
 }
 
 /**
@@ -62,6 +73,16 @@ export async function importFromFile(opts: ImportOptions): Promise<ImportOutcome
     return {
       result: { created: 0, failed: [] },
       validationErrors,
+      validCount: 0,
+    };
+  }
+
+  // Dry run: validation is done, AnkiConnect stays untouched.
+  if (opts.dryRun) {
+    return {
+      result: { created: 0, failed: [] },
+      validationErrors,
+      validCount: validNotes.length,
     };
   }
 
@@ -108,5 +129,6 @@ export async function importFromFile(opts: ImportOptions): Promise<ImportOutcome
   return {
     result: { created, failed },
     validationErrors,
+    validCount: validNotes.length,
   };
 }
