@@ -218,6 +218,41 @@ describe("parseNotes: whitespace", () => {
     const r = validate(xml);
     expect(r.notes[0]!.fields.Front).toBe("foo<b>bar</b>baz");
   });
+
+  // Field text is preserved verbatim — never re-formatted. Anki-card
+  // rendering bugs in other tools (terkelg/anki-markdown#43) traced
+  // back to the importer mutating the user's text. Our pipeline copies
+  // source ranges, so the XML's leading/trailing newlines and
+  // indentation inside the field body round-trip unchanged.
+  test("preserves leading/trailing newlines inside field body verbatim", () => {
+    const xml = `<anki><note type="Basic"><front>line1\nline2\nline3</front><back>x</back></note></anki>`;
+    const r = validate(xml);
+    // Newlines inside the field body are not collapsed. Only the
+    // .trim() in buildFields touches the outer edges; the body is
+    // passed through source-slicing untouched.
+    expect(r.notes[0]!.fields.Front).toContain("line1\nline2");
+  });
+
+  test("preserves field indentation (no auto-reformatting)", () => {
+    // Indentation inside a field must survive. If the importer ever
+    // re-flows whitespace, indented code blocks will get mangled.
+    // (The leading indent of the first content line is trimmed by
+    // .trim() in buildFields, so the assertion targets an internal
+    // line whose indent must remain.)
+    const xml = `<anki><note type="Basic"><front><![CDATA[if (x) {
+        return y;
+    }]]></front><back>x</back></note></anki>`;
+    const r = validate(xml);
+    expect(r.notes[0]!.fields.Front).toContain("        return y;");
+    expect(r.notes[0]!.fields.Front).toContain("    }");
+  });
+
+  test("preserves raw field text including trailing whitespace in markup", () => {
+    // The author's deliberate inter-tag spacing is preserved.
+    const xml = `<anki><note type="Basic"><front>foo <b>bar</b> baz</front><back>x</back></note></anki>`;
+    const r = validate(xml);
+    expect(r.notes[0]!.fields.Front).toBe("foo <b>bar</b> baz");
+  });
 });
 
 // ─── Per-model structural validation ───────────────────────────────────────
@@ -334,6 +369,68 @@ describe("validateNotes: Cloze", () => {
 
   test("accepts multiple cloze markers c1 and c2", () => {
     const r = validate(`<anki><note type="Cloze"><text>{{c1::a}} and {{c2::b}}</text></note></anki>`);
+    expect(r.errors).toHaveLength(0);
+  });
+
+  // Edge cases derived from terkelg/anki-markdown#33 (cloze support).
+  test("accepts nested cloze markers (c1 inside c1)", () => {
+    const r = validate(`<anki><note type="Cloze"><text>{{c1::outer {{c2::inner}}}}</text></note></anki>`);
+    expect(r.errors).toHaveLength(0);
+    expect(r.notes[0]!.fields.Text).toBe("{{c1::outer {{c2::inner}}}}");
+  });
+
+  test("accepts cloze with hint (c1::text::hint)", () => {
+    const r = validate(`<anki><note type="Cloze"><text>{{c1::Paris::capital of France}}</text></note></anki>`);
+    expect(r.errors).toHaveLength(0);
+    expect(r.notes[0]!.fields.Text).toBe("{{c1::Paris::capital of France}}");
+  });
+
+  test("accepts multiple markers with the same ordinal on one card", () => {
+    const r = validate(`<anki><note type="Cloze"><text>{{c1::a}} {{c1::b}} {{c1::c}}</text></note></anki>`);
+    expect(r.errors).toHaveLength(0);
+  });
+
+  test("accepts ordinals in non-ascending order", () => {
+    const r = validate(`<anki><note type="Cloze"><text>{{c3::three}} {{c1::one}} {{c2::two}}</text></note></anki>`);
+    expect(r.errors).toHaveLength(0);
+  });
+
+  test("accepts skipped ordinals (c1, c3 without c2)", () => {
+    const r = validate(`<anki><note type="Cloze"><text>{{c1::a}} and {{c3::c}}</text></note></anki>`);
+    expect(r.errors).toHaveLength(0);
+  });
+
+  test("accepts multi-digit ordinals (c10, c100)", () => {
+    const r = validate(`<anki><note type="Cloze"><text>{{c10::x}} and {{c100::y}}</text></note></anki>`);
+    expect(r.errors).toHaveLength(0);
+  });
+
+  test("preserves cloze markers inside CDATA verbatim", () => {
+    const r = validate(`<anki><note type="Cloze"><text><![CDATA[Math: {{c1::42}} is the answer.]]></text></note></anki>`);
+    expect(r.notes[0]!.fields.Text).toBe("Math: {{c1::42}} is the answer.");
+  });
+
+  test("rejects an empty cloze marker body", () => {
+    // `{{c1::}}` has a marker but no content. Anki will accept it but
+    // the result is a blank clozed span. We deliberately accept it so
+    // we don't get in the author's way — a regression here would break
+    // round-tripping of files that contain empty clozes.
+    const r = validate(`<anki><note type="Cloze"><text>before {{c1::}} after</text></note></anki>`);
+    expect(r.errors).toHaveLength(0);
+  });
+
+  // Forward-compat: comma-separated ordinals. Anki 25.09 does not yet
+  // generate the corresponding cards, but upcoming Anki versions will.
+  // We accept the syntax so decks written today for future Anki
+  // versions validate without modification. (terkelg/anki-markdown#36)
+  test("accepts comma-separated cloze ordinals {{c1,2::text}}", () => {
+    const r = validate(`<anki><note type="Cloze"><text>{{c1,2::shared}}</text></note></anki>`);
+    expect(r.errors).toHaveLength(0);
+    expect(r.notes[0]!.fields.Text).toBe("{{c1,2::shared}}");
+  });
+
+  test("accepts triple-comma cloze ordinals {{c1,2,3::text}}", () => {
+    const r = validate(`<anki><note type="Cloze"><text>{{c1,2,3::shared}}</text></note></anki>`);
     expect(r.errors).toHaveLength(0);
   });
 });

@@ -63,6 +63,27 @@ export class AnkiConnectClient {
   }
 
   /**
+   * Create a deck (or no-op if it already exists).
+   *
+   * AnkiConnect's `createDeck` is idempotent: it returns the existing
+   * deck's id when called for a name that already exists, and the new
+   * deck's id otherwise. It also creates missing parent decks on the
+   * fly (so calling `createDeck('A::B::C')` will create `A`, `A::B`
+   * and `A::B::C` if none of them exist).
+   *
+   * Returns the deck id (number) reported by AnkiConnect.
+   */
+  async createDeck(name: string): Promise<number> {
+    const res = await this.invoke<number | null>("createDeck", { deck: name });
+    if (typeof res !== "number") {
+      throw new AnkiConnectError(
+        `Unexpected response from 'createDeck': ${JSON.stringify(res)}`,
+      );
+    }
+    return res;
+  }
+
+  /**
    * Low-level JSON-RPC invocation. Throws on network failure, non-2xx
    * status, or an envelope-level `error`. Per-note failures are NOT
    * thrown here — they appear as `null` in the result array.

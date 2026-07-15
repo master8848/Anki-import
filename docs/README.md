@@ -84,15 +84,21 @@ A larger example with HTML, MathJax, and native LaTeX is in
 
 1. **Parse** — [`fast-xml-parser`](https://github.com/NaturalIntelligence/fast-xml-parser)
    validates well-formedness and gives us an ordered element tree with source
-   offsets.
-2. **Extract field HTML** — for each `<note>` field we walk a hand-rolled
-   token stream over the original source to find the matching closing tag,
-   then copy the source range verbatim (or escape it lightly for CDATA).
-   This preserves every entity the author wrote, byte for byte.
+   offsets. A hand-rolled tokenizer then walks the source to find each
+   field's exact source range and check PCDATA for illegal characters.
+2. **Extract field HTML** — for each `<note>` field we walk the token
+   stream to find the matching closing tag, then copy the source range
+   verbatim (or escape it lightly for CDATA). This preserves every
+   entity the author wrote, byte for byte.
 3. **Validate** — we apply per-model structural rules (required fields,
    forbidden fields, allowed values for `<addReverse>`, Cloze markers) and
    collect every error before reporting.
-4. **Send to AnkiConnect** — one `addNotes` call with all valid notes;
+4. **Auto-create decks** — for every unique deck name referenced by the
+   validated notes, we call AnkiConnect's `createDeck`. This is
+   idempotent and creates parent decks on the fly, so a fresh Anki
+   install "just works" with no manual deck provisioning. Disable with
+   `--no-auto-create-deck`.
+5. **Send to AnkiConnect** — one `addNotes` call with all valid notes;
    per-note failures are matched back to 1-based note numbers in the file.
 
 For the deeper design notes, see `problems-solved.md`. For the schema,
@@ -100,6 +106,10 @@ start with `language.md`.
 
 ## Documentation index
 
+- [`usage.md`](./usage.md) — **start here.** How to write `<anki>` XML
+  for every supported note type, with simple and complex examples.
+- [`cli.md`](./cli.md) — full CLI reference, including exit codes and
+  the `--auto-create-deck` flag.
 - [`language.md`](./language.md) — the XML schema: elements, attributes,
   required fields per model, deck inheritance, tags.
 - [`cdata.md`](./cdata.md) — when and how to use CDATA; what gets
@@ -116,7 +126,7 @@ start with `language.md`.
 
 ```bash
 bun install
-bun test                # 97 tests, all four files
+bun test                # 153 tests, all five files
 bun test tests/cli.test.ts
 ```
 

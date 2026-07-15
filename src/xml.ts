@@ -77,6 +77,7 @@ type XmlToken =
   | { kind: "cdata"; tagStart: number; contentStart: number; contentEnd: number; tagEnd: number }
   | { kind: "comment"; tagStart: number; tagEnd: number }
   | { kind: "pi"; tagStart: number; tagEnd: number }
+  | { kind: "markupDecl"; tagStart: number; tagEnd: number }
   | { kind: "text"; start: number; end: number };
 
 /**
@@ -130,6 +131,21 @@ function tokenizeXml(source: string): XmlToken[] {
       if (end === -1) throw new XmlParseError("Unterminated comment in source");
       tokens.push({ kind: "comment", tagStart, tagEnd: end + "-->".length });
       i = end + "-->".length;
+      textStart = i;
+      continue;
+    }
+
+    // <!DOCTYPE ...> and other <! ... > markup declarations. We
+    // discard them the same way fast-xml-parser does — we don't
+    // validate against any DTD, so the declaration is a no-op. We
+    // also emit a `markupDecl` token so the text-token PCDATA check
+    // never sees the inner `<` characters of e.g. `<!ENTITY ...>`.
+    if (source.startsWith("<!", i)) {
+      const tagStart = i;
+      const end = source.indexOf(">", i + 2);
+      if (end === -1) throw new XmlParseError("Unterminated markup declaration");
+      tokens.push({ kind: "markupDecl", tagStart, tagEnd: end + 1 });
+      i = end + 1;
       textStart = i;
       continue;
     }
@@ -221,6 +237,37 @@ function isNameChar(code: number): boolean {
 
 function isSpace(code: number): boolean {
   return code === 32 || code === 9 || code === 10 || code === 13;
+}
+
+/**
+ * Validate the PCDATA in a source text.
+ *
+ * `<` and a bare `&` (one not followed by an entity pattern) are
+ * illegal in PCDATA per the XML spec. fast-xml-parser is lenient and
+ * will happily produce a corrupted tree when they appear — e.g.
+ * `5 < 10` gets parsed as text + a phantom `<10>` element. We reject
+ * these up front so the author gets a clear error instead of a
+ * silently broken import.
+ *
+ * CDATA sections, comments, processing instructions, and attribute
+ * values are skipped: those contexts permit `<` and `&` literally.
+ */
+function validatePcdata(source: string, tokens: XmlToken[]): void {
+  for (const tok of tokens) {
+    if (tok.kind !== "text") continue;
+    const text = source.slice(tok.start, tok.end);
+    const idx = tok.start;
+    if (text.includes("<")) {
+      throw new XmlParseError(
+        `Illegal '<' in PCDATA at offset ${idx}; use &lt; or wrap the field in CDATA`,
+      );
+    }
+    if (/&(?![a-zA-Z][a-zA-Z0-9]*|#[0-9]+|#x[0-9a-fA-F]+;)/.test(text)) {
+      throw new XmlParseError(
+        `Illegal '&' in PCDATA at offset ${idx}; use &amp; or wrap the field in CDATA`,
+      );
+    }
+  }
 }
 
 // ─── fast-xml-parser integration ────────────────────────────────────────────
@@ -332,7 +379,9 @@ function extractFieldContent(
       // Text between tags is already-HTML-escaped content; copy verbatim.
       out += source.slice(tok.start, tok.end);
     }
-    // Comments and processing instructions are dropped.
+    // Comments, processing instructions, and DOCTYPE/markup
+    // declarations are dropped — they never contribute to the
+    // rendered field body.
   }
   return { html: out };
 }
@@ -448,6 +497,9 @@ function parseNotesInner(source: string): ParsedDocument {
   if (!rootChildren) throw new XmlParseError("Root <anki> has no children");
 
   const tokens = tokenizeXml(source);
+  // Catch illegal PCDATA early — before the parser's lenient handling
+  // can produce a silently corrupted tree. See validatePcdata docs.
+  validatePcdata(source, tokens);
   const notes: ParsedNote[] = [];
   let noteCounter = 0;
 
@@ -654,7 +706,17 @@ function hasMeaningfulContent(html: string): boolean {
   return stripped.length > 0;
 }
 
-/** A Cloze field must contain at least one `{{cN::...}}` marker. */
+/**
+ * A Cloze field must contain at least one `{{cN::...}}` marker.
+ *
+ * Accepts both simple ordinals (`{{c1::text}}`, `{{c2::text}}`) and
+ * the comma-separated variant (`{{c1,2::text}}`) — which is the
+ * upstream-Anki syntax for "hide this on cards 1 AND 2". We accept
+ * the comma form even when the running Anki version doesn't yet
+ * generate the corresponding cards, so files written for a future
+ * Anki can be validated without modification. (See
+ * https://github.com/terkelg/anki-markdown/issues/36 for context.)
+ */
 function hasClozeMarkers(html: string): boolean {
-  return /\{\{c\d+::/.test(html);
+  return /\{\{c[\d,]+::/.test(html);
 }
