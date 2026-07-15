@@ -28,6 +28,10 @@
  */
 
 import { XMLParser } from "fast-xml-parser";
+// `captureMetaData: true` attaches per-node start indices under a Symbol.
+// The symbol is created internally by fast-xml-parser; the supported way to
+// retrieve it is XMLParser.getMetaDataSymbol().
+const META = XMLParser.getMetaDataSymbol() as unknown as symbol;
 import type {
   NoteValidationError,
   ParsedField,
@@ -72,7 +76,8 @@ type XmlToken =
   | { kind: "end"; name: string; tagStart: number; tagEnd: number }
   | { kind: "cdata"; tagStart: number; contentStart: number; contentEnd: number; tagEnd: number }
   | { kind: "comment"; tagStart: number; tagEnd: number }
-  | { kind: "pi"; tagStart: number; tagEnd: number };
+  | { kind: "pi"; tagStart: number; tagEnd: number }
+  | { kind: "text"; start: number; end: number };
 
 /**
  * Tokenize an XML source string into structural events.
@@ -85,12 +90,19 @@ function tokenizeXml(source: string): XmlToken[] {
   const tokens: XmlToken[] = [];
   const len = source.length;
   let i = 0;
+  let textStart = 0;
 
   while (i < len) {
     const ch = source.charCodeAt(i);
     if (ch !== 60 /* `<` */) {
       i++;
       continue;
+    }
+
+    // Emit any accumulated text up to this point as a text token.
+    if (i > textStart) {
+      tokens.push({ kind: "text", start: textStart, end: i });
+      textStart = i;
     }
 
     // <![CDATA[ ... ]]>
@@ -107,6 +119,7 @@ function tokenizeXml(source: string): XmlToken[] {
         tagEnd: end + "]]>".length,
       });
       i = end + "]]>".length;
+      textStart = i;
       continue;
     }
 
@@ -117,6 +130,7 @@ function tokenizeXml(source: string): XmlToken[] {
       if (end === -1) throw new XmlParseError("Unterminated comment in source");
       tokens.push({ kind: "comment", tagStart, tagEnd: end + "-->".length });
       i = end + "-->".length;
+      textStart = i;
       continue;
     }
 
@@ -127,6 +141,7 @@ function tokenizeXml(source: string): XmlToken[] {
       if (end === -1) throw new XmlParseError("Unterminated processing instruction");
       tokens.push({ kind: "pi", tagStart, tagEnd: end + "?>".length });
       i = end + "?>".length;
+      textStart = i;
       continue;
     }
 
@@ -145,6 +160,7 @@ function tokenizeXml(source: string): XmlToken[] {
       j++;
       tokens.push({ kind: "end", name, tagStart, tagEnd: j });
       i = j;
+      textStart = i;
       continue;
     }
 
@@ -184,6 +200,11 @@ function tokenizeXml(source: string): XmlToken[] {
     }
     if (j >= len) throw new XmlParseError(`Unterminated start tag <${name}>`);
     i = j;
+    textStart = i;
+  }
+
+  if (textStart < len) {
+    tokens.push({ kind: "text", start: textStart, end: len });
   }
 
   return tokens;
@@ -203,8 +224,6 @@ function isSpace(code: number): boolean {
 }
 
 // ─── fast-xml-parser integration ────────────────────────────────────────────
-
-const META = Symbol.for("fxp.meta");
 
 interface RawNode {
   [META]?: { startIndex?: number };
@@ -236,6 +255,22 @@ function nodeChildren(node: Record<string, unknown>): unknown[] | undefined {
   return undefined;
 }
 
+/**
+ * Locate the first non-PI root element among fast-xml-parser's
+ * top-level children. The library surfaces `<?xml ... ?>` as a `?xml`
+ * entry and doesn't fold top-level comments/PI into it. Calling code
+ * inspects the name to decide whether it's `<anki>` or something else.
+ */
+function findRootElement(tree: unknown[]): Record<string, unknown> | undefined {
+  for (const entry of tree) {
+    if (!entry || typeof entry !== "object") continue;
+    const node = entry as Record<string, unknown>;
+    const name = nodeTagName(node);
+    if (name && name !== "?xml") return node;
+  }
+  return undefined;
+}
+
 // ─── Field-content extraction ───────────────────────────────────────────────
 
 /**
@@ -260,16 +295,18 @@ function findMatchingClose(tokens: XmlToken[], startIdx: number, name: string): 
  * Pull the raw source range for a field. Handles two cases:
  *
  *   - The field contains ordinary XML markup (e.g. nested HTML, MathJax,
- *     native LaTeX `[latex]...[/latex]`). We treat the whole substring
- *     as already-HTML-escaped and pass it through unchanged.
+ *     native LaTeX `[latex]...[/latex]`). Text between tags is already
+ *     HTML-escaped by the author (in valid XML, `<` cannot appear in
+ *     PCDATA), so we pass those slices through unchanged.
  *
- *   - The field body is a single CDATA section. CDATA text is raw: we
- *     escape only bare `&` characters so existing entities like `&lt;`
- *     and `&amp;` survive verbatim. Everything else is left alone.
+ *   - The field body is a CDATA section. CDATA text is raw — we escape
+ *     `<`, `>`, and bare `&` so the result is safe to embed in Anki's
+ *     HTML field, while preserving existing entities like `&lt;` and
+ *     `&amp;` so they don't get double-escaped.
  *
- * Mixed CDATA + markup is also supported: tokens between the open and
- * close tags are concatenated in document order, with CDATA tokens
- * escaped and all other tokens copied verbatim.
+ * Mixed CDATA + markup is supported: tokens between the open and close
+ * tags are concatenated in document order, with CDATA contents escaped
+ * and all other tokens copied verbatim from the source.
  */
 function extractFieldContent(
   source: string,
@@ -288,39 +325,76 @@ function extractFieldContent(
   for (let k = openIdx + 1; k < closeIdx; k++) {
     const tok = tokens[k]!;
     if (tok.kind === "cdata") {
-      out += escapeBareAmpersands(source.slice(tok.contentStart, tok.contentEnd));
+      out += escapeCdataForHtml(source.slice(tok.contentStart, tok.contentEnd));
     } else if (tok.kind === "start" || tok.kind === "end" || tok.kind === "selfClose") {
       out += source.slice(tok.tagStart, tok.tagEnd);
-    } else {
-      // Comments and processing instructions are dropped — they should
-      // not appear inside a field in well-formed input.
+    } else if (tok.kind === "text") {
+      // Text between tags is already-HTML-escaped content; copy verbatim.
+      out += source.slice(tok.start, tok.end);
     }
+    // Comments and processing instructions are dropped.
   }
   return { html: out };
 }
 
 /**
- * Escape only the `&` characters in `s` that are NOT the start of a
- * named/numeric XML/HTML entity. This lets CDATA contents be embedded
- * in HTML output without doubling existing escapes.
+ * Make a CDATA body safe to embed in an Anki HTML field.
  *
- *   "&"                       -> "&amp;"   (bare ampersand)
- *   "&lt;" / "&amp;" / "&#39;" -> unchanged (already an entity)
+ * CDATA is literally text, so `<` and `>` are not delimiters inside it
+ * but they ARE in the surrounding HTML field — we have to escape them.
+ * `&` is also escaped, but we must skip sequences that are already a
+ * valid entity (`&lt;`, `&amp;`, `&#39;`, `&#x27;`, ...) so they
+ * survive verbatim instead of being doubled (`&amp;lt;`).
+ *
+ *   "<"  -> "&lt;"
+ *   ">"  -> "&gt;"
+ *   "&"  -> "&amp;"   unless followed by an entity pattern
  */
-function escapeBareAmpersands(s: string): string {
-  // Negative lookbehind to skip & followed by an entity name.
-  // We use a non-capturing form so this works in any JS regex engine.
-  return s.replace(/&(?!(?:[a-zA-Z][a-zA-Z0-9]*|#\d+|#x[0-9a-fA-F]+);)/g, "&amp;");
+function escapeCdataForHtml(s: string): string {
+  return s
+    .replace(/&(?!(?:[a-zA-Z][a-zA-Z0-9]*|#\d+|#x[0-9a-fA-F]+);)/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
-// ─── Public parsing API ─────────────────────────────────────────────────────
+// ─── Public parsing API ──────────────────────────────────────────────────────────
+
+/**
+ * Result of parsing an `<anki>` document: the list of notes and the
+ * deck declared on the root element (used for inheritance).
+ */
+export interface ParsedDocument {
+  notes: ParsedNote[];
+  defaultDeck: string;
+}
+
+/**
+ * Parse the XML document into notes and recover the default-deck
+ * attribute on the `<anki>` root. Throws `XmlParseError` for malformed
+ * XML, missing root, or any wrong root element.
+ *
+ * Callers that want both notes and default deck should prefer this
+ * over `parseNotes` so they don't have to grep source text with a
+ * regex (which is brittle in the face of comments that contain the
+ * literal text "<anki>").
+ */
+export function parseDocument(source: string): ParsedDocument {
+  return parseNotesInner(source);
+}
 
 /**
  * Parse the XML document and return every `<note>` with its attributes
  * and raw field HTML strings. Throws `XmlParseError` for malformed XML
  * or missing root.
+ *
+ * Use `parseDocument` instead if you also need the root-level default
+ * deck.
  */
 export function parseNotes(source: string): ParsedNote[] {
+  return parseNotesInner(source).notes;
+}
+
+function parseNotesInner(source: string): ParsedDocument {
   const parser = new XMLParser({
     preserveOrder: true,
     ignoreAttributes: false,
@@ -332,6 +406,14 @@ export function parseNotes(source: string): ParsedNote[] {
     captureMetaData: true,
     removeNSPrefix: false,
     allowBooleanAttributes: false,
+    // fast-xml-parser v5.10 ships with an empty default `unpairedTags`
+    // list. Anki card content is HTML, so we must declare the common
+    // HTML void elements explicitly or they will swallow later tags
+    // as if they were paired (e.g. `<br>line2</front><back>...`).
+    unpairedTags: [
+      "br", "hr", "img", "input", "meta", "link", "area", "base", "col",
+      "embed", "param", "source", "track", "wbr",
+    ],
   });
 
   let tree: unknown;
@@ -345,7 +427,15 @@ export function parseNotes(source: string): ParsedNote[] {
     throw new XmlParseError("XML has no root element");
   }
 
-  const rootEntry = tree[0] as Record<string, unknown>;
+  // fast-xml-parser surfaces the XML declaration `<?xml ... ?>` as a
+  // top-level entry with the synthetic tag name "?xml". Walk past any
+  // top-level `?xml` / stray processing instruction to find the real
+  // root. If the first non-PI element exists but isn't `<anki>`, we
+  // surface that fact in the error message.
+  const rootEntry = findRootElement(tree);
+  if (!rootEntry) {
+    throw new XmlParseError("XML has no root element");
+  }
   const rootName = nodeTagName(rootEntry);
   if (rootName !== "anki") {
     throw new XmlParseError(`Root element must be <anki>, got <${rootName ?? "?"}>`);
@@ -377,7 +467,6 @@ export function parseNotes(source: string): ParsedNote[] {
     };
 
     const noteChildren = nodeChildren(childNode) ?? [];
-    const seenFields = new Set<XmlFieldName>();
 
     for (const grandchild of noteChildren) {
       if (!grandchild || typeof grandchild !== "object") continue;
@@ -385,8 +474,10 @@ export function parseNotes(source: string): ParsedNote[] {
       const gTag = nodeTagName(gNode);
       if (!gTag || !FIELD_NAMES.has(gTag as XmlFieldName)) continue;
       const fieldName = gTag as XmlFieldName;
-      if (seenFields.has(fieldName)) continue; // duplicates handled by validator
-      seenFields.add(fieldName);
+      // Duplicate field tags are intentionally NOT silently skipped
+      // here — we push every occurrence so the validator can flag
+      // repeats via <field>.push + length-based dedup detection.
+
 
       const startIdx = nodeStart(gNode);
       if (startIdx === undefined) {
@@ -405,7 +496,7 @@ export function parseNotes(source: string): ParsedNote[] {
     notes.push(note);
   }
 
-  return notes;
+  return { notes, defaultDeck };
 }
 
 /**

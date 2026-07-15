@@ -49,7 +49,7 @@ interface ParsedArgs {
   showVersion: boolean;
 }
 
-function parseArgs(argv: string[]): ParsedArgs {
+export function parseArgs(argv: string[]): ParsedArgs {
   const args: ParsedArgs = {
     command: null,
     positional: [],
@@ -195,4 +195,7 @@ async function main(): Promise<number> {
   return await runImport(args);
 }
 
-await main();
+// `await main()` at top level does NOT propagate the returned exit
+// code on Bun (process exits with 0 regardless). Explicit
+// `process.exit()` is required.
+process.exit(await main());

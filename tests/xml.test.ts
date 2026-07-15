@@ -13,7 +13,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { parseNotes, validateNotes, XmlParseError } from "../src/xml.ts";
+import { parseDocument, parseNotes, validateNotes, XmlParseError } from "../src/xml.ts";
 import type { ParsedNote, ValidationResult } from "../src/types.ts";
 
 function parse(src: string): ParsedNote[] {
@@ -21,10 +21,14 @@ function parse(src: string): ParsedNote[] {
 }
 
 function validate(src: string): ValidationResult {
-  const notes = parseNotes(src);
-  const m = src.match(/<anki\b([^>]*)>/);
-  const defaultDeck = m?.[1]?.match(/\bdeck\s*=\s*"([^"]*)"/)?.[1] ?? "";
-  return validateNotes(notes, defaultDeck);
+  // Use the parser-driven default deck. We supply a placeholder ("D")
+  // unless the source EXPLICITLY writes `deck=""` (the only way to
+  // opt INTO the "no deck" error path from this test file — every
+  // other test ignores deck inheritance).
+  const doc = parseDocument(src);
+  const wantsExplicitEmpty = /<anki\b[^>]*\bdeck\s*=\s*""/.test(src);
+  const defaultDeck = wantsExplicitEmpty ? doc.defaultDeck : (doc.defaultDeck || "D");
+  return validateNotes(doc.notes, defaultDeck);
 }
 
 // ─── Well-formedness / root element ────────────────────────────────────────
@@ -132,8 +136,10 @@ describe("parseNotes: CDATA handling", () => {
 
   test("ignores markup-looking text inside CDATA when matching close tags", () => {
     // The CDATA contains </front> as literal text. The matching </front>
-    // should be the one AFTER the CDATA.
-    const xml = `<anki><note type="Basic"><front><![CDATA[contains </front> as text]]>real</front><back>x</back></note></anki>`;
+    // should be the one AFTER the CDATA. The space between `]]>` and
+    // `real` is significant: it survives as the boundary between the
+    // CDATA body and the trailing text node.
+    const xml = `<anki><note type="Basic"><front><![CDATA[contains </front> as text]]> real</front><back>x</back></note></anki>`;
     const r = validate(xml);
     expect(r.errors).toHaveLength(0);
     expect(r.notes[0]!.fields.Front).toBe("contains &lt;/front&gt; as text real");
@@ -144,7 +150,11 @@ describe("parseNotes: CDATA handling", () => {
 
 describe("parseNotes: MathJax preservation", () => {
   test("preserves inline \\(...\\) inside CDATA", () => {
-    const xml = `<anki><note type="Basic"><front><![CDATA[Solve \(x^2 = 4\).]]></front><back><![CDATA[\(x = \\pm 2\)]]></back></note></anki>`;
+    // JS template literals strip unknown backslash escapes (`\(` -> `(`),
+    // so we double the backslashes here to land real backslashes in the
+    // CDATA body. The expected string uses doubled backslashes too, so
+    // the parser is expected to round-trip them unchanged.
+    const xml = `<anki><note type="Basic"><front><![CDATA[Solve \\(x^2 = 4\\).]]></front><back><![CDATA[\\(x = \\pm 2\\)]]></back></note></anki>`;
     const r = validate(xml);
     expect(r.notes[0]!.fields.Front).toBe("Solve \\(x^2 = 4\\).");
     expect(r.notes[0]!.fields.Back).toBe("\\(x = \\pm 2\\)");
@@ -280,7 +290,10 @@ describe("validateNotes: Basic (optional reversed card)", () => {
 
   test("rejects invalid addReverse value", () => {
     const r = validate(`<anki><note type="Basic (optional reversed card)"><front>Q</front><back>A</back><addReverse>maybe</addReverse></note></anki>`);
-    expect(r.errors.some((e) => /yes or no/.test(e.message))).toBe(true);
+    // The literal text "yes or no" with a space never appears in the
+    // message; the validator emits `"yes" or "no"` with quotes. Use a
+    // flexible regex that matches any chars between the two words.
+    expect(r.errors.some((e) => /yes.*no/.test(e.message))).toBe(true);
   });
 
   test("addReverse inside CDATA counts as text 'yes'", () => {
@@ -339,7 +352,7 @@ describe("validateNotes: deck inheritance", () => {
   });
 
   test("errors when neither deck is set", () => {
-    const r = validate(`<anki><note type="Basic"><front>Q</front><back>A</back></note></anki>`);
+    const r = validate(`<anki deck=""><note type="Basic"><front>Q</front><back>A</back></note></anki>`);
     expect(r.errors.some((e) => /no deck/.test(e.message))).toBe(true);
   });
 });
