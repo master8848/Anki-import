@@ -15,6 +15,20 @@
 
 import type { AnkiConnectNote, AnkiConnectResponse } from "./types.ts";
 
+/**
+ * A single note returned by AnkiConnect's `notesInfo`. The fields object
+ * uses the note type's *field names* (e.g. "Front", "Back"), NOT the
+ * lowercase XML tags we accept on input. Callers that want XML tag
+ * names need to map them via `modelFieldNames`.
+ */
+export interface AnkiConnectNoteInfo {
+  noteId: number;
+  modelName: string;
+  tags: string[];
+  fields: Record<string, { value: string; order: number }>;
+  cards: number[];
+}
+
 export interface AnkiConnectOptions {
   /** Base URL of AnkiConnect, e.g. `http://127.0.0.1:8765`. */
   url: string;
@@ -81,6 +95,95 @@ export class AnkiConnectClient {
       );
     }
     return res;
+  }
+
+  /**
+   * List every deck name (flat). AnkiConnect returns names in `Parent::Child`
+   * form. Use `parseDeckTree` to turn this into a hierarchy.
+   */
+  async deckNames(): Promise<string[]> {
+    const res = await this.invoke<string[]>("deckNames");
+    if (!Array.isArray(res)) {
+      throw new AnkiConnectError(
+        `Unexpected response from 'deckNames': ${JSON.stringify(res)}`,
+      );
+    }
+    return res;
+  }
+
+  /**
+   * Same as `deckNames` but also returns Anki's internal deck id for each.
+   * Useful when callers want a stable handle independent of renaming.
+   */
+  async deckNamesAndIds(): Promise<Record<string, number>> {
+    const res = await this.invoke<Record<string, number>>("deckNamesAndIds");
+    if (res === null || typeof res !== "object" || Array.isArray(res)) {
+      throw new AnkiConnectError(
+        `Unexpected response from 'deckNamesAndIds': ${JSON.stringify(res)}`,
+      );
+    }
+    return res;
+  }
+
+  /**
+   * Run an Anki search query and return the matching *note* ids.
+   * `query` follows Anki's search syntax (e.g. `deck:Spanish`, `tag:verb`,
+   * `"hola"`, `is:review`). An empty query matches every note.
+   */
+  async findNotes(query: string): Promise<number[]> {
+    const res = await this.invoke<number[]>("findNotes", { query });
+    if (!Array.isArray(res)) {
+      throw new AnkiConnectError(
+        `Unexpected response from 'findNotes': ${JSON.stringify(res)}`,
+      );
+    }
+    return res;
+  }
+
+  /**
+   * Same as `findNotes` but returns *card* ids. Used for `is:new` /
+   * `is:learn` / `is:review` style queries that filter cards, not notes.
+   */
+  async findCards(query: string): Promise<number[]> {
+    const res = await this.invoke<number[]>("findCards", { query });
+    if (!Array.isArray(res)) {
+      throw new AnkiConnectError(
+        `Unexpected response from 'findCards': ${JSON.stringify(res)}`,
+      );
+    }
+    return res;
+  }
+
+  /**
+   * Fetch full note records (modelName, tags, fields, card ids) for the
+   * given note ids. AnkiConnect returns `null` entries for missing ids,
+   * which we preserve so callers can map failures back to positions.
+   */
+  async notesInfo(noteIds: number[]): Promise<(AnkiConnectNoteInfo | null)[]> {
+    if (noteIds.length === 0) return [];
+    const res = await this.invoke<(AnkiConnectNoteInfo | null)[]>("notesInfo", {
+      notes: noteIds,
+    });
+    if (!Array.isArray(res)) {
+      throw new AnkiConnectError(
+        `Unexpected response from 'notesInfo': ${JSON.stringify(res)}`,
+      );
+    }
+    return res;
+  }
+
+  /**
+   * Replace the fields of an existing note. Tags are not touched.
+   * Field names are the Anki *display* names ("Front", "Back"), not
+   * the lowercase XML tags. Use `modelFieldNames` to discover them.
+   */
+  async updateNoteFields(noteId: number, fields: Record<string, string>): Promise<void> {
+    await this.invoke<null>("updateNoteFields", { id: noteId, fields });
+  }
+
+  /** Create a single note. Returns the new note id, or null on rejection. */
+  async addNote(note: AnkiConnectNote): Promise<number | null> {
+    return await this.invoke<number | null>("addNote", { note });
   }
 
   /**
