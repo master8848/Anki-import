@@ -27,7 +27,7 @@
  *       every problem at once.
  */
 
-import { XMLParser } from "fast-xml-parser";
+import { XMLParser, XMLValidator } from "fast-xml-parser";
 // `captureMetaData: true` attaches per-node start indices under a Symbol.
 // The symbol is created internally by fast-xml-parser; the supported way to
 // retrieve it is XMLParser.getMetaDataSymbol().
@@ -41,6 +41,24 @@ import type {
   ValidatedNote,
   XmlFieldName,
 } from "./types.ts";
+
+/** HTML void elements accepted without XML-style `/>` inside Anki fields. */
+const HTML_VOID_TAGS = [
+  "br",
+  "hr",
+  "img",
+  "input",
+  "meta",
+  "link",
+  "area",
+  "base",
+  "col",
+  "embed",
+  "param",
+  "source",
+  "track",
+  "wbr",
+];
 
 /** Tags that appear inside `<note>` and map to Anki fields. */
 const FIELD_NAMES: ReadonlySet<XmlFieldName> = new Set([
@@ -192,16 +210,19 @@ function tokenizeXml(source: string): XmlToken[] {
       i++;
       continue;
     }
+    let terminated = false;
     while (j < len) {
       const c = source.charCodeAt(j);
       if (c === 62 /* `>` */) {
         j++;
         tokens.push({ kind: "start", name, tagStart, tagEnd: j, contentStart: j });
+        terminated = true;
         break;
       }
       if (c === 47 /* `/` */ && source.charCodeAt(j + 1) === 62 /* `>` */) {
         j += 2;
         tokens.push({ kind: "selfClose", name, tagStart, tagEnd: j });
+        terminated = true;
         break;
       }
       if (c === 34 /* `"` */ || c === 39 /* `'` */) {
@@ -214,7 +235,7 @@ function tokenizeXml(source: string): XmlToken[] {
       }
       j++;
     }
-    if (j >= len) throw new XmlParseError(`Unterminated start tag <${name}>`);
+    if (!terminated) throw new XmlParseError(`Unterminated start tag <${name}>`);
     i = j;
     textStart = i;
   }
@@ -262,7 +283,7 @@ function validatePcdata(source: string, tokens: XmlToken[]): void {
         `Illegal '<' in PCDATA at offset ${idx}; use &lt; or wrap the field in CDATA`,
       );
     }
-    if (/&(?![a-zA-Z][a-zA-Z0-9]*|#[0-9]+|#x[0-9a-fA-F]+;)/.test(text)) {
+    if (/&(?!(?:[a-zA-Z][a-zA-Z0-9]*|#[0-9]+|#x[0-9a-fA-F]+);)/.test(text)) {
       throw new XmlParseError(
         `Illegal '&' in PCDATA at offset ${idx}; use &amp; or wrap the field in CDATA`,
       );
@@ -444,6 +465,19 @@ export function parseNotes(source: string): ParsedNote[] {
 }
 
 function parseNotesInner(source: string): ParsedDocument {
+  // XMLParser is deliberately permissive (it can recover from a missing
+  // `</note>`, for example), so validate first. This keeps malformed AI
+  // output from being silently interpreted as a different note structure.
+  // The same HTML void-tag extension is passed to both stages.
+  const wellFormed = XMLValidator.validate(source, {
+    allowBooleanAttributes: false,
+    unpairedTags: HTML_VOID_TAGS,
+  });
+  if (wellFormed !== true) {
+    const { msg, line, col } = wellFormed.err;
+    throw new XmlParseError(`Malformed XML: ${msg} (line ${line}, column ${col})`);
+  }
+
   const parser = new XMLParser({
     preserveOrder: true,
     ignoreAttributes: false,
@@ -459,10 +493,7 @@ function parseNotesInner(source: string): ParsedDocument {
     // list. Anki card content is HTML, so we must declare the common
     // HTML void elements explicitly or they will swallow later tags
     // as if they were paired (e.g. `<br>line2</front><back>...`).
-    unpairedTags: [
-      "br", "hr", "img", "input", "meta", "link", "area", "base", "col",
-      "embed", "param", "source", "track", "wbr",
-    ],
+    unpairedTags: HTML_VOID_TAGS,
   });
 
   let tree: unknown;
@@ -493,8 +524,7 @@ function parseNotesInner(source: string): ParsedDocument {
   const rootAttrs = (rootEntry[":@"] as Record<string, string> | undefined) ?? {};
   const defaultDeck = rootAttrs["@_deck"] ?? "";
 
-  const rootChildren = nodeChildren(rootEntry);
-  if (!rootChildren) throw new XmlParseError("Root <anki> has no children");
+  const rootChildren = nodeChildren(rootEntry) ?? [];
 
   const tokens = tokenizeXml(source);
   // Catch illegal PCDATA early — before the parser's lenient handling
@@ -718,5 +748,5 @@ function hasMeaningfulContent(html: string): boolean {
  * https://github.com/terkelg/anki-markdown/issues/36 for context.)
  */
 function hasClozeMarkers(html: string): boolean {
-  return /\{\{c[\d,]+::/.test(html);
+  return /\{\{c\d+(?:,\d+)*::/.test(html);
 }

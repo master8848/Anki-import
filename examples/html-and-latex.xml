@@ -50,11 +50,10 @@ E = mc^2
 On, Old, Olympus' Towering Top, A Famous Vocal German Viewed Some Hops.</back>
   </note>
 
-  <!-- Mixed CDATA + nested HTML tags inside one field. -->
+  <!-- Mixed CDATA + nested HTML tags inside one field. Real HTML tags
+       must sit outside CDATA; only their text is wrapped as literal data. -->
   <note type="Cloze" tags="physics units">
-    <text><![CDATA[
-      Speed of light in vacuum: <b>{{c1::299,792,458}}</b> m/s.
-    ]]></text>
+    <text><![CDATA[Speed of light in vacuum: ]]><b><![CDATA[{{c1::299,792,458}}]]></b><![CDATA[ m/s.]]></text>
     <extra>Exactly defined since 1983.</extra>
   </note>
 

@@ -58,6 +58,28 @@ describe("importFromFile: validation", () => {
     expect(called).toBe(false);
   });
 
+  test("keeps a mixed valid/invalid file atomic and posts no valid subset", async () => {
+    let called = false;
+    const fetchImpl = (async () => {
+      called = true;
+      return new Response(JSON.stringify({ result: [], error: null }));
+    }) as unknown as typeof fetch;
+    const path = writeTemp(
+      "mixed-validation",
+      `<anki deck="D">
+        <note type="Basic"><front>valid Q</front><back>valid A</back></note>
+        <note type="Basic"><back>missing front</back></note>
+      </anki>`,
+    );
+
+    const outcome = await importFromFile({ inputPath: path, fetchImpl });
+
+    expect(outcome.validCount).toBe(1);
+    expect(outcome.validationErrors.some((error) => error.noteNumber === 2)).toBe(true);
+    expect(outcome.result.created).toBe(0);
+    expect(called).toBe(false);
+  });
+
   test("returns single error envelope when document is empty", async () => {
     const path = writeTemp("empty", "<anki></anki>");
     const outcome = await importFromFile({ inputPath: path });
@@ -332,5 +354,18 @@ describe("importFromFile: example files", () => {
     });
     expect(outcome.validationErrors).toHaveLength(0);
     expect(outcome.result.created).toBe(3);
+  });
+
+  test("examples/issue-cases.xml validates compatibility regressions", async () => {
+    const fetchImpl = makeMockAnki({
+      result: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+      error: null,
+    });
+    const outcome = await importFromFile({
+      inputPath: `${import.meta.dir}/../examples/issue-cases.xml`,
+      fetchImpl,
+    });
+    expect(outcome.validationErrors).toHaveLength(0);
+    expect(outcome.result.created).toBe(10);
   });
 });

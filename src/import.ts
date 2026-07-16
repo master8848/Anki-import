@@ -76,7 +76,20 @@ export async function importFromFile(opts: ImportOptions): Promise<ImportOutcome
     parsed.defaultDeck,
   );
 
-  // Short-circuit when validation failed entirely; nothing to send.
+  // Imports are atomic at the file-validation boundary: if even one note
+  // is invalid, do not create decks and do not post the otherwise-valid
+  // subset. This matches the CLI's "fix all errors and re-run" contract and
+  // prevents a corrected second run from colliding with notes created by a
+  // partially successful first run.
+  if (validationErrors.length > 0) {
+    return {
+      result: { created: 0, failed: [] },
+      validationErrors,
+      validCount: validNotes.length,
+    };
+  }
+
+  // A defensive fallback for an impossible parser/validator outcome.
   if (validNotes.length === 0) {
     return {
       result: { created: 0, failed: [] },

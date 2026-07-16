@@ -8,6 +8,12 @@ command:
 anki-xml import ./cards.xml
 ```
 
+The practical AI/XML recipes start in [`xml-cookbook.md`](./xml-cookbook.md).
+The upstream issue research is in
+[`upstream-anki-markdown-review.md`](./upstream-anki-markdown-review.md), and
+future proposals are intentionally separate in
+[`FUTURE_FEATURES.md`](../FUTURE_FEATURES.md).
+
 The tool exists because flashcard decks that contain HTML, MathJax, and native
 LaTeX are awkward to author in pure JSON or CSV. Writing them as XML lets the
 author use **CDATA sections** to embed backslash-heavy formulas and
@@ -106,28 +112,36 @@ start with `language.md`.
 
 ## Documentation index
 
-- [`usage.md`](./usage.md) — **start here.** How to write `<anki>` XML
-  for every supported note type, with simple and complex examples.
-- [`cli.md`](./cli.md) — full CLI reference, including exit codes and
-  the `--auto-create-deck` flag.
+- [`xml-cookbook.md`](./xml-cookbook.md) — **start here for AI output.**
+  Practical recipes for HTML, CDATA, code, lists, tables, Cloze, media, and
+  bulk generation.
+- [`upstream-anki-markdown-review.md`](./upstream-anki-markdown-review.md) —
+  review of every upstream issue and the cases relevant to this importer.
+- [`../FUTURE_FEATURES.md`](../FUTURE_FEATURES.md) — proposed work kept
+  separate for review; these are not current capabilities.
+- [`usage.md`](./usage.md) — how to write `<anki>` XML for every supported note
+  type, with simple and complex examples.
+- [`cli.md`](./cli.md) — full CLI reference, including exit codes and the
+  `--auto-create-deck` flag.
 - [`language.md`](./language.md) — the XML schema: elements, attributes,
   required fields per model, deck inheritance, tags.
-- [`cdata.md`](./cdata.md) — when and how to use CDATA; what gets
-  re-escaped, what passes through verbatim.
-- [`latex.md`](./latex.md) — MathJax (`\(...\)`, `\[...\]`) and native
-  Anki `[latex]...[/latex]`.
+- [`cdata.md`](./cdata.md) — when and how to use CDATA; what gets re-escaped,
+  what passes through verbatim.
+- [`latex.md`](./latex.md) — MathJax (`\(...\)`, `\[...\]`) and native Anki
+  `[latex]...[/latex]`.
 - [`html.md`](./html.md) — inline HTML tags, entities, line breaks.
-- [`whitespace.md`](./whitespace.md) — how leading, trailing, and
-  inter-token whitespace is handled.
-- [`problems-solved.md`](./problems-solved.md) — why we slice the
-  source text instead of round-tripping through an XML serializer.
+- [`whitespace.md`](./whitespace.md) — how leading, trailing, and inter-token
+  whitespace is handled.
+- [`problems-solved.md`](./problems-solved.md) — why we slice the source text
+  instead of round-tripping through an XML serializer.
 
 ## Development
 
 ```bash
 bun install
-bun test                # 153 tests, all five files
+bun test
 bun test tests/cli.test.ts
+bunx tsc --noEmit
 ```
 
 Requires Bun ≥ 1.3.

@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Cases inspired by terkelg/anki-markdown's public issue tracker.
+
+  Important: this file targets Anki's BUILT-IN note types. Fields are HTML,
+  not Markdown. Use real <ol>, <table>, and <pre><code> elements when you
+  want those structures rendered. CDATA is for literal text and escapes
+  angle brackets before the value is sent to Anki.
+-->
+<anki deck="AI Import::Compatibility">
+
+  <!-- #10: HTML-looking strings in code must be entities in XML/HTML. -->
+  <note type="Basic" tags="code javascript upstream-10">
+    <front>What HTML fragment does this JavaScript create?</front>
+    <back><pre><code>$("&lt;a&gt;", {
+  html: "This is a &lt;strong&gt;new&lt;/strong&gt; link",
+  href: "foo.html"
+});</code></pre></back>
+  </note>
+
+  <!-- #43/#45: use HTML for rendered nested lists; indentation remains intact. -->
+  <note type="Basic" tags="lists upstream-43">
+    <front>Summarize the network migration plan.</front>
+    <back><ol><li>短期<ul><li>NAT</li><li>L4, L7 反向代理</li></ul></li><li>中/长期<ul><li>逐步重新规划 IP</li></ul></li></ol></back>
+  </note>
+
+  <!-- #48: line breaks inside a table cell pass through verbatim. -->
+  <note type="Basic" tags="tables html upstream-48">
+    <front>Which ports are commonly used for web traffic?</front>
+    <back><table><thead><tr><th>Protocol</th><th>Ports</th></tr></thead><tbody><tr><td>HTTP(S)</td><td>80<br/>443<br/>8443</td></tr></tbody></table></back>
+  </note>
+
+  <!-- #33: code-rich Cloze using built-in HTML formatting. -->
+  <note type="Cloze" tags="rust cloze upstream-33">
+    <text><pre><code>pub enum {{c2::Entry}}&lt;...&gt; {
+  {{c1::Occupied}}({{c1::OccupiedEntry&lt;...&gt;}}),
+  {{c1::Vacant}}({{c1::VacantEntry&lt;...&gt;}}),
+}</code></pre></text>
+    <extra>Repeated c1 markers are hidden on the same card.</extra>
+  </note>
+
+  <!-- Nested clozes, a normal hint, and repeated ordinals. -->
+  <note type="Cloze" tags="cloze nested hints">
+    <text>{{c1::Canberra was {{c2::founded}}}} in {{c3::1913::year}}. {{c1::Canberra}} is Australia's capital.</text>
+    <extra>The outer c1 contains the inner c2.</extra>
+  </note>
+
+  <!-- #36: accepted for forward compatibility; check your Anki version. -->
+  <note type="Cloze" tags="cloze comma-ordinals upstream-36">
+    <text>{{c1,2::This answer is hidden on cards 1 and 2}}.</text>
+  </note>
+
+  <!-- #39: built-in type-in model; HTML on the prompt remains HTML. -->
+  <note type="Basic (type in the answer)" tags="rust type-in upstream-39">
+    <front>Which trait provides <code>Future::map</code>?<pre><code>future.map(transform)</code></pre></front>
+    <back>FutureExt</back>
+  </note>
+
+  <!-- Links and keyboard keys are ordinary nested HTML. -->
+  <note type="Basic" tags="html links keyboard">
+    <front>Open the reference with <kbd>Cmd</kbd>+<kbd>K</kbd>.</front>
+    <back><a href="https://example.test/search?a=anki&amp;b=xml">Reference</a></back>
+  </note>
+
+  <!-- References pass through; files must already exist in Anki media. -->
+  <note type="Basic" tags="media image audio">
+    <front>Identify this diagram: <img src="diagram.png" alt="sample diagram"/></front>
+    <back>Diagram A<br/>[sound:diagram-a.mp3]</back>
+  </note>
+
+  <!-- Literal operators and a literal CDATA terminator split safely. -->
+  <note type="Basic" tags="cdata literal-text">
+    <front><![CDATA[Why is 1 < 2 && 3 > 2?]]></front>
+    <back><![CDATA[Both comparisons are true. Literal terminator: ]]]]><![CDATA[>]]></back>
+  </note>
+
+</anki>
