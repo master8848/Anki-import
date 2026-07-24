@@ -57,10 +57,12 @@ schema for each.
 
 ```
 anki-xml import <file> [options]
+anki-xml validate <file> [--strict] [--json]
 anki-xml decks [--json]
 anki-xml stats [--deck NAME] [--json]
 anki-xml search <phrase> [--deck D] [--tag T] [--limit N] [--query Q] [--json]
 anki-xml update (--id N | --ids "1,2,3" | --file f.xml) [--field Name=value ...] [--dry-run]
+anki-xml completion <bash|zsh|fish|powershell>
 anki-xml --help
 anki-xml --version
 ```
@@ -122,12 +124,26 @@ start with `language.md`.
 - [`xml-cookbook.md`](./xml-cookbook.md) — **start here for AI output.**
   Practical recipes for HTML, CDATA, code, lists, tables, Cloze, media, and
   bulk generation.
+- [`commands.md`](./commands.md) — full per-command reference (import,
+  validate, decks, stats, search, update, completion) with human and JSON
+  output examples.
+- [`field-names.md`](./field-names.md) — XML tag ↔ Anki display name
+  reference; the canonical answer to "what do I call this field?".
+- [`roadmap.md`](./roadmap.md) — the 12-commit implementation plan; the
+  source of truth for what's being built and in what order.
+- [`architecture-review.md`](./architecture-review.md) — read-only review
+  of the codebase with Top 10 ROI improvements.
+- [`schema-v2.md`](./schema-v2.md) — design spec for the next XML schema
+  version (additive only; v1 keeps working unchanged).
+- [`cli-command-design.md`](./cli-command-design.md) — design spec for new
+  CLI commands beyond the current seven.
+- [`ai-integration.md`](./ai-integration.md) — guide for AI agents using
+  `anki-xml` as a backend; JSON shapes, error codes, idempotency
+  patterns, reference agent implementation.
 - [`upstream-anki-markdown-review.md`](./upstream-anki-markdown-review.md) —
   review of every upstream issue and the cases relevant to this importer.
-- [`../FUTURE_FEATURES.md`](../FUTURE_FEATURES.md) — proposed work kept
-  separate for review; these are not current capabilities.
-- [`commands.md`](./commands.md) — full per-command reference (import,
-  decks, stats, search, update) with human and JSON output examples.
+- [`../FUTURE_FEATURES.md`](../FUTURE_FEATURES.md) — historical proposals
+  superseded by [`roadmap.md`](./roadmap.md).
 - [`usage.md`](./usage.md) — how to write `<anki>` XML for every supported note
   type, with simple and complex examples.
 - [`cli.md`](./cli.md) — import-specific options, exit codes, and the

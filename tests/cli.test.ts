@@ -127,6 +127,60 @@ describe("main: end-to-end via spawn", () => {
       await Bun.$`rm -f ${tmpPath}`.quiet();
     }
   });
+
+  test("validate on valid file exits 0", async () => {
+    const path = `${import.meta.dir}/../examples/basic.xml`;
+    const { code, stdout } = await runCli(["validate", path]);
+    expect(code).toBe(0);
+    expect(stdout).toContain("Valid:");
+  });
+
+  test("validate on invalid file exits 1", async () => {
+    const tmpPath = `/tmp/anki-xml-cli-bad-${Math.random().toString(36).slice(2)}.xml`;
+    await Bun.write(
+      tmpPath,
+      `<anki><note type="Basic"><back>A</back></note></anki>`,
+    );
+    try {
+      const { code } = await runCli(["validate", tmpPath]);
+      expect(code).toBe(1);
+    } finally {
+      await Bun.$`rm -f ${tmpPath}`.quiet();
+    }
+  });
+
+  test("validate on missing file exits 2", async () => {
+    const { code } = await runCli(["validate", "/tmp/no-such-anki-file-99999.xml"]);
+    expect(code).toBe(2);
+  });
+
+  test("validate --json on valid file exits 0 with JSON", async () => {
+    const path = `${import.meta.dir}/../examples/basic.xml`;
+    const { code, stdout } = await runCli(["validate", path, "--json"]);
+    expect(code).toBe(0);
+    const parsed = JSON.parse(stdout);
+    expect(parsed.valid).toBe(true);
+    expect(Array.isArray(parsed.errors)).toBe(true);
+    expect(Array.isArray(parsed.warnings)).toBe(true);
+  });
+
+  test("completion bash exits 0 and emits script", async () => {
+    const { code, stdout } = await runCli(["completion", "bash"]);
+    expect(code).toBe(0);
+    expect(stdout).toContain("complete -F _anki_xml_commands");
+  });
+
+  test("completion with unknown shell exits 2", async () => {
+    const { code, stderr } = await runCli(["completion", "elvish"]);
+    expect(code).toBe(2);
+    expect(stderr).toMatch(/unknown shell/i);
+  });
+
+  test("completion without shell arg exits 2", async () => {
+    const { code, stderr } = await runCli(["completion"]);
+    expect(code).toBe(2);
+    expect(stderr).toMatch(/missing <shell>/);
+  });
 });
 
 describe("CliError", () => {

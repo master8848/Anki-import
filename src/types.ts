@@ -80,6 +80,15 @@ export interface ValidatedNote {
 export interface ValidationResult {
   notes: ValidatedNote[];
   errors: NoteValidationError[];
+  /**
+   * Non-fatal problems found during validation. The CLI surfaces these
+   * as warnings unless `--strict` is passed.
+   *
+   * Currently used for tag-format issues (commas inside tags, very long
+   * tags, control characters). The list is empty when no problems are
+   * found.
+   */
+  warnings: NoteValidationError[];
 }
 
 /** Payload structure for AnkiConnect's `addNotes` API. */
