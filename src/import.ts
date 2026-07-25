@@ -154,7 +154,7 @@ export async function importFromFile(opts: ImportOptions): Promise<ImportOutcome
     modelName: n.modelName,
     fields: n.fields,
     tags: n.tags,
-    options: { allowDuplicate: false },
+    options: { allowDuplicate: opts.allowDuplicate ?? false },
   }));
 
   let ids: (number | null)[];

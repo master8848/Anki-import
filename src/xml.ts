@@ -550,6 +550,7 @@ function parseNotesInner(source: string): ParsedDocument {
       fields: [],
       sourceOffset: nodeStart(childNode),
       fieldSourceOffsets: [],
+      unknownElements: [],
     };
     // Optional `id="N"` attribute: when present, the note is treated as
     // an update against an existing Anki note. Parsing/validation here
@@ -570,7 +571,14 @@ function parseNotesInner(source: string): ParsedDocument {
       if (!grandchild || typeof grandchild !== "object") continue;
       const gNode = grandchild as Record<string, unknown>;
       const gTag = nodeTagName(gNode);
-      if (!gTag || !FIELD_NAMES.has(gTag as XmlFieldName)) continue;
+      if (!gTag) continue;
+      if (!FIELD_NAMES.has(gTag as XmlFieldName)) {
+        // Not a known field. Surface as a warning so the AI author
+        // can fix typos (e.g. `<frobt>` instead of `<front>`)
+        // without silently dropping data.
+        note.unknownElements?.push(gTag);
+        continue;
+      }
       const fieldName = gTag as XmlFieldName;
       // Duplicate field tags are intentionally NOT silently skipped
       // here — we push every occurrence so the validator can flag
@@ -738,6 +746,17 @@ export function validateNotes(
 
     const tags = parseTags(note.tags);
     validateTags(tags, note.number, warnings);
+    // Unknown elements are warnings, not errors. Anki's own parser
+    // is permissive about extra fields; we surface them so the AI
+    // author can fix typos without the import failing.
+    if (note.unknownElements) {
+      for (const el of note.unknownElements) {
+        warnings.push({
+          noteNumber: note.number,
+          message: `unknown element <${el}> inside <note> — expected one of the model's fields; this element was ignored`,
+        });
+      }
+    }
 
     const validated: ValidatedNote = {
       number: note.number,

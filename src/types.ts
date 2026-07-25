@@ -70,6 +70,12 @@ export interface ParsedNote {
    * Lets the validator point at the precise field that failed.
    */
   fieldSourceOffsets?: number[];
+  /**
+   * Names of XML elements inside this note that are not known
+   * fields (e.g. `<frobt>` instead of `<front>`). Surfaced as
+   * warnings so AI authors can fix typos before import.
+   */
+  unknownElements?: string[];
 }
 
 /** A field inside a `<note>`. */

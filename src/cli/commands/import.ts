@@ -8,6 +8,7 @@ import { formatOutput, withFatal } from "../output.ts";
 
 export interface ImportSubArgs {
   file: string | null;
+  allowDuplicate: boolean;
 }
 
 const command: Command<ImportSubArgs> = {
@@ -16,10 +17,14 @@ const command: Command<ImportSubArgs> = {
   flags: {
     "--auto-create-deck": "Create decks referenced by notes (default: on)",
     "--no-auto-create-deck": "Fail if a referenced deck does not exist",
+    "--allow-duplicate": "Allow duplicate notes (default: reject duplicates).",
     "--dry-run": "Validate and report; do not contact AnkiConnect",
   },
-  parseSubArgs(positional) {
-    return { file: positional[0] ?? null };
+  parseSubArgs(positional, rest) {
+    return {
+      file: positional[0] ?? null,
+      allowDuplicate: rest.includes("--allow-duplicate"),
+    };
   },
   async run(args, sub) {
     if (!sub.file) {
@@ -37,6 +42,7 @@ const command: Command<ImportSubArgs> = {
         ankiConnectUrl: args.url,
         dryRun: args.dryRun,
         autoCreateDeck: args.autoCreateDeck ?? true,
+        allowDuplicate: sub.allowDuplicate,
       });
 
       if (outcome.validationErrors.length > 0) {

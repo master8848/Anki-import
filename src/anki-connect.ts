@@ -173,12 +173,29 @@ export class AnkiConnectClient {
   }
 
   /**
-   * Replace the fields of an existing note. Tags are not touched.
+   * Replace the fields of an existing note. By default tags are not
+   * touched; pass `tags` to set the entire tag list (replaces).
    * Field names are the Anki *display* names ("Front", "Back"), not
    * the lowercase XML tags. Use `modelFieldNames` to discover them.
    */
-  async updateNoteFields(noteId: number, fields: Record<string, string>): Promise<void> {
-    await this.invoke<null>("updateNoteFields", { id: noteId, fields });
+  async updateNoteFields(
+    noteId: number,
+    fields: Record<string, string>,
+    options?: { tags?: string[] },
+  ): Promise<void> {
+    const params: Record<string, unknown> = { id: noteId, fields };
+    if (options?.tags !== undefined) params["tags"] = options.tags;
+    await this.invoke<null>("updateNoteFields", params);
+  }
+
+  /** Add tags to an existing note (idempotent). */
+  async addTags(noteIds: number[], tags: string): Promise<void> {
+    await this.invoke<null>("addTags", { notes: noteIds, tags });
+  }
+
+  /** Remove tags from an existing note (idempotent). */
+  async removeTags(noteIds: number[], tags: string): Promise<void> {
+    await this.invoke<null>("removeTags", { notes: noteIds, tags });
   }
 
   /** Create a single note. Returns the new note id, or null on rejection. */
