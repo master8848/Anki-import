@@ -122,6 +122,13 @@ describe("command registry", () => {
       "tag",
       "untag",
       "export",
+      "delete",
+      "rename-deck",
+      "delete-deck",
+      "move-notes",
+      "suspend",
+      "unsuspend",
+      "bury",
       "completion",
     ]);
   });

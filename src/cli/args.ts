@@ -60,6 +60,7 @@ export const SUBCOMMAND_FLAGS = new Set([
   "--no-preflight",
   "--out",
   "--with-ids",
+  "--cards-too",
 ]);
 
 /** Flags that take no value (booleans). */
@@ -68,6 +69,7 @@ export const BOOLEAN_FLAGS = new Set([
   "--allow-duplicate",
   "--no-preflight",
   "--with-ids",
+  "--cards-too",
 ]);
 
 export function parseArgs(argv: string[]): ParsedArgs {

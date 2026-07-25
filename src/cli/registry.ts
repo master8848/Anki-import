@@ -24,6 +24,9 @@ import updateCmd from "./commands/update.ts";
 import tagCmd from "./commands/tag.ts";
 import untagCmd from "./commands/untag.ts";
 import exportCmd from "./commands/export.ts";
+import deleteCmd from "./commands/delete.ts";
+import { renameCmd, deleteDeckCmd, moveNotesCmd } from "./commands/deck-ops.ts";
+import { suspendCmd, unsuspendCmd, buryCmd } from "./commands/scheduling.ts";
 import completionCmd from "./commands/completion.ts";
 
 export const COMMANDS: Command[] = [
@@ -37,6 +40,13 @@ export const COMMANDS: Command[] = [
   tagCmd,
   untagCmd,
   exportCmd,
+  deleteCmd,
+  renameCmd,
+  deleteDeckCmd,
+  moveNotesCmd,
+  suspendCmd,
+  unsuspendCmd,
+  buryCmd,
   completionCmd,
 ];
 
