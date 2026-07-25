@@ -101,6 +101,12 @@ In order:
 | 11 | P4.2 + P4.3 + P4.8 + P4.10 | high | Custom models, media, preview, multi-profile |
 | 12 | P4.9 | high | Plugins, **deferred until 3 real requests materialize** |
 
+## Status
+
+Commits 1–11 are shipped (see `git log`). Commit 12 is intentionally
+deferred per the table above; see `src/plugins.ts` for the design
+notes that will guide the eventual implementation.
+
 ## Breaking changes
 
 Only **one** feature has even a minor breaking change:
