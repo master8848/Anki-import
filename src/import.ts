@@ -76,6 +76,20 @@ export async function importFromFile(opts: ImportOptions): Promise<ImportOutcome
     parsed.defaultDeck,
   );
 
+  // Phase 2: <note id="N"> is parsed and validated but not yet honored
+  // by `import`. Notes with an id are skipped and surfaced as a warning
+  // so AI authors get visibility instead of a silent re-import that
+  // would create a duplicate. Phase 4 adds an `--update-existing` flag
+  // (or a dedicated `upsert` command) that targets these.
+  const idNotes = validNotes.filter((n) => n.id !== undefined);
+  const createNotes = validNotes.filter((n) => n.id === undefined);
+  for (const id of idNotes) {
+    validationErrors.push({
+      noteNumber: id.number,
+      message: `<note id="${id.id}"> is treated as an update; run 'anki-xml update --id ${id.id} --field ...' instead`,
+    });
+  }
+
   // Imports are atomic at the file-validation boundary: if even one note
   // is invalid, do not create decks and do not post the otherwise-valid
   // subset. This matches the CLI's "fix all errors and re-run" contract and
@@ -91,6 +105,16 @@ export async function importFromFile(opts: ImportOptions): Promise<ImportOutcome
 
   // A defensive fallback for an impossible parser/validator outcome.
   if (validNotes.length === 0) {
+    return {
+      result: { created: 0, failed: [] },
+      validationErrors,
+      validCount: 0,
+    };
+  }
+
+  // If every note in the file had an id (and was therefore skipped),
+  // short-circuit with a clean error result.
+  if (createNotes.length === 0) {
     return {
       result: { created: 0, failed: [] },
       validationErrors,
@@ -117,14 +141,14 @@ export async function importFromFile(opts: ImportOptions): Promise<ImportOutcome
   // createDeck is idempotent and creates missing parents on the fly,
   // so we can safely call it for the full set of unique deck names.
   if (opts.autoCreateDeck ?? true) {
-    const uniqueDecks = [...new Set(validNotes.map((n) => n.deckName))];
+    const uniqueDecks = [...new Set(createNotes.map((n) => n.deckName))];
     for (const name of uniqueDecks) {
       if (!name) continue; // belt-and-braces; validation already errors on empty deck
       await client.createDeck(name);
     }
   }
 
-  const payloads: AnkiConnectNote[] = validNotes.map((n) => ({
+  const payloads: AnkiConnectNote[] = createNotes.map((n) => ({
     deckName: n.deckName,
     modelName: n.modelName,
     fields: n.fields,

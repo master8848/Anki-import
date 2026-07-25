@@ -40,6 +40,18 @@ export type XmlFieldName =
 export interface ParsedNote {
   /** 1-based index across the document, used for human-friendly error messages. */
   number: number;
+  /**
+   * Optional `id` attribute on `<note>`. When present and positive,
+   * the note is treated as an UPDATE against an existing Anki note
+   * with that id; when absent, the note is created fresh.
+   *
+   * Quickstart: leave the attribute off for new cards. The custom
+   * flag `--update-existing` (Phase 4) lets a single import target
+   * existing notes by id without mixing the two cases accidentally.
+   * For now, a note with `id="N"` is skipped on import — use
+   * `anki-xml update --id N --field ...` for explicit updates.
+   */
+  id?: number;
   /** Raw `type` attribute value. Empty string when missing. */
   type: string;
   /** Per-note `deck` override. Empty string when absent (caller falls back to document default). */
@@ -70,6 +82,8 @@ export interface NoteValidationError {
 /** A note that has passed validation and is ready for AnkiConnect. */
 export interface ValidatedNote {
   number: number;
+  /** Optional id (only set when the source `<note>` had `id="N"`). */
+  id?: number;
   deckName: string;
   modelName: SupportedModel;
   fields: Record<string, string>;

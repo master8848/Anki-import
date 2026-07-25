@@ -32,6 +32,7 @@ import { XMLParser, XMLValidator } from "fast-xml-parser";
 // The symbol is created internally by fast-xml-parser; the supported way to
 // retrieve it is XMLParser.getMetaDataSymbol().
 const META = XMLParser.getMetaDataSymbol() as unknown as symbol;
+import { getModel, SUPPORTED_MODEL_NAMES } from "./models.ts";
 import type {
   NoteValidationError,
   ParsedField,
@@ -69,14 +70,15 @@ const FIELD_NAMES: ReadonlySet<XmlFieldName> = new Set([
   "addReverse",
 ]);
 
-/** All supported Anki note types, exactly as Anki names them. */
-export const SUPPORTED_MODELS: ReadonlySet<string> = new Set<SupportedModel>([
-  "Basic",
-  "Basic (and reversed card)",
-  "Basic (optional reversed card)",
-  "Basic (type in the answer)",
-  "Cloze",
-]);
+/** All supported Anki note types, exactly as Anki names them.
+ *
+ * Derived from the `MODELS` registry (P2.4) so that the supported set
+ * is always in sync with the validator. Used by callers that need to
+ * cheaply check model membership without doing a full lookup.
+ */
+export const SUPPORTED_MODELS: ReadonlySet<string> = new Set<SupportedModel>(
+  SUPPORTED_MODEL_NAMES as SupportedModel[],
+);
 
 /** Thrown for any structural / XML problem encountered while parsing. */
 export class XmlParseError extends Error {
@@ -547,6 +549,18 @@ function parseNotesInner(source: string): ParsedDocument {
       tags: attrs["@_tags"] ?? "",
       fields: [],
     };
+    // Optional `id="N"` attribute: when present, the note is treated as
+    // an update against an existing Anki note. Parsing/validation here
+    // is passive — the import command skips these notes (Phase 4 will
+    // add an `--update-existing` flag). The numeric check + duplicate
+    // detection live in validateNotes().
+    const idRaw = attrs["@_id"];
+    if (idRaw !== undefined && idRaw !== "") {
+      const n = Number(idRaw);
+      if (Number.isFinite(n) && Number.isInteger(n) && n > 0) {
+        note.id = n;
+      }
+    }
 
     const noteChildren = nodeChildren(childNode) ?? [];
 
@@ -586,6 +600,13 @@ function parseNotesInner(source: string): ParsedDocument {
  *
  * Every error is collected and returned together; the caller decides how
  * to present them. The function does not contact AnkiConnect.
+ *
+ * The per-model rules live in the `MODELS` registry (P2.4). This
+ * function is therefore model-agnostic: it looks up the model, checks
+ * required/optional/forbidden fields, applies any model-specific
+ * extra validator, and uses the registry's `buildFields` to assemble
+ * the Anki field map. Adding a new model no longer requires editing
+ * this function.
  */
 export function validateNotes(
   notes: ParsedNote[],
@@ -599,6 +620,9 @@ export function validateNotes(
     errors.push({ noteNumber: 0, message: "No <note> elements found inside <anki>" });
     return { notes: [], errors, warnings };
   }
+
+  // Track ids seen so we can detect duplicates across the file.
+  const seenIds = new Map<number, number>();
 
   for (const note of notes) {
     const noteErrors: string[] = [];
@@ -616,57 +640,67 @@ export function validateNotes(
       noteErrors.push("no deck: set `deck` on <anki> or on each <note>");
     }
 
-    // Detect duplicate field tags.
-    const fieldNames = note.fields.map((f) => f.name);
-    const dupes = fieldNames.filter((n, i) => fieldNames.indexOf(n) !== i);
-    for (const d of new Set(dupes)) {
-      noteErrors.push(`<${d}> appears more than once`);
-    }
-
-    const front = note.fields.find((f) => f.name === "front");
-    const back = note.fields.find((f) => f.name === "back");
-    const text = note.fields.find((f) => f.name === "text");
-    const extra = note.fields.find((f) => f.name === "extra");
-    const addReverse = note.fields.find((f) => f.name === "addReverse");
-
-    // Per-model required-field / forbidden-field rules.
-    if (note.type === "Basic" || note.type === "Basic (and reversed card)" || note.type === "Basic (type in the answer)") {
-      if (!front) noteErrors.push(`<${note.type}> requires <front>`);
-      else if (!hasMeaningfulContent(front.html))
-        noteErrors.push("<front> is empty or contains only whitespace/HTML tags");
-      if (!back) noteErrors.push(`<${note.type}> requires <back>`);
-      else if (!hasMeaningfulContent(back.html))
-        noteErrors.push("<back> is empty or contains only whitespace/HTML tags");
-      if (text) noteErrors.push(`<${note.type}> must not include <text>`);
-      if (addReverse) noteErrors.push(`<${note.type}> must not include <addReverse>`);
-    } else if (note.type === "Basic (optional reversed card)") {
-      if (!front) noteErrors.push("<front> is required");
-      else if (!hasMeaningfulContent(front.html))
-        noteErrors.push("<front> is empty or contains only whitespace/HTML tags");
-      if (!back) noteErrors.push("<back> is required");
-      else if (!hasMeaningfulContent(back.html))
-        noteErrors.push("<back> is empty or contains only whitespace/HTML tags");
-      if (!addReverse) {
-        noteErrors.push("<addReverse> is required (use yes or no)");
+    // Validate id attribute (must be a positive integer if present).
+    if (note.id !== undefined) {
+      if (note.id <= 0) {
+        noteErrors.push(`id attribute must be a positive integer (got ${note.id})`);
       } else {
-        const v = addReverse.html.trim().toLowerCase();
-        if (v !== "yes" && v !== "no") {
-          noteErrors.push(`<addReverse> must be "yes" or "no", got "${addReverse.html.trim()}"`);
+        const firstSeen = seenIds.get(note.id);
+        if (firstSeen !== undefined) {
+          noteErrors.push(
+            `id ${note.id} is used more than once (also in note ${firstSeen})`,
+          );
+        } else {
+          seenIds.set(note.id, note.number);
         }
       }
-      if (text) noteErrors.push("Basic (optional reversed card) must not include <text>");
-    } else if (note.type === "Cloze") {
-      if (!text) noteErrors.push("Cloze requires <text> (containing {{c1::...}} markers)");
-      else if (!hasMeaningfulContent(text.html))
-        noteErrors.push("<text> is empty or contains only whitespace/HTML tags");
-      else if (!hasClozeMarkers(text.html))
-        noteErrors.push(`<text> for a Cloze note must contain at least one {{cN::...}} marker`);
-      if (front || back)
-        noteErrors.push("Cloze must not include <front> or <back> — use <text> instead");
-      if (addReverse)
-        noteErrors.push("Cloze must not include <addReverse>");
-      if (extra && !hasMeaningfulContent(extra.html)) {
-        noteErrors.push("<extra> is empty or contains only whitespace/HTML tags");
+    }
+
+    const model = getModel(note.type);
+    if (model) {
+      // Detect duplicate field tags.
+      const fieldNames = note.fields.map((f) => f.name);
+      const dupes = fieldNames.filter((n, i) => fieldNames.indexOf(n) !== i);
+      for (const d of new Set(dupes)) {
+        noteErrors.push(`<${d}> appears more than once`);
+      }
+
+      // Fields used in this note that the model doesn't accept.
+      for (const field of note.fields) {
+        if (!model.accepts.has(field.name)) {
+          noteErrors.push(
+            `<${field.name}> is not accepted by ${model.name}; expected one of: ${[...model.accepts].join(", ")}`,
+          );
+        }
+      }
+
+      // Required fields that are missing.
+      for (const req of model.required) {
+        const present = note.fields.find((f) => f.name === req);
+        if (!present) {
+          noteErrors.push(`${model.name} requires <${req}>`);
+          continue;
+        }
+        if (model.checkContent && !hasMeaningfulContent(present.html)) {
+          noteErrors.push(`<${req}> is empty or contains only whitespace/HTML tags`);
+        }
+      }
+
+      // Optional fields with empty content get flagged when content
+      // checks are on (catches `<extra>   </extra>` accidents).
+      if (model.checkContent) {
+        for (const opt of model.optional) {
+          const present = note.fields.find((f) => f.name === opt);
+          if (present && !hasMeaningfulContent(present.html)) {
+            noteErrors.push(`<${opt}> is empty or contains only whitespace/HTML tags`);
+          }
+        }
+      }
+
+      // Model-specific extra rules.
+      if (model.validateExtras) {
+        const extraErrors = model.validateExtras(note);
+        for (const msg of extraErrors) noteErrors.push(msg);
       }
     }
 
@@ -680,9 +714,10 @@ export function validateNotes(
 
     const validated: ValidatedNote = {
       number: note.number,
+      id: note.id,
       deckName: deck,
       modelName: note.type as SupportedModel,
-      fields: buildFields(note.type as SupportedModel, front, back, text, extra, addReverse),
+      fields: model!.buildFields(note.fields),
       tags,
     };
     valid.push(validated);
@@ -723,38 +758,6 @@ function validateTags(
   }
 }
 
-/** Map our parsed fields onto Anki field names per supported model. */
-function buildFields(
-  model: SupportedModel,
-  front: ParsedField | undefined,
-  back: ParsedField | undefined,
-  text: ParsedField | undefined,
-  extra: ParsedField | undefined,
-  addReverse: ParsedField | undefined,
-): Record<string, string> {
-  switch (model) {
-    case "Basic":
-    case "Basic (and reversed card)":
-    case "Basic (type in the answer)":
-      return {
-        Front: front!.html.trim(),
-        Back: back!.html.trim(),
-      };
-    case "Basic (optional reversed card)":
-      return {
-        Front: front!.html.trim(),
-        Back: back!.html.trim(),
-        "Add Reverse": addReverse!.html.trim(),
-        Extra: extra?.html.trim() ?? "",
-      };
-    case "Cloze":
-      return {
-        Text: text!.html.trim(),
-        Extra: extra?.html.trim() ?? "",
-      };
-  }
-}
-
 /** Parse the `tags` attribute (whitespace-separated). Empty -> []. */
 function parseTags(raw: string): string[] {
   return raw
@@ -766,23 +769,8 @@ function parseTags(raw: string): string[] {
 /**
  * A field is "empty" if its stripped text is empty. Tags are stripped
  * before checking so `<img src="..."/>` alone does not count as content.
- */
-function hasMeaningfulContent(html: string): boolean {
-  const stripped = html.replace(/<[^>]*>/g, "").trim();
-  return stripped.length > 0;
-}
-
-/**
- * A Cloze field must contain at least one `{{cN::...}}` marker.
  *
- * Accepts both simple ordinals (`{{c1::text}}`, `{{c2::text}}`) and
- * the comma-separated variant (`{{c1,2::text}}`) — which is the
- * upstream-Anki syntax for "hide this on cards 1 AND 2". We accept
- * the comma form even when the running Anki version doesn't yet
- * generate the corresponding cards, so files written for a future
- * Anki can be validated without modification. (See
- * https://github.com/terkelg/anki-markdown/issues/36 for context.)
+ * Re-exported from models.ts so the validator and the registry share
+ * one implementation.
  */
-function hasClozeMarkers(html: string): boolean {
-  return /\{\{c\d+(?:,\d+)*::/.test(html);
-}
+import { hasMeaningfulContent } from "./models.ts";
