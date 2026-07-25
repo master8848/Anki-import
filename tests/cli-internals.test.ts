@@ -114,6 +114,7 @@ describe("command registry", () => {
     expect(COMMAND_NAMES).toEqual([
       "import",
       "validate",
+      "plan",
       "decks",
       "stats",
       "search",

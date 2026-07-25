@@ -193,6 +193,25 @@ export class AnkiConnectClient {
     await this.invoke<null>("addTags", { notes: noteIds, tags });
   }
 
+  /**
+   * Preflight check: for each candidate note, ask AnkiConnect if it
+   * would be added (true), rejected as a duplicate (false), or rejected
+   * for some other reason (null).
+   *
+   * Same `notes` shape as `addNotes`; AnkiConnect does the dedup check
+   * against the live collection.
+   */
+  async canAddNotes(
+    notes: AnkiConnectNote[],
+  ): Promise<(boolean | null)[]> {
+    return await this.invoke<(boolean | null)[]>("canAddNotes", { notes });
+  }
+
+  /** List all deck names. Used by `plan` to predict deck creation. */
+  async deckNames(): Promise<string[]> {
+    return await this.invoke<string[]>("deckNames");
+  }
+
   /** Remove tags from an existing note (idempotent). */
   async removeTags(noteIds: number[], tags: string): Promise<void> {
     await this.invoke<null>("removeTags", { notes: noteIds, tags });

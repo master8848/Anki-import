@@ -37,6 +37,22 @@ characters). See [`field-names.md`](./field-names.md) for the supported
 field vocabulary and [`ai-integration.md`](./ai-integration.md) for the
 JSON shape.
 
+## `plan <file>`
+
+Preflight check for an import. Validates the file, asks AnkiConnect
+which decks already exist, and uses `canAddNotes` to predict which
+notes would be rejected as duplicates. **No mutation.**
+
+```bash
+anki-xml plan ./cards.xml                # full preflight (default)
+anki-xml plan ./cards.xml --no-preflight # offline plan (no network)
+anki-xml plan ./cards.xml --json         # machine-readable
+```
+
+This is the AI-loop's read-before-write primitive: read the plan,
+decide whether to proceed, then call `import`. See
+[`ai-cookbook.md`](./ai-cookbook.md) for the pattern.
+
 ## `decks`
 
 List every deck and subdeck with its card count (own + descendant

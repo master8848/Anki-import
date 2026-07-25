@@ -15,16 +15,18 @@
 
 import type { Command } from "./command.ts";
 import importCmd from "./commands/import.ts";
+import validateCmd from "./commands/validate.ts";
+import planCmd from "./commands/plan.ts";
 import decksCmd from "./commands/decks.ts";
 import statsCmd from "./commands/stats.ts";
 import searchCmd from "./commands/search.ts";
 import updateCmd from "./commands/update.ts";
-import validateCmd from "./commands/validate.ts";
 import completionCmd from "./commands/completion.ts";
 
 export const COMMANDS: Command[] = [
   importCmd,
   validateCmd,
+  planCmd,
   decksCmd,
   statsCmd,
   searchCmd,
