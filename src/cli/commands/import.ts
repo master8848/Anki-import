@@ -44,7 +44,8 @@ const command: Command<ImportSubArgs> = {
         console.error("Validation errors:");
         for (const e of outcome.validationErrors) {
           const where = e.noteNumber === 0 ? "<anki>" : `Note ${e.noteNumber}`;
-          console.error(`  ${where}: ${e.message}`);
+          const loc = e.line !== undefined ? ` (line ${e.line}, col ${e.column})` : "";
+          console.error(`  ${where}${loc}: ${e.message}`);
         }
         console.error("");
         console.error("Aborting: no notes were sent to AnkiConnect.");

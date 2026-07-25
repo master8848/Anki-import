@@ -140,6 +140,9 @@ start with `language.md`.
 - [`ai-integration.md`](./ai-integration.md) — guide for AI agents using
   `anki-xml` as a backend; JSON shapes, error codes, idempotency
   patterns, reference agent implementation.
+- [`extension-policy.md`](./extension-policy.md) — how to add new
+  commands, flags, models, shells, and error codes. Read before
+  proposing a feature.
 - [`upstream-anki-markdown-review.md`](./upstream-anki-markdown-review.md) —
   review of every upstream issue and the cases relevant to this importer.
 - [`../FUTURE_FEATURES.md`](../FUTURE_FEATURES.md) — historical proposals

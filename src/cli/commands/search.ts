@@ -68,6 +68,7 @@ const command: Command<SearchSubArgs> = {
       return 2;
     }
     return withFatal(async () => {
+      const startMs = Date.now();
       const hits = await runSearch({
         ankiConnectUrl: args.url,
         phrase: sub.phrase || undefined,
@@ -76,7 +77,7 @@ const command: Command<SearchSubArgs> = {
         tags: sub.tags,
         limit: sub.limit,
       });
-      console.log(formatOutput(hits, { args }, renderSearch(hits)));
+      console.log(formatOutput(hits, { args, startMs, command: "search" }, renderSearch(hits)));
       return 0;
     });
   },

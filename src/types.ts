@@ -60,6 +60,16 @@ export interface ParsedNote {
   tags: string;
   /** Inner fields, in document order. */
   fields: ParsedField[];
+  /**
+   * Source offset of the `<note>` start tag. Used by the validator
+   * to compute line/column for error messages.
+   */
+  sourceOffset?: number;
+  /**
+   * Source offsets for each field, in the same order as `fields`.
+   * Lets the validator point at the precise field that failed.
+   */
+  fieldSourceOffsets?: number[];
 }
 
 /** A field inside a `<note>`. */
@@ -77,6 +87,10 @@ export interface ParsedField {
 export interface NoteValidationError {
   noteNumber: number;
   message: string;
+  /** 1-based line number in the source file. Absent when unknown. */
+  line?: number;
+  /** 1-based column number in the source file. Absent when unknown. */
+  column?: number;
 }
 
 /** A note that has passed validation and is ready for AnkiConnect. */
