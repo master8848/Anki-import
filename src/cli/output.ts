@@ -23,6 +23,20 @@ export interface OutputContext {
   command: string;
 }
 
+/** Output format selected by --json / --json-legacy / --format. */
+export type OutputFormat = "human" | "json-envelope" | "json-legacy" | "ndjson";
+
+/**
+ * Determine which output format the caller selected. Defaults to
+ * "human" when --json is off; otherwise returns the envelope or
+ * legacy JSON, or NDJSON when --format=ndjson is set.
+ */
+export function selectFormat(args: ParsedArgs): OutputFormat {
+  if (args.format === "ndjson") return "ndjson";
+  if (!args.json) return "human";
+  return args.jsonVersion === 0 ? "json-legacy" : "json-envelope";
+}
+
 /**
  * Render either machine-readable JSON or the human-readable string the
  * caller built. The JSON shape is the canonical contract for AI agents;
@@ -34,15 +48,45 @@ export function formatOutput<T>(
   human: string,
   options?: { warnings?: NoteValidationError[] },
 ): string {
-  if (!ctx.args.json) return human;
-  if (ctx.args.jsonVersion === 0) {
-    return JSON.stringify(data, null, 2);
+  const fmt = selectFormat(ctx.args);
+  switch (fmt) {
+    case "human":
+      return human;
+    case "json-legacy":
+      return JSON.stringify(data, null, 2);
+    case "json-envelope":
+      return JSON.stringify(
+        envelope(ctx.command, ctx.args, ctx.startMs, data, options?.warnings),
+        null,
+        2,
+      );
+    case "ndjson":
+      return JSON.stringify(data);
   }
-  return JSON.stringify(
-    envelope(ctx.command, ctx.args, ctx.startMs, data, options?.warnings),
-    null,
-    2,
-  );
+}
+
+/**
+ * Format a single record for NDJSON streaming. Each line is a
+ * self-contained JSON object; `meta` is appended on the final
+ * record (when `isLast` is true).
+ */
+export function formatNdjsonRecord<T>(
+  data: T,
+  ctx: OutputContext,
+  isLast = false,
+): string {
+  if (isLast) {
+    return JSON.stringify({
+      ...(data as Record<string, unknown>),
+      _meta: {
+        duration_ms: Date.now() - ctx.startMs,
+        timestamp: new Date().toISOString(),
+        version: "0.1.0",
+        command: ctx.command,
+      },
+    });
+  }
+  return JSON.stringify(data);
 }
 
 /**
