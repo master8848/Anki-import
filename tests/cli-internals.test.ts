@@ -132,6 +132,8 @@ describe("command registry", () => {
       "migrate",
       "diff",
       "sync",
+      "preview",
+      "profile",
       "completion",
     ]);
   });

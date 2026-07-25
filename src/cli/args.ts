@@ -32,6 +32,8 @@ export interface ParsedArgs {
   quiet: boolean;
   /** Output format hint: "ndjson" streams one JSON record per line. */
   format: "default" | "ndjson";
+  /** Multi-collection profile name. */
+  profile: string | null;
   /** Loose bag of subcommand-specific flags. Parsed by each command. */
   rest: string[];
 }
@@ -88,6 +90,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
     noColor: false,
     quiet: false,
     format: "default",
+    profile: null,
     rest: [],
   };
 
@@ -147,6 +150,13 @@ export function parseArgs(argv: string[]): ParsedArgs {
         throw new CliError(`--format must be 'ndjson' or 'default' (got '${next}')`);
       }
       args.format = next;
+      i += 2;
+      continue;
+    }
+    if (a === "--profile") {
+      const next = argv[i + 1];
+      if (!next) throw new CliError("--profile requires a value");
+      args.profile = next;
       i += 2;
       continue;
     }
