@@ -72,6 +72,16 @@ export function writeStdout(text: string): void {
 }
 
 /**
+ * Strip ANSI escape sequences from a string. Used when --no-color is
+ * passed or when stdout is not a TTY. The regex matches the CSI
+ * (Control Sequence Introducer) form that all of our formatting uses.
+ */
+export function stripAnsi(text: string): string {
+  // eslint-disable-next-line no-control-regex
+  return text.replace(/\x1b\[[0-9;]*m/g, "");
+}
+
+/**
  * Write a fatal error line and return exit code 2.
  */
 export function fatal(message: string): number {

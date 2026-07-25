@@ -140,6 +140,9 @@ start with `language.md`.
 - [`ai-integration.md`](./ai-integration.md) — guide for AI agents using
   `anki-xml` as a backend; JSON shapes, error codes, idempotency
   patterns, reference agent implementation.
+- [`ai-cookbook.md`](./ai-cookbook.md) — recipes for agent loops:
+  the five-loop pattern, find-and-update pipeline, stream-and-page
+  patterns, stable retries, and "don't do this" anti-patterns.
 - [`extension-policy.md`](./extension-policy.md) — how to add new
   commands, flags, models, shells, and error codes. Read before
   proposing a feature.
