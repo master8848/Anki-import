@@ -294,6 +294,11 @@ export class AnkiConnectClient {
     return await this.invoke<{ name: string; id: number }[]>("modelNamesAndIds");
   }
 
+  /** Every model name. */
+  async modelNames(): Promise<string[]> {
+    return await this.invoke<string[]>("modelNames");
+  }
+
   /** Field names for one model. Returns [] if the model doesn't exist. */
   async modelFieldNames(modelName: string): Promise<string[]> {
     return await this.invoke<string[]>("modelFieldNames", { modelName });

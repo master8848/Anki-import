@@ -143,6 +143,7 @@ describe("command registry", () => {
       "audit-log",
       "sample",
       "schema-validate",
+      "doctor",
       "completion",
     ]);
   });

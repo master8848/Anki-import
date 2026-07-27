@@ -41,6 +41,7 @@ import rollbackCmd from "./commands/rollback.ts";
 import auditLogCmd from "./commands/audit-log.ts";
 import sampleCmd from "./commands/sample.ts";
 import schemaValidateCmd from "./commands/schema-validate.ts";
+import doctorCmd from "./commands/doctor.ts";
 import completionCmd from "./commands/completion.ts";
 
 export const COMMANDS: Command[] = [
@@ -75,6 +76,7 @@ export const COMMANDS: Command[] = [
   auditLogCmd,
   sampleCmd,
   schemaValidateCmd,
+  doctorCmd,
   completionCmd,
 ];
 
