@@ -37,19 +37,28 @@ Every command is:
 
 ## Install
 
-```sh
-git clone https://github.com/YOUR-USERNAME/anki-xml
-cd anki-xml
-bun install
-```
+Pick one of three install methods. **npm / npx is recommended** for
+the widest reach — Node ≥ 18 is the only prerequisite.
 
-Or run directly from a checkout:
+### npm / npx (recommended)
 
 ```sh
-bun run src/index.ts --help
+# One-time global install
+npm install -g anki-xml
+
+# Or, no install — npx will fetch and run it
+npx anki-xml --version
+anki-xml --help
 ```
 
-Or download a standalone binary from the [Releases page](https://github.com/YOUR-USERNAME/anki-xml/releases):
+The npm package contains a single self-contained CommonJS bundle
+(~175 KB) — no `node_modules` install, no native deps. Runs on
+plain Node ≥ 18 with no extra tooling.
+
+### Download the standalone binary
+
+Single self-contained executable. No runtime required at all (Bun
+is bundled in):
 
 ```sh
 curl -L https://github.com/YOUR-USERNAME/anki-xml/releases/latest/download/anki-xml -o /usr/local/bin/anki-xml
@@ -57,8 +66,20 @@ chmod +x /usr/local/bin/anki-xml
 anki-xml --version
 ```
 
-Requires [Bun](https://bun.sh) ≥ 1.3 to build; the standalone
-binary is self-contained.
+Available for macOS (arm64 / x86_64), Linux (x86_64 / aarch64),
+and Windows. See the [Releases page](https://github.com/YOUR-USERNAME/anki-xml/releases).
+
+### Build from source
+
+Requires [Bun](https://bun.sh) ≥ 1.3:
+
+```sh
+git clone https://github.com/YOUR-USERNAME/anki-xml
+cd anki-xml
+bun install
+bun run build:npm       # produces ./dist/cli.js (Node bundle)
+bun run build           # produces ./anki-xml (standalone)
+```
 
 ## Quick start
 
@@ -158,6 +179,7 @@ Every checkpoint is a JSON snapshot at
 
 ## Documentation
 
+- [`docs/install.md`](docs/install.md) — install methods compared
 - [`docs/commands.md`](docs/commands.md) — full command reference
 - [`docs/cli.md`](docs/cli.md) — global flags, exit codes, config
 - [`docs/usage.md`](docs/usage.md) — XML schema for every model

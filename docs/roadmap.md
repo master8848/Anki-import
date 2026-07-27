@@ -112,6 +112,7 @@ In order:
 | M18 | Bun standalone-binary build | ✅ shipped |
 | M19 | Top-level `README.md` help surface grouped by category | ✅ shipped |
 | M20 | Per-command help with positional argument + examples | ✅ shipped |
+| M21 | npm distribution (Node ≥ 18 CommonJS bundle; `npm i -g` and `npx`) | ✅ shipped |
 
 ## Original commit log (Phase 1..4)
 

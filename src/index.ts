@@ -1,4 +1,3 @@
-#!/usr/bin/env bun
 /**
  * anki-xml CLI entry point.
  *
@@ -7,11 +6,14 @@
  * output helpers in `src/cli/output.ts`, and the command registry in
  * `src/cli/registry.ts`.
  *
- * `main()` returns an exit code (0, 1, or 2). `await main()` does not
- * propagate the exit code on Bun (the process exits 0 regardless), so
- * we use an explicit `process.exit()` when this module is the entry
- * point. When imported by tests, `import.meta.main` is false and we
- * skip the exit so the test process survives.
+ * `main()` returns an exit code (0, 1, or 2). When this module is the
+ * entry point, we call `process.exit()` directly. When imported by
+ * tests, `import.meta.main` is false and we skip the exit so the test
+ * process survives.
+ *
+ * The IIFE-style entry avoids top-level await so the same source can
+ * be bundled for both Bun (ESM, top-level await) and Node (CJS, no
+ * top-level await) targets.
  */
 
 import { main } from "./cli/run.ts";
@@ -20,5 +22,7 @@ export { CliError, parseArgs } from "./cli/args.ts";
 export type { ParsedArgs } from "./cli/args.ts";
 
 if (import.meta.main) {
-  process.exit(await main());
+  (async () => {
+    process.exit(await main());
+  })();
 }
