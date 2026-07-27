@@ -39,6 +39,8 @@ import noteInfoCmd from "./commands/note-info.ts";
 import checkpointCmd from "./commands/checkpoint.ts";
 import rollbackCmd from "./commands/rollback.ts";
 import auditLogCmd from "./commands/audit-log.ts";
+import sampleCmd from "./commands/sample.ts";
+import schemaValidateCmd from "./commands/schema-validate.ts";
 import completionCmd from "./commands/completion.ts";
 
 export const COMMANDS: Command[] = [
@@ -71,6 +73,8 @@ export const COMMANDS: Command[] = [
   checkpointCmd,
   rollbackCmd,
   auditLogCmd,
+  sampleCmd,
+  schemaValidateCmd,
   completionCmd,
 ];
 

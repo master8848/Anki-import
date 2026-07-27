@@ -141,6 +141,8 @@ describe("command registry", () => {
       "checkpoint",
       "rollback",
       "audit-log",
+      "sample",
+      "schema-validate",
       "completion",
     ]);
   });
