@@ -8,7 +8,9 @@
   "scripts": {
     "start": "bun run src/index.ts",
     "import": "bun run src/index.ts import",
-    "test": "bun test"
+    "test": "bun test",
+    "build": "bun run scripts/build.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "fast-xml-parser": "^5.10.0"

@@ -83,6 +83,15 @@ const command: Command<ImportSubArgs> = {
         for (const f of failed) {
           console.log(`  Note ${f.noteNumber}: ${f.reason}`);
         }
+        if (args.batchId && args.rollbackOnPartial) {
+          // For import, rollback is a no-op (we created notes that
+          // don't have pre-state to restore), but we still record the
+          // batch as failed so the agent knows the operation didn't
+          // fully succeed.
+          console.log(
+            `Batch '${args.batchId}' had ${failed.length} failure(s); created notes are NOT auto-rolled-back (delete them manually if needed).`,
+          );
+        }
         return 1;
       }
       console.log("All notes created successfully.");
