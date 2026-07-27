@@ -36,6 +36,10 @@ export interface ParsedArgs {
   profile: string | null;
   /** Idempotency key (M10). */
   idempotencyKey: string | null;
+  /** Batch id (M9). Triggers an auto-checkpoint before the write. */
+  batchId: string | null;
+  /** Rollback automatically when a partial failure occurs (M9). */
+  rollbackOnPartial: boolean;
   /** Loose bag of subcommand-specific flags. Parsed by each command. */
   rest: string[];
 }
@@ -94,6 +98,8 @@ export function parseArgs(argv: string[]): ParsedArgs {
     format: "default",
     profile: null,
     idempotencyKey: null,
+    batchId: null,
+    rollbackOnPartial: false,
     rest: [],
   };
 
@@ -168,6 +174,17 @@ export function parseArgs(argv: string[]): ParsedArgs {
       if (!next) throw new CliError("--idempotency-key requires a value");
       args.idempotencyKey = next;
       i += 2;
+      continue;
+    }
+    if (a === "--batch-id") {
+      const next = argv[i + 1];
+      if (!next) throw new CliError("--batch-id requires a value");
+      args.batchId = next;
+      i += 2;
+      continue;
+    }
+    if (a === "--rollback-on-partial") {
+      args.rollbackOnPartial = true;
       continue;
     }
     if (a === "--url") {
