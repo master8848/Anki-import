@@ -220,6 +220,46 @@ async function bulkTag(query: string, tags: string[]): Promise<void> {
 }
 ```
 
+### Workflow 4: Safe batch + rollback (M9)
+
+```typescript
+async function applyBatch(xml: string): Promise<void> {
+  const path = await stageFile(xml);
+  const batchId = `nightly-${new Date().toISOString().slice(0,10)}`;
+
+  // Capture state before mutation.
+  await ankiXml(["checkpoint", "create", `${batchId}-pre`, "--ids", "ALL"]);
+
+  // Atomic batch — rolls back automatically on any failure.
+  const result = await ankiXml([
+    "import", path,
+    "--batch-id", batchId,
+    "--rollback-on-partial",
+    "--idempotency-key", `${batchId}-v1`,
+    "--json"
+  ]);
+
+  if (!result.ok) {
+    // No rollback action needed: --rollback-on-partial already restored
+    // the state captured in `${batchId}-pre`. The agent can re-run or
+    // inspect via `audit-log --command import`.
+    throw new BatchError(result.error);
+  }
+}
+```
+
+### Workflow 5: Recovery matrix
+
+| Failure | Recovery command |
+|---|---|
+| Wrong file applied | `anki-xml rollback --to <name>` |
+| Field-name typo | `anki-xml update --rename-field Old=New --ids ...` |
+| Live schema drift | `anki-xml schema-validate <file>` |
+| Network blip mid-write | Re-run with same `--idempotency-key <k>` |
+| Network blip mid-import | `anki-xml import --resume-from <name>` |
+| Partial batch (some null) | `--batch-id X --rollback-on-partial` |
+| Unknown failure | `anki-xml doctor` |
+
 ---
 
 ## Error Code Reference

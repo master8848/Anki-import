@@ -1,5 +1,10 @@
 # anki-xml
 
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Tests](https://img.shields.io/badge/tests-420%20pass-success)](tests/)
+[![Bun](https://img.shields.io/badge/runtime-bun%20%E2%89%A5%201.3-blueviolet)](https://bun.sh)
+[![AnkiConnect](https://img.shields.io/badge/AnkiConnect-%E2%89%A5%206-blue)](https://foosoft.net/projects/anki-connect/)
+
 A command-line tool for importing, querying, and updating
 [Anki](https://apps.ankiweb.net/) flashcards via
 [AnkiConnect](https://foosoft.net/projects/anki-connect/). Built for
@@ -33,7 +38,9 @@ Every command is:
 ## Install
 
 ```sh
-bun install -g anki-xml
+git clone https://github.com/YOUR-USERNAME/anki-xml
+cd anki-xml
+bun install
 ```
 
 Or run directly from a checkout:
@@ -42,16 +49,29 @@ Or run directly from a checkout:
 bun run src/index.ts --help
 ```
 
+Or download a standalone binary from the [Releases page](https://github.com/YOUR-USERNAME/anki-xml/releases):
+
+```sh
+curl -L https://github.com/YOUR-USERNAME/anki-xml/releases/latest/download/anki-xml -o /usr/local/bin/anki-xml
+chmod +x /usr/local/bin/anki-xml
+anki-xml --version
+```
+
+Requires [Bun](https://bun.sh) ≥ 1.3 to build; the standalone
+binary is self-contained.
+
 ## Quick start
 
-1. Start Anki with the AnkiConnect add-on installed.
-2. Verify the CLI can reach it:
+1. Install [Anki](https://apps.ankiweb.net/) and the
+   [AnkiConnect](https://foosoft.net/projects/anki-connect/) add-on.
+2. Start Anki with AnkiConnect loaded.
+3. Verify the CLI can reach it:
 
    ```sh
    anki-xml doctor
    ```
 
-3. Create a file of cards and import it:
+4. Create a file of cards and import it:
 
    ```xml
    <!-- cards.xml -->
@@ -67,33 +87,16 @@ bun run src/index.ts --help
    anki-xml import ./cards.xml
    ```
 
-## Commands (32)
+## Commands (31)
 
-| Command | Purpose |
+| Group | Commands |
 |---|---|
-| `import` | Create notes from an XML file |
-| `validate` | Static-validate an XML file (no AnkiConnect call) |
-| `plan` | Show what `import` would do (dry-run + structured) |
-| `decks` | List decks and card counts |
-| `stats` | Per-state card counts, or `--field <name>` cardinality |
-| `search` | Search notes by query, deck, tag, phrase |
-| `update` | Change field values and tags on existing notes |
-| `tag` / `untag` | Add or remove tags in bulk |
-| `export` | Read notes and emit round-trippable XML |
-| `delete` | Delete notes by query or explicit ids |
-| `rename-deck` / `delete-deck` / `move-notes` | Deck operations |
-| `suspend` / `unsuspend` / `bury` | Card scheduling |
-| `migrate` | Apply schema migration transforms (`assign-guids`) |
-| `diff` | Compare a file against the live collection |
-| `sync` | Reconcile a file with the live collection |
-| `preview` | Open Anki's browser on a query |
-| `profile` | Manage named AnkiConnect URL profiles |
-| `models` / `fields` / `tags` / `note-info` | Schema discovery |
-| `sample` | Random sample of notes (deterministic with `--seed`) |
-| `schema-validate` | Validate a file against the LIVE collection's schema |
-| `checkpoint` / `rollback` / `audit-log` | Recovery & observability |
-| `doctor` | Verify environment is ready |
-| `completion` | Shell completion script (bash/zsh/fish/powershell) |
+| Read / Query | `validate`, `plan`, `decks`, `stats`, `search`, `export`, `diff`, `preview`, `sample`, `schema-validate`, `doctor` |
+| Write | `import`, `update`, `tag`, `untag`, `delete`, `rename-deck`, `delete-deck`, `move-notes`, `suspend`, `unsuspend`, `bury`, `sync` |
+| Schema | `models`, `fields`, `tags`, `note-info` |
+| Lifecycle | `migrate`, `profile` |
+| Recovery | `checkpoint`, `rollback`, `audit-log` |
+| Shell | `completion` |
 
 Run `anki-xml --help` for the full surface, or `anki-xml <command> --help`
 for per-command flags.
@@ -146,7 +149,7 @@ PREVIEW   →  plan --format ndjson --dry-run
 APPLY     →  import / update / tag / delete / sync
 VERIFY    →  search --id ...
 ROLLBACK  →  checkpoint + rollback (or auto via --rollback-on-partial)
-RECOVER   →  --resume-from (M11) or --idempotency-key (M10)
+RECOVER   →  --resume-from or --idempotency-key
 ```
 
 Every write is recorded in `~/.local/share/anki-xml/audit.log` (JSONL).
@@ -156,6 +159,9 @@ Every checkpoint is a JSON snapshot at
 ## Documentation
 
 - [`docs/commands.md`](docs/commands.md) — full command reference
+- [`docs/cli.md`](docs/cli.md) — global flags, exit codes, config
+- [`docs/usage.md`](docs/usage.md) — XML schema for every model
+- [`docs/language.md`](docs/language.md) — elements, attributes, deck inheritance
 - [`docs/field-names.md`](docs/field-names.md) — XML ↔ Anki field name map
 - [`docs/ai-integration.md`](docs/ai-integration.md) — agent workflow guide
 - [`docs/ai-cookbook.md`](docs/ai-cookbook.md) — five-loop agent pattern
@@ -164,13 +170,26 @@ Every checkpoint is a JSON snapshot at
 - [`docs/extension-policy.md`](docs/extension-policy.md) — when to extend
 - [`docs/schema-v2.md`](docs/schema-v2.md) — schema v2 design spec
 
+## Development
+
+```sh
+bun install                  # install deps
+bun test                     # run all 420 tests
+bun test tests/cli.test.ts   # one test file
+bunx tsc --noEmit            # type-check
+bun run build                # standalone binary
+bun run publish:check        # verify safe-to-publish
+```
+
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md). Before opening an issue,
+read [`docs/extension-policy.md`](docs/extension-policy.md) — many
+features are deliberately deferred until enough requests materialize.
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE).
 
 ## Project status
 
