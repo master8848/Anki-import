@@ -11,7 +11,8 @@
 import * as fs from "node:fs/promises";
 import { AnkiConnectClient, AnkiConnectError } from "./anki-connect.ts";
 import { parseDocument, validateNotes, XmlParseError } from "./xml.ts";
-import type { AnkiConnectNote, ImportResult } from "./types.ts";
+import { toAddNotePayloads } from "./anki-payload.ts";
+import type { ImportResult } from "./types.ts";
 
 export interface ImportOptions {
   /** Path to the XML input file. */
@@ -149,13 +150,9 @@ export async function importFromFile(opts: ImportOptions): Promise<ImportOutcome
     }
   }
 
-  const payloads: AnkiConnectNote[] = createNotes.map((n) => ({
-    deckName: n.deckName,
-    modelName: n.modelName,
-    fields: n.fields,
-    tags: n.tags,
-    options: { allowDuplicate: opts.allowDuplicate ?? false },
-  }));
+  const payloads = toAddNotePayloads(createNotes, {
+    allowDuplicate: opts.allowDuplicate,
+  });
 
   let ids: (number | null)[];
   try {

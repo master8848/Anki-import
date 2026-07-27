@@ -54,6 +54,75 @@ function buildQuery(deck: string | undefined, suffix: string): string {
   return `"deck:${deck}" ${suffix}`;
 }
 
+export interface FieldFrequency {
+  value: string;
+  count: number;
+}
+
+export interface FieldStatsResult {
+  field: string;
+  /** Number of distinct non-empty values. */
+  unique: number;
+  /** Number of notes whose field value was empty. */
+  empty: number;
+  /** Top N values by frequency, descending. */
+  top: FieldFrequency[];
+  /** Total notes scanned. */
+  total: number;
+}
+
+export interface FieldStatsOptions {
+  field: string;
+  ankiConnectUrl: string;
+  fetchImpl?: typeof fetch;
+  /** Optional deck filter. */
+  deck?: string;
+  /** Cap the top list. */
+  top?: number;
+}
+
+/**
+ * Cardinality stats for a single field. Walks every matching note
+ * via notesInfo and tallies field values. Use sparingly on large
+ * collections.
+ */
+export async function fetchFieldStats(
+  opts: FieldStatsOptions,
+): Promise<FieldStatsResult> {
+  const client = new AnkiConnectClient({
+    url: opts.ankiConnectUrl,
+    fetchImpl: opts.fetchImpl,
+  });
+  const query = opts.deck ? `"deck:${opts.deck}"` : "";
+  const ids = await client.findNotes(query);
+  const top = opts.top ?? 20;
+  if (ids.length === 0) {
+    return { field: opts.field, unique: 0, empty: 0, top: [], total: 0 };
+  }
+  const infos = await client.notesInfo(ids);
+  const counts = new Map<string, number>();
+  let empty = 0;
+  for (const info of infos) {
+    if (!info) continue;
+    const v = info.fields[opts.field]?.value ?? "";
+    if (v.length === 0) {
+      empty++;
+    } else {
+      counts.set(v, (counts.get(v) ?? 0) + 1);
+    }
+  }
+  const sorted = [...counts.entries()]
+    .map(([value, count]) => ({ value, count }))
+    .sort((a, b) => b.count - a.count);
+  return {
+    field: opts.field,
+    unique: counts.size,
+    empty,
+    top: sorted.slice(0, top),
+    total: ids.length,
+  };
+}
+
 /** Empty zeroed stats. */
 function zeroStats(): CardStats {
   return { new: 0, learn: 0, review: 0, suspended: 0, buried: 0, total: 0, completed: 0, incomplete: 0 };
