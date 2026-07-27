@@ -218,3 +218,61 @@ export function renderUpdate(result: UpdateResult): string {
   }
   return lines.join("\n");
 }
+
+export interface RenameFieldOptions {
+  /** Source field name (Anki display name). */
+  from: string;
+  /** Target field name (Anki display name). */
+  to: string;
+  /** Note ids to update. */
+  noteIds: number[];
+  ankiConnectUrl: string;
+  fetchImpl?: typeof fetch;
+}
+
+export interface RenameFieldResult {
+  attempted: number;
+  renamed: number;
+  failed: { noteId: number; reason: string }[];
+}
+
+/**
+ * Rename a field across many notes (M12 --fix-field).
+ *
+ * For each note: read its current `from` value, write it to `to`,
+ * and clear `from` so the data isn't duplicated. Useful when the
+ * agent imported with the wrong field name and now needs to migrate
+ * the data to the correct one.
+ */
+export async function runRenameField(
+  opts: RenameFieldOptions,
+): Promise<RenameFieldResult> {
+  const client = new AnkiConnectClient({
+    url: opts.ankiConnectUrl,
+    fetchImpl: opts.fetchImpl,
+  });
+  const result: RenameFieldResult = { attempted: 0, renamed: 0, failed: [] };
+  if (opts.noteIds.length === 0) return result;
+  const infos = await client.notesInfo(opts.noteIds);
+  for (const info of infos) {
+    if (!info) continue;
+    result.attempted++;
+    const fromVal = info.fields[opts.from]?.value ?? "";
+    const toVal = info.fields[opts.to]?.value ?? "";
+    if (fromVal.length === 0) {
+      // Nothing to migrate on this note.
+      continue;
+    }
+    try {
+      await client.updateNoteFields(info.noteId, {
+        [opts.to]: fromVal,
+        [opts.from]: "",
+      });
+      result.renamed++;
+    } catch (err) {
+      result.failed.push({ noteId: info.noteId, reason: (err as Error).message });
+    }
+  }
+  void toVal;
+  return result;
+}
