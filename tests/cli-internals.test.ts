@@ -138,6 +138,9 @@ describe("command registry", () => {
       "fields",
       "tags",
       "note-info",
+      "checkpoint",
+      "rollback",
+      "audit-log",
       "completion",
     ]);
   });

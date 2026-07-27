@@ -230,6 +230,11 @@ export class AnkiConnectClient {
     await this.invoke<null>("changeDeck", { notes: noteIds, deck });
   }
 
+  /** Move a single note to a different deck. */
+  async changeDeck(noteId: number, deckName: string): Promise<void> {
+    await this.invoke<null>("changeDeck", { notes: [noteId], deck: deckName });
+  }
+
   /** Delete an entire deck. Permanent; not undoable. */
   async deleteDeck(name: string, cardsToo: boolean): Promise<void> {
     await this.invoke<null>("deleteDeck", { name, cardsToo });
