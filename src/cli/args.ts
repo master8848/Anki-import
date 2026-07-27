@@ -40,6 +40,8 @@ export interface ParsedArgs {
   batchId: string | null;
   /** Rollback automatically when a partial failure occurs (M9). */
   rollbackOnPartial: boolean;
+  /** Explicit config file path (M14). */
+  configPath: string | null;
   /** Loose bag of subcommand-specific flags. Parsed by each command. */
   rest: string[];
 }
@@ -100,6 +102,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
     idempotencyKey: null,
     batchId: null,
     rollbackOnPartial: false,
+    configPath: null,
     rest: [],
   };
 
@@ -185,6 +188,13 @@ export function parseArgs(argv: string[]): ParsedArgs {
     }
     if (a === "--rollback-on-partial") {
       args.rollbackOnPartial = true;
+      continue;
+    }
+    if (a === "--config") {
+      const next = argv[i + 1];
+      if (!next) throw new CliError("--config requires a value");
+      args.configPath = next;
+      i += 2;
       continue;
     }
     if (a === "--url") {

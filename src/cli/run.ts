@@ -13,12 +13,33 @@
 import { CliError, parseArgs, type ParsedArgs } from "./args.ts";
 import { findCommand } from "./registry.ts";
 import { printHelp, printCommandHelp, VERSION } from "./help.ts";
+import { mergeConfigInto, resolveConfig } from "../config.ts";
 
 export async function main(): Promise<number> {
   const argv = process.argv.slice(2);
   let args: ParsedArgs;
   try {
     args = parseArgs(argv);
+  } catch (err) {
+    if (err instanceof CliError) {
+      console.error(`error: ${err.message}`);
+      return 2;
+    }
+    throw err;
+  }
+
+  // Load and merge config (M14). Flags on the command line always
+  // override the config; the config only fills in defaults.
+  try {
+    const { config } = await resolveConfig(args.configPath ?? undefined);
+    mergeConfigInto(config, {
+      url: args.url,
+      profile: args.profile,
+      format: args.format,
+      dryRun: args.dryRun,
+      noColor: args.noColor,
+      quiet: args.quiet,
+    });
   } catch (err) {
     if (err instanceof CliError) {
       console.error(`error: ${err.message}`);
