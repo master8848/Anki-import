@@ -284,6 +284,32 @@ export class AnkiConnectClient {
     await this.invoke<null>("guiBrowse", { query });
   }
 
+  /** Every model name paired with its id. */
+  async modelNamesAndIds(): Promise<{ name: string; id: number }[]> {
+    return await this.invoke<{ name: string; id: number }[]>("modelNamesAndIds");
+  }
+
+  /** Field names for one model. Returns [] if the model doesn't exist. */
+  async modelFieldNames(modelName: string): Promise<string[]> {
+    return await this.invoke<string[]>("modelFieldNames", { modelName });
+  }
+
+  /** Card templates for one model. */
+  async modelTemplates(
+    modelName: string,
+  ): Promise<{ name: string; ord: number }[]> {
+    const result = await this.invoke<
+      Record<string, { Name: string; Ord: number }>
+    >("modelTemplates", { modelName });
+    if (!result) return [];
+    return Object.values(result).map((t) => ({ name: t.Name, ord: t.Ord }));
+  }
+
+  /** Every tag in the collection. */
+  async getTags(): Promise<string[]> {
+    return await this.invoke<string[]>("getTags");
+  }
+
   /** Remove tags from an existing note (idempotent). */
   async removeTags(noteIds: number[], tags: string): Promise<void> {
     await this.invoke<null>("removeTags", { notes: noteIds, tags });

@@ -32,6 +32,10 @@ import diffCmd from "./commands/diff.ts";
 import syncCmd from "./commands/sync.ts";
 import previewCmd from "./commands/preview.ts";
 import profileCmd from "./commands/profile.ts";
+import modelsCmd from "./commands/models.ts";
+import fieldsCmd from "./commands/fields.ts";
+import tagsCmd from "./commands/tags.ts";
+import noteInfoCmd from "./commands/note-info.ts";
 import completionCmd from "./commands/completion.ts";
 
 export const COMMANDS: Command[] = [
@@ -57,6 +61,10 @@ export const COMMANDS: Command[] = [
   syncCmd,
   previewCmd,
   profileCmd,
+  modelsCmd,
+  fieldsCmd,
+  tagsCmd,
+  noteInfoCmd,
   completionCmd,
 ];
 
