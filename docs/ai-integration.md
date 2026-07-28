@@ -25,6 +25,10 @@ roadmap) and an actual AI agent that uses `anki-xml` as its backend.
 6. **The XML file is the agent's scratch space.** Agents should keep one
    XML file per logical unit (batch, deck, project) and use it as a staging
    area between operations.
+7. **Default-safe LaTeX syntax.** Use `[latex]...[/latex]` blocks for math.
+   The `\(...\)` and `\[...\]` delimiters only render when the MathJax
+   add-on (`1610307553`) is installed; run `anki-xml doctor` first to
+   verify, and switch to native `[latex]` if MathJax is missing.
 
 ## JSON Envelope Contract
 
@@ -258,7 +262,42 @@ async function applyBatch(xml: string): Promise<void> {
 | Network blip mid-write | Re-run with same `--idempotency-key <k>` |
 | Network blip mid-import | `anki-xml import --resume-from <name>` |
 | Partial batch (some null) | `--batch-id X --rollback-on-partial` |
+| `\(...\)` shows as literal text | `anki-xml addon install 1610307553` (MathJax) |
 | Unknown failure | `anki-xml doctor` |
+
+## Math / LaTeX Prerequisites
+
+Before generating cards that contain LaTeX, an agent must verify
+the user's Anki supports the chosen syntax. The rules are:
+
+| Syntax | Renders without an add-on? | Add-on required |
+|---|---|---|
+| `[latex]...[/latex]` | yes | none |
+| `\(...\)`, `\[...\]`, `$$...$$` | no | MathJax (AnkiWeb code `1610307553`) |
+
+A pre-flight check that gates math-heavy generation:
+
+```typescript
+async function supportsMathJax(): Promise<boolean> {
+  const doc = await ankiXml(["doctor"]);
+  const check = doc.data?.checks?.find(
+    (c: any) => c.name === "mathjax-addon-installed",
+  );
+  return check?.ok === true;
+}
+
+if (await supportsMathJax()) {
+  // safe to use \( ... \) and \[ ... \]
+  xml = wrapMathJax(xml);
+} else {
+  // fall back to native [latex]...[/latex] which always renders
+  xml = wrapNativeLatex(xml);
+}
+```
+
+If `doctor` reports `addons-queryable` failed, the user's AnkiConnect
+is too old to support add-on queries (action `getAddons` not exposed).
+In that case, always fall back to native `[latex]...[/latex]`.
 
 ---
 

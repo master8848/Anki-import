@@ -5,6 +5,24 @@ this tool unchanged when you put them inside CDATA, because the
 content of a CDATA section is opaque to our escape rule except for
 the three HTML-significant characters `<`, `>`, and `&`.
 
+## Quick reference: which syntax renders by default?
+
+| Syntax | Renders without an add-on? | Requires |
+|---|---|---|
+| `[latex]...[/latex]` | **Yes** (recommended) | Nothing |
+| `\( ... \)` inline MathJax | No | MathJax add-on (`1610307553`) |
+| `\[ ... \]` display MathJax | No | MathJax add-on (`1610307553`) |
+| `$$ ... $$` display MathJax | No | MathJax add-on (`1610307553`) |
+| `<sup>` / `<sub>` / `<table>` | **Yes** | Nothing |
+
+**Default-safe authoring rule for AI agents:** if you cannot guarantee
+the user's Anki has the MathJax add-on installed, only emit
+`[latex]...[/latex]` blocks. Use plain HTML for simple exponents and
+subscripts. Run `anki-xml doctor` before generating math-heavy cards;
+if the `mathjax-addon-installed` check fails, switch to native
+`[latex]...[/latex]` or install the add-on with
+`anki-xml addon install 1610307553`.
+
 ## 1. MathJax inline: `\( ... \)`
 
 The standard LaTeX inline delimiter.
@@ -60,14 +78,15 @@ verbatim in a single CDATA section.)
 
 Anki has its own LaTeX system that is independent of MathJax. You
 write `[latex]...[/latex]` directly in the field and Anki wraps the
-contents in the right `\(...\)` delimiters itself.
+contents in the right `\(...\)` delimiters itself. **This is the
+syntax that renders without installing any add-on.**
 
 ```xml
-<back><![CDATA[
+<front><![CDATA[
 [latex]
 E = mc^2
 [/latex]
-]]></back>
+]]></front>
 ```
 
 becomes (in the Anki field):
@@ -180,3 +199,31 @@ one opaque block and produces the field:
 
 (With `<`, `>`, and bare `&` escaped per `cdata.md`; there are none
 of those in this example.)
+
+## 8. Verifying the user's Anki has MathJax
+
+Before generating math-heavy content with `\(...\)` or `\[...\]`,
+an AI agent should verify the user's Anki has the MathJax add-on
+installed:
+
+```bash
+anki-xml doctor
+```
+
+The `mathjax-addon-installed` check fails if MathJax is missing or
+disabled, and the failure detail tells the agent how to fix it:
+
+```
+anki-xml addon install 1610307553
+```
+
+If `doctor` reports `addons-queryable: failed`, the user's
+AnkiConnect is too old to support add-on queries. In that case, fall
+back to the native `[latex]...[/latex]` syntax which always works.
+
+For per-add-on introspection without running the full `doctor`:
+
+```bash
+anki-xml addon list              # every installed add-on
+anki-xml addon check             # doctor-style check for known add-ons
+```

@@ -15,6 +15,7 @@ Write            import  update  tag  untag  delete  rename-deck
 Schema           models  fields  tags  note-info
 Lifecycle        migrate  profile
 Recovery         checkpoint  rollback  audit-log
+Add-ons          addon
 Shell            completion
 ```
 
@@ -199,14 +200,60 @@ See [`schema-v2.md`](./schema-v2.md) for the future schema v2 story.
 
 ### `doctor`
 
-Pre-flight check: connectivity, version, collection. The agent
-should run this before real work.
+Pre-flight check: connectivity, version, collection, and required
+add-ons. The agent should run this before real work, especially
+before generating math-heavy content.
 
 ```bash
 anki-xml doctor
 ```
 
-Exits 0 when everything is healthy, 1 when any check fails.
+Checks performed (in order):
+
+| # | Check | Fails when |
+|---|---|---|
+| 1 | `anki-connect-reachable` | Anki is not running or the URL is wrong |
+| 2 | `anki-connect-version` | AnkiConnect API version is below 5 |
+| 3 | `collection-has-decks` | The collection has no decks |
+| 4 | `collection-has-models` | The collection has no models (unusual) |
+| 5 | `addons-queryable` | AnkiConnect is too old to expose `getAddons` |
+| 6 | `mathjax-addon-installed` | The MathJax add-on (`1610307553`) is not installed or is disabled |
+
+Exits 0 when every check passes, 1 when any fails. Each failed
+check's `detail` explains how to fix it. The MathJax check's fix is
+either `anki-xml addon install 1610307553` or switching the source
+content to the native `[latex]...[/latex]` syntax, which renders
+without MathJax.
+
+### `addon`
+
+Manage Anki add-ons via AnkiConnect (`getAddons` / `installAddon`
+/ `toggleAddon`).
+
+```bash
+anki-xml addon list                              # every installed add-on
+anki-xml addon install 1610307553                # install MathJax from AnkiWeb
+anki-xml addon enable 1610307553                 # enable an installed add-on
+anki-xml addon disable 1610307553                # disable without uninstalling
+anki-xml addon check                             # doctor-style check for known add-ons
+```
+
+Subcommand semantics:
+
+- `list` — reports every installed add-on with enabled state. Annotates
+  known add-ons (e.g. MathJax) with a description. Requires
+  AnkiConnect that supports `getAddons` (added in AnkiConnect 2.1.55+).
+- `install <code>` — downloads an add-on from AnkiWeb by its numeric
+  code. Requires internet from the Anki host. After install, Anki
+  typically requires a restart for the add-on to load.
+- `enable <code>` / `disable <code>` — toggle an installed add-on
+  on or off. Restart Anki for the change to take effect.
+- `check` — runs the add-on portion of `doctor` in isolation. Returns
+  exit 1 if any known add-on (currently MathJax) is missing or
+  disabled.
+
+Known add-on codes are exported from `src/doctor.ts` as
+`KNOWN_ADDONS` so other tools can reference them without hardcoding.
 
 ---
 

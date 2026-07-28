@@ -42,6 +42,7 @@ import auditLogCmd from "./commands/audit-log.ts";
 import sampleCmd from "./commands/sample.ts";
 import schemaValidateCmd from "./commands/schema-validate.ts";
 import doctorCmd from "./commands/doctor.ts";
+import addonCmd from "./commands/addon.ts";
 import completionCmd from "./commands/completion.ts";
 
 export const COMMANDS: Command[] = [
@@ -77,6 +78,7 @@ export const COMMANDS: Command[] = [
   sampleCmd,
   schemaValidateCmd,
   doctorCmd,
+  addonCmd,
   completionCmd,
 ];
 

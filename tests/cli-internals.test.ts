@@ -144,6 +144,7 @@ describe("command registry", () => {
       "sample",
       "schema-validate",
       "doctor",
+      "addon",
       "completion",
     ]);
   });

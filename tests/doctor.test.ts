@@ -24,14 +24,15 @@ describe("runDoctor", () => {
         ["version", 6],
         ["deckNames", ["Default", "Spanish"]],
         ["modelNames", ["Basic", "Cloze"]],
+        ["getAddons", { "1610307553": true }],
       ]),
     );
     const result = await runDoctor({ fetchImpl });
     expect(result.ok).toBe(true);
     expect(result.checks.every((c) => c.ok)).toBe(true);
-    expect(result.checks.length).toBe(4);
+    expect(result.checks.length).toBe(6);
     expect(result.checks.every((c) => c.ok)).toBe(true);
-    expect(result.checks.length).toBe(4);
+    expect(result.checks.length).toBe(6);
   });
 
   test("flags an unreachable AnkiConnect", async () => {
@@ -73,5 +74,80 @@ describe("runDoctor", () => {
     expect(
       result.checks.some((c) => c.name === "collection-has-decks" && !c.ok),
     ).toBe(true);
+  });
+
+  test("flags MathJax as missing when the add-on is not installed", async () => {
+    const fetchImpl = makeFetch(
+      new Map<string, unknown>([
+        ["version", 6],
+        ["deckNames", ["Default"]],
+        ["modelNames", ["Basic"]],
+        ["getAddons", { "1111111111": true }],
+      ]),
+    );
+    const result = await runDoctor({ fetchImpl });
+    expect(result.ok).toBe(false);
+    const mathjax = result.checks.find(
+      (c) => c.name === "mathjax-addon-installed",
+    );
+    expect(mathjax?.ok).toBe(false);
+    expect(mathjax?.detail).toContain("not installed");
+    expect(mathjax?.detail).toContain("addon install 1610307553");
+  });
+
+  test("flags MathJax as installed-but-disabled", async () => {
+    const fetchImpl = makeFetch(
+      new Map<string, unknown>([
+        ["version", 6],
+        ["deckNames", ["Default"]],
+        ["modelNames", ["Basic"]],
+        ["getAddons", { "1610307553": false }],
+      ]),
+    );
+    const result = await runDoctor({ fetchImpl });
+    expect(result.ok).toBe(false);
+    const mathjax = result.checks.find(
+      (c) => c.name === "mathjax-addon-installed",
+    );
+    expect(mathjax?.ok).toBe(false);
+    expect(mathjax?.detail).toContain("disabled");
+  });
+
+  test("passes MathJax when the add-on is enabled", async () => {
+    const fetchImpl = makeFetch(
+      new Map<string, unknown>([
+        ["version", 6],
+        ["deckNames", ["Default"]],
+        ["modelNames", ["Basic"]],
+        ["getAddons", { "1610307553": true }],
+      ]),
+    );
+    const result = await runDoctor({ fetchImpl });
+    expect(result.ok).toBe(true);
+    const mathjax = result.checks.find(
+      (c) => c.name === "mathjax-addon-installed",
+    );
+    expect(mathjax?.ok).toBe(true);
+    expect(mathjax?.detail).toContain("installed and enabled");
+  });
+
+  test("flags addons-queryable when AnkiConnect does not support getAddons", async () => {
+    const fetchImpl = makeFetch(
+      new Map<string, unknown>([
+        ["version", 6],
+        ["deckNames", ["Default"]],
+        ["modelNames", ["Basic"]],
+      ]),
+    );
+    // No 'getAddons' entry -> mock returns null and the client throws.
+    const result = await runDoctor({ fetchImpl });
+    expect(result.ok).toBe(false);
+    const addons = result.checks.find((c) => c.name === "addons-queryable");
+    expect(addons?.ok).toBe(false);
+    expect(addons?.detail).toContain("older build");
+    // The MathJax check is skipped when add-ons cannot be queried.
+    expect(
+      result.checks.some((c) => c.name === "mathjax-addon-installed"),
+    ).toBe(false);
   });
 });
