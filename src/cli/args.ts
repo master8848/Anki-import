@@ -26,6 +26,10 @@ export interface ParsedArgs {
   autoCreateDeck: boolean | null;
   showHelp: boolean;
   showVersion: boolean;
+  /** Strip ANSI color codes from output. Defaults to false. */
+  noColor: boolean;
+  /** Emit summary-only output. Defaults to false. */
+  quiet: boolean;
   /** Loose bag of subcommand-specific flags. Parsed by each command. */
   rest: string[];
 }
@@ -67,6 +71,8 @@ export function parseArgs(argv: string[]): ParsedArgs {
     autoCreateDeck: null,
     showHelp: false,
     showVersion: false,
+    noColor: false,
+    quiet: false,
     rest: [],
   };
 
@@ -106,6 +112,16 @@ export function parseArgs(argv: string[]): ParsedArgs {
     }
     if (a === "--no-auto-create-deck") {
       args.autoCreateDeck = false;
+      i++;
+      continue;
+    }
+    if (a === "--no-color" || a === "--no-colour") {
+      args.noColor = true;
+      i++;
+      continue;
+    }
+    if (a === "--quiet") {
+      args.quiet = true;
       i++;
       continue;
     }

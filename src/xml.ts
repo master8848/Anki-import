@@ -526,6 +526,20 @@ function parseNotesInner(source: string): ParsedDocument {
   const rootAttrs = (rootEntry[":@"] as Record<string, string> | undefined) ?? {};
   const defaultDeck = rootAttrs["@_deck"] ?? "";
 
+  // Optional `version="N"` attribute on <anki> for forward-compat with
+  // future schema versions. v1 is the default; explicit "1" is a no-op.
+  // Any other value is a validation error so authors learn early when
+  // they're writing against a schema the current CLI doesn't support.
+  const versionAttr = rootAttrs["@_version"];
+  if (versionAttr !== undefined && versionAttr !== "1") {
+    // We'll surface this as a validation error after parsing so the
+    // caller gets a clean report. Throw with a sentinel message that
+    // the validator can match.
+    throw new XmlParseError(
+      `Unsupported <anki version="${versionAttr}">; this CLI targets schema version 1. Remove the attribute or set version="1".`,
+    );
+  }
+
   const rootChildren = nodeChildren(rootEntry) ?? [];
 
   const tokens = tokenizeXml(source);
