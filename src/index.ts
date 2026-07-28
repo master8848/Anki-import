@@ -119,6 +119,7 @@ async function runImport(args: ParsedArgs): Promise<number> {
     outcome = await importFromFile({
       inputPath: file,
       ankiConnectUrl: args.url,
+      dryRun: args.dryRun,
     });
   } catch (err) {
     if (err instanceof CliError) {
@@ -145,7 +146,7 @@ async function runImport(args: ParsedArgs): Promise<number> {
   // Dry-run stops after validation.
   if (args.dryRun) {
     console.log("Dry run: validation passed, AnkiConnect was not contacted.");
-    console.log(`Would have created ${outcome.result.created} notes.`);
+    console.log(`Would have created ${outcome.validCount} notes.`);
     return 0;
   }
 
@@ -197,5 +198,8 @@ async function main(): Promise<number> {
 
 // `await main()` at top level does NOT propagate the returned exit
 // code on Bun (process exits with 0 regardless). Explicit
-// `process.exit()` is required.
-process.exit(await main());
+// `process.exit()` is required, but only when this module is the
+// CLI entry point — not when it's imported by tests.
+if (import.meta.main) {
+  process.exit(await main());
+}
