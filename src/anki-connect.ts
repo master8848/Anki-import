@@ -331,6 +331,51 @@ export class AnkiConnectClient {
   }
 
   /**
+   * List every installed Anki add-on. The returned object maps each
+   * AnkiWeb add-on code (as a string) to a boolean indicating whether
+   * the add-on is currently enabled.
+   *
+   * Useful for `doctor` and the `addon list` command. Requires an
+   * AnkiConnect build that exposes the `getAddons` action; older
+   * AnkiConnect versions will return a non-object result.
+   */
+  async getAddons(): Promise<Record<string, boolean>> {
+    const res = await this.invoke<Record<string, boolean> | null>("getAddons");
+    if (res === null || typeof res !== "object" || Array.isArray(res)) {
+      throw new AnkiConnectError(
+        `Unexpected response from 'getAddons': ${JSON.stringify(res)}`,
+      );
+    }
+    return res;
+  }
+
+  /**
+   * Install an Anki add-on by its AnkiWeb code (e.g. `1610307553` for
+   * MathJax). Requires internet access from the Anki host and an
+   * AnkiConnect build that exposes the `installAddon` action.
+   *
+   * Returns the AnkiWeb code as a string. After install, the user
+   * typically needs to restart Anki for the add-on to load.
+   */
+  async installAddon(addonId: string): Promise<string> {
+    const res = await this.invoke<string | null>("installAddon", { id: addonId });
+    if (typeof res !== "string") {
+      throw new AnkiConnectError(
+        `Unexpected response from 'installAddon': ${JSON.stringify(res)}`,
+      );
+    }
+    return res;
+  }
+
+  /**
+   * Enable or disable an already-installed Anki add-on. Useful for the
+   * `addon enable` / `addon disable` commands.
+   */
+  async toggleAddon(addonId: string, enable: boolean): Promise<void> {
+    await this.invoke<null>("toggleAddon", { addonId, enable });
+  }
+
+  /**
    * Low-level JSON-RPC invocation. Throws on network failure, non-2xx
    * status, or an envelope-level `error`. Per-note failures are NOT
    * thrown here — they appear as `null` in the result array.

@@ -8,6 +8,12 @@
  *   2. AnkiConnect reports a version we understand.
  *   3. The collection has at least one deck.
  *   4. The collection has at least one model.
+ *   5. AnkiConnect can query installed add-ons (`getAddons`).
+ *   6. The MathJax add-on (AnkiWeb code 1610307553) is installed and
+ *      enabled. MathJax is required to render the inline `\(...\)` and
+ *      display `\[...\]` delimiters. The native `[latex]...[/latex]`
+ *      syntax renders without it; this check warns only if you might
+ *      rely on the MathJax-only delimiters.
  *
  * Each check returns a structured pass/fail with diagnostic detail.
  * The command exits 0 when every check passes and 1 when any fails.
@@ -16,6 +22,26 @@
  */
 
 import { AnkiConnectClient, AnkiConnectError } from "./anki-connect.ts";
+
+/**
+ * AnkiWeb add-on code for the MathJax add-on (by Alexander Prüfer).
+ * Source: https://ankiweb.net/shared/info/1610307553
+ *
+ * MathJax is the canonical way to render LaTeX in Anki, but it is NOT
+ * installed by default. Authors who write `\(...\)` or `\[...\]` in
+ * their cards must have this add-on installed and enabled, or the
+ * delimiters will appear as literal text in the reviewer.
+ */
+export const MATHJAX_ADDON_CODE = "1610307553";
+
+/** Well-known AnkiWeb codes the doctor cares about, keyed by stable name. */
+export const KNOWN_ADDONS: Record<string, { code: string; description: string }> = {
+  mathjax: {
+    code: MATHJAX_ADDON_CODE,
+    description:
+      "MathJax inline/display LaTeX rendering for \(...\) and \[...\]",
+  },
+};
 
 export interface DoctorCheck {
   name: string;
@@ -116,6 +142,62 @@ export async function runDoctor(opts: DoctorOptions): Promise<DoctorResult> {
       name: "collection-has-models",
       ok: false,
       detail: `could not list models: ${(err as Error).message}`,
+    });
+  }
+
+  // Check 5: AnkiConnect can query installed add-ons. This is a soft
+  // capability check -- older AnkiConnect builds do not expose
+  // `getAddons`, so we report it as a check that may legitimately
+  // fail on older installations without failing the whole doctor run.
+  let installedAddons: Record<string, boolean> | null = null;
+  try {
+    installedAddons = await client.getAddons();
+    const count = Object.keys(installedAddons).length;
+    checks.push({
+      name: "addons-queryable",
+      ok: true,
+      detail: `AnkiConnect reported ${count} add-on(s)`,
+    });
+  } catch (err) {
+    checks.push({
+      name: "addons-queryable",
+      ok: false,
+      detail:
+        `AnkiConnect does not support add-on queries (likely an older build): ${(err as Error).message}`,
+    });
+    // Subsequent add-on checks need the addons map; bail on those.
+    return { url, checks, ok: checks.every((c) => c.ok) };
+  }
+
+  // Check 6: MathJax add-on installed and enabled. Without it,
+  // `\(...\)` and `\[...\]` show as literal text. The native Anki
+  // `[latex]...[/latex]` syntax still works regardless, so this check
+  // reports the situation but is informational about the rendering
+  // paths that require it.
+  const mathjaxEnabled = installedAddons[MATHJAX_ADDON_CODE] === true;
+  const mathjaxInstalled = Object.prototype.hasOwnProperty.call(
+    installedAddons,
+    MATHJAX_ADDON_CODE,
+  );
+  if (mathjaxEnabled) {
+    checks.push({
+      name: "mathjax-addon-installed",
+      ok: true,
+      detail: `MathJax add-on ${MATHJAX_ADDON_CODE} is installed and enabled`,
+    });
+  } else if (mathjaxInstalled) {
+    checks.push({
+      name: "mathjax-addon-installed",
+      ok: false,
+      detail:
+        `MathJax add-on ${MATHJAX_ADDON_CODE} is installed but disabled; enable it in Anki's add-ons screen, or use the native [latex]...[/latex] syntax which renders without MathJax`,
+    });
+  } else {
+    checks.push({
+      name: "mathjax-addon-installed",
+      ok: false,
+      detail:
+        `MathJax add-on ${MATHJAX_ADDON_CODE} is not installed; run \`anki-xml addon install ${MATHJAX_ADDON_CODE}\` to install it, or use the native [latex]...[/latex] syntax which renders without MathJax`,
     });
   }
 

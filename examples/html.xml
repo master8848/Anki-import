@@ -1,0 +1,426 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  100 flashcards for studying HTML.
+
+  The cards use Anki's built-in Basic note type and cover foundations,
+  text, links and media, lists and tables, semantic elements, forms,
+  and accessibility. HTML examples are escaped as XML entities so they
+  render as code in Anki.
+-->
+<anki deck="AI Import::HTML">
+
+  <!-- Foundations (1-20) -->
+  <note type="Basic" tags="html foundations">
+    <front>What does HTML stand for, and what is its primary purpose?</front>
+    <back>HTML stands for <b>HyperText Markup Language</b>. It describes the structure and meaning of web content; CSS presents it and JavaScript adds behavior.</back>
+  </note>
+  <note type="Basic" tags="html foundations">
+    <front>How do HTML, CSS, and JavaScript differ?</front>
+    <back>HTML provides content and structure, CSS controls presentation and layout, and JavaScript provides scripting and dynamic behavior.</back>
+  </note>
+  <note type="Basic" tags="html foundations">
+    <front>What is the purpose of <code>&lt;!DOCTYPE html&gt;</code>?</front>
+    <back>It tells the browser to use standards mode for the document. In HTML5, the declaration is short and case-insensitive; it is not an HTML element.</back>
+  </note>
+  <note type="Basic" tags="html foundations">
+    <front>What is the role of the <code>&lt;html&gt;</code> element?</front>
+    <back>It is the root element containing the whole document, including <code>&lt;head&gt;</code> and <code>&lt;body&gt;</code>. Its <code>lang</code> attribute should identify the document language.</back>
+  </note>
+  <note type="Basic" tags="html foundations">
+    <front>What belongs in an HTML document's <code>&lt;head&gt;</code>?</front>
+    <back>Metadata and resources for the document, such as <code>&lt;title&gt;</code>, <code>&lt;meta&gt;</code>, stylesheets, scripts, icons, and preload hints. Visible page content belongs in <code>&lt;body&gt;</code>.</back>
+  </note>
+  <note type="Basic" tags="html foundations">
+    <front>What belongs inside <code>&lt;body&gt;</code>?</front>
+    <back>The document content rendered in the page: headings, paragraphs, links, images, forms, lists, tables, and other visible or interactive elements.</back>
+  </note>
+  <note type="Basic" tags="html accessibility">
+    <front>Why should the root element include a <code>lang</code> attribute?</front>
+    <back>It tells browsers and assistive technologies the language of the content, improving pronunciation, translation, and accessibility. Example: <code>&lt;html lang=&quot;en&quot;&gt;</code>.</back>
+  </note>
+  <note type="Basic" tags="html metadata">
+    <front>What does <code>&lt;meta charset=&quot;UTF-8&quot;&gt;</code> do?</front>
+    <back>It declares the document's character encoding as UTF-8, allowing a broad range of characters to be interpreted correctly. It should appear near the beginning of <code>&lt;head&gt;</code>.</back>
+  </note>
+  <note type="Basic" tags="html metadata responsive">
+    <front>What is the purpose of the viewport meta tag?</front>
+    <back>It controls the layout viewport on mobile devices. The common value <code>width=device-width, initial-scale=1</code> makes the CSS viewport match the device width and starts at normal zoom.</back>
+  </note>
+  <note type="Basic" tags="html metadata">
+    <front>What does the <code>&lt;title&gt;</code> element provide?</front>
+    <back>The document title shown in the browser tab, bookmarks, history, and often search results. Each document should have one descriptive <code>&lt;title&gt;</code> in its <code>&lt;head&gt;</code>.</back>
+  </note>
+  <note type="Basic" tags="html metadata seo">
+    <front>What is the purpose of <code>&lt;meta name=&quot;description&quot;&gt;</code>?</front>
+    <back>It supplies a short description of the page that search engines may use in result snippets. It does not directly determine the page's ranking.</back>
+  </note>
+  <note type="Basic" tags="html syntax">
+    <front>How do you write an HTML comment?</front>
+    <back>Use <code>&lt;!-- comment text --&gt;</code>. Comments are ignored by the browser when rendering, but they remain visible in the source.</back>
+  </note>
+  <note type="Basic" tags="html syntax">
+    <front>What is an HTML element?</front>
+    <back>An element is a complete piece of markup, usually consisting of an opening tag, content, and a closing tag, such as <code>&lt;p&gt;Text&lt;/p&gt;</code>. Some elements are void and have no closing tag.</back>
+  </note>
+  <note type="Basic" tags="html syntax">
+    <front>What is the difference between a tag and an HTML element?</front>
+    <back>A tag is the markup delimiter such as <code>&lt;p&gt;</code> or <code>&lt;/p&gt;</code>; an element includes the tags plus its content and children.</back>
+  </note>
+  <note type="Basic" tags="html syntax">
+    <front>What is an HTML attribute?</front>
+    <back>An attribute supplies extra information or configuration on an element's opening tag, for example <code>href</code> on an anchor or <code>alt</code> on an image. Most values use quotes.</back>
+  </note>
+  <note type="Basic" tags="html syntax">
+    <front>What is a boolean attribute?</front>
+    <back>A boolean attribute represents true by being present and false by being absent. Its value is not normally needed; for example, <code>&lt;input required&gt;</code> means the control is required.</back>
+  </note>
+  <note type="Basic" tags="html syntax">
+    <front>What are global HTML attributes?</front>
+    <back>Attributes usable on most or all HTML elements, including <code>id</code>, <code>class</code>, <code>title</code>, <code>hidden</code>, <code>lang</code>, <code>dir</code>, and <code>data-*</code>.</back>
+  </note>
+  <note type="Basic" tags="html attributes">
+    <front>What makes an HTML <code>id</code> value valid and useful?</front>
+    <back>An <code>id</code> uniquely identifies an element within the document. It must not contain spaces; it can be targeted by fragment links, CSS, JavaScript, and accessibility relationships.</back>
+  </note>
+  <note type="Basic" tags="html attributes css">
+    <front>What is the purpose of the <code>class</code> attribute?</front>
+    <back>It assigns one or more space-separated class names to an element. Classes are reusable hooks for CSS and JavaScript, unlike an <code>id</code>, which should be unique.</back>
+  </note>
+  <note type="Basic" tags="html attributes javascript">
+    <front>What are <code>data-*</code> attributes used for?</front>
+    <back>They store custom, non-visible data on standard HTML elements without inventing invalid attributes. JavaScript can read them through <code>element.dataset</code>; for example, <code>data-user-id</code> maps to <code>dataset.userId</code>.</back>
+  </note>
+  <note type="Basic" tags="html attributes">
+    <front>What does the <code>hidden</code> attribute do?</front>
+    <back>It marks an element as not currently relevant for presentation. User agents generally hide it, but it is not a security mechanism; CSS or JavaScript can reveal the element.</back>
+  </note>
+
+  <!-- Text and inline semantics (21-40) -->
+  <note type="Basic" tags="html text headings">
+    <front>What are <code>&lt;h1&gt;</code> through <code>&lt;h6&gt;</code> used for?</front>
+    <back>They are six levels of section headings, from highest importance (<code>&lt;h1&gt;</code>) to lowest (<code>&lt;h6&gt;</code>). Choose the level based on document structure, not visual size.</back>
+  </note>
+  <note type="Basic" tags="html text headings accessibility">
+    <front>What is a good rule for heading hierarchy?</front>
+    <back>Use headings in a logical outline: a page normally has one primary <code>&lt;h1&gt;</code>, followed by nested <code>&lt;h2&gt;</code> and <code>&lt;h3&gt;</code> sections as needed. Do not skip levels merely to change font size.</back>
+  </note>
+  <note type="Basic" tags="html text">
+    <front>What does the <code>&lt;p&gt;</code> element represent?</front>
+    <back>A paragraph of prose. Browsers normally render paragraphs as block-level content with spacing between them; use CSS for that spacing rather than empty paragraphs.</back>
+  </note>
+  <note type="Basic" tags="html text">
+    <front>When should <code>&lt;br&gt;</code> be used?</front>
+    <back>Use it for a meaningful line break within phrasing content, such as a postal address or poem. Do not use repeated <code>&lt;br&gt;</code> elements for layout; use CSS instead.</back>
+  </note>
+  <note type="Basic" tags="html text">
+    <front>What does <code>&lt;hr&gt;</code> represent semantically?</front>
+    <back>A thematic break between paragraphs or sections, such as a change of topic. Its visual line is only a default presentation that CSS can change.</back>
+  </note>
+  <note type="Basic" tags="html text semantics">
+    <front>What is the difference between <code>&lt;strong&gt;</code> and <code>&lt;b&gt;</code>?</front>
+    <back><code>&lt;strong&gt;</code> conveys strong importance, seriousness, or urgency. <code>&lt;b&gt;</code> draws attention without adding importance. Both may appear bold by default, but meaning should guide the choice.</back>
+  </note>
+  <note type="Basic" tags="html text semantics">
+    <front>What is the difference between <code>&lt;em&gt;</code> and <code>&lt;i&gt;</code>?</front>
+    <back><code>&lt;em&gt;</code> marks stress emphasis that can change a sentence's meaning. <code>&lt;i&gt;</code> marks text set apart from normal prose, such as a term, idiom, or taxonomic name, without stress emphasis.</back>
+  </note>
+  <note type="Basic" tags="html text semantics">
+    <front>What does the <code>&lt;mark&gt;</code> element mean?</front>
+    <back>It marks text as relevant or highlighted in the current context, such as search-result matches. Its default yellow background is presentation, not the meaning itself.</back>
+  </note>
+  <note type="Basic" tags="html text semantics">
+    <front>What is the purpose of <code>&lt;small&gt;</code>?</front>
+    <back>It represents side comments, small print, or fine print such as copyright and legal text. It does not make arbitrary text more important or provide a reliable accessibility label.</back>
+  </note>
+  <note type="Basic" tags="html text semantics">
+    <front>How do <code>&lt;del&gt;</code> and <code>&lt;ins&gt;</code> represent document edits?</front>
+    <back><code>&lt;del&gt;</code> represents content that was removed, while <code>&lt;ins&gt;</code> represents content that was added. Optional <code>datetime</code> attributes can record when the change occurred.</back>
+  </note>
+  <note type="Basic" tags="html text">
+    <front>What are <code>&lt;sub&gt;</code> and <code>&lt;sup&gt;</code> for?</front>
+    <back><code>&lt;sub&gt;</code> marks subscript text, such as the 2 in H<sub>2</sub>O. <code>&lt;sup&gt;</code> marks superscript text, such as an exponent or footnote marker. They are semantic, not general positioning tools.</back>
+  </note>
+  <note type="Basic" tags="html text semantics">
+    <front>How should a long quotation be marked up?</front>
+    <back>Use <code>&lt;blockquote&gt;</code> for a quotation from another source. A <code>cite</code> attribute may contain the source URL, while a visible source can be marked with <code>&lt;cite&gt;</code>.</back>
+  </note>
+  <note type="Basic" tags="html text semantics">
+    <front>When should <code>&lt;q&gt;</code> be used instead of <code>&lt;blockquote&gt;</code>?</front>
+    <back>Use <code>&lt;q&gt;</code> for a short inline quotation and <code>&lt;blockquote&gt;</code> for a standalone, longer quotation. Browsers may add quotation marks around <code>&lt;q&gt;</code> automatically.</back>
+  </note>
+  <note type="Basic" tags="html text accessibility">
+    <front>What does <code>&lt;abbr title=&quot;...&quot;&gt;</code> provide?</front>
+    <back><code>&lt;abbr&gt;</code> identifies an abbreviation or acronym. The <code>title</code> attribute can provide its expanded form, though important expansions should also be understandable from visible content.</back>
+  </note>
+  <note type="Basic" tags="html text semantics">
+    <front>What is the purpose of the <code>&lt;time&gt;</code> element?</front>
+    <back>It represents a date, time, duration, or machine-readable timestamp. Use <code>datetime</code> for a parseable value, for example <code>&lt;time datetime=&quot;2025-01-01&quot;&gt;New Year's Day&lt;/time&gt;</code>.</back>
+  </note>
+  <note type="Basic" tags="html text code">
+    <front>Which element marks a short fragment of computer code?</front>
+    <back>Use <code>&lt;code&gt;</code> for a short inline fragment, such as <code>npm install</code>. It conveys code semantics; the browser's monospace styling is only a default.</back>
+  </note>
+  <note type="Basic" tags="html text code">
+    <front>What is <code>&lt;pre&gt;</code> used for?</front>
+    <back>It represents preformatted text where whitespace and line breaks are significant. It is commonly combined with <code>&lt;code&gt;</code> for multi-line source code: <code>&lt;pre&gt;&lt;code&gt;...&lt;/code&gt;&lt;/pre&gt;</code>.</back>
+  </note>
+  <note type="Basic" tags="html text code">
+    <front>What do <code>&lt;kbd&gt;</code>, <code>&lt;samp&gt;</code>, and <code>&lt;var&gt;</code> represent?</front>
+    <back><code>&lt;kbd&gt;</code> marks user input such as a key, <code>&lt;samp&gt;</code> marks sample output from a program, and <code>&lt;var&gt;</code> marks a variable or placeholder.</back>
+  </note>
+  <note type="Basic" tags="html syntax entities">
+    <front>How do you write a literal less-than sign in HTML text?</front>
+    <back>Use the character reference <code>&amp;lt;</code>. Likewise, use <code>&amp;gt;</code> for a greater-than sign when needed and <code>&amp;amp;</code> for an ampersand that must not begin a character reference.</back>
+  </note>
+  <note type="Basic" tags="html text">
+    <front>How does HTML normally treat consecutive spaces and line breaks in text?</front>
+    <back>Normal HTML rendering collapses runs of whitespace into a single space. Use semantic elements, CSS such as <code>white-space</code>, or <code>&lt;pre&gt;</code> when whitespace must be preserved.</back>
+  </note>
+
+  <!-- Links and media (41-56) -->
+  <note type="Basic" tags="html links">
+    <front>What does the <code>&lt;a&gt;</code> element create?</front>
+    <back>It creates a hyperlink when it has an <code>href</code> destination. The linked text should describe the destination or action, rather than saying only “click here.”</back>
+  </note>
+  <note type="Basic" tags="html links">
+    <front>What is the difference between an absolute and a relative URL?</front>
+    <back>An absolute URL includes the scheme and host, such as <code>https://example.com/docs</code>. A relative URL is resolved from the current document or base URL, such as <code>../docs</code> or <code>/docs</code>.</back>
+  </note>
+  <note type="Basic" tags="html links">
+    <front>How do you link to a location within the current page?</front>
+    <back>Give the destination element a unique <code>id</code>, then use a fragment URL such as <code>href=&quot;#contact&quot;</code>. The browser scrolls to the element with <code>id=&quot;contact&quot;</code>.</back>
+  </note>
+  <note type="Basic" tags="html links security">
+    <front>What should usually accompany <code>target=&quot;_blank&quot;</code>?</front>
+    <back>Use <code>rel=&quot;noopener&quot;</code> to prevent the new page from controlling the opener through <code>window.opener</code>. Modern browsers often imply <code>noopener</code>, but stating it explicitly is clear; add <code>noreferrer</code> only when its referrer behavior is wanted.</back>
+  </note>
+  <note type="Basic" tags="html links">
+    <front>How can an anchor start an email or telephone action?</front>
+    <back>Use a scheme in <code>href</code>: <code>mailto:person@example.com</code> for email or <code>tel:+15551234567</code> for telephone links. The device decides which application handles the scheme.</back>
+  </note>
+  <note type="Basic" tags="html media accessibility">
+    <front>Which element embeds an image, and which attributes are essential?</front>
+    <back>Use <code>&lt;img src=&quot;...&quot; alt=&quot;...&quot;&gt;</code>. <code>src</code> identifies the image resource and <code>alt</code> provides its text alternative. <code>img</code> is a void element.</back>
+  </note>
+  <note type="Basic" tags="html media accessibility">
+    <front>How should the <code>alt</code> value differ for informative and decorative images?</front>
+    <back>For an informative image, describe its relevant purpose or content. For a purely decorative image, use <code>alt=&quot;&quot;</code> so assistive technology can skip it. Do not repeat nearby visible text unnecessarily.</back>
+  </note>
+  <note type="Basic" tags="html media">
+    <front>When should <code>&lt;figure&gt;</code> and <code>&lt;figcaption&gt;</code> be used?</front>
+    <back>Use <code>&lt;figure&gt;</code> for self-contained content such as an image, diagram, code sample, or quote that can be moved away from the main flow. Put its visible caption in <code>&lt;figcaption&gt;</code>.</back>
+  </note>
+  <note type="Basic" tags="html media responsive">
+    <front>What problem does <code>&lt;picture&gt;</code> solve?</front>
+    <back>It provides art direction or alternative image sources selected by media conditions, with a fallback <code>&lt;img&gt;</code>. Use it when different crops or formats are needed, not merely to list resolutions.</back>
+  </note>
+  <note type="Basic" tags="html media responsive">
+    <front>What are <code>srcset</code> and <code>sizes</code> used for on images?</front>
+    <back><code>srcset</code> lists candidate image resources, commonly with width or pixel-density descriptors. <code>sizes</code> tells the browser the rendered width under viewport conditions so it can choose an efficient candidate.</back>
+  </note>
+  <note type="Basic" tags="html media performance">
+    <front>What does <code>loading=&quot;lazy&quot;</code> do on an image or iframe?</front>
+    <back>It hints that the browser may defer loading the resource until it is near the viewport. It can improve initial performance, but it is only a hint and should not be used for critical above-the-fold content.</back>
+  </note>
+  <note type="Basic" tags="html media">
+    <front>How do you embed audio with HTML?</front>
+    <back>Use <code>&lt;audio controls&gt;</code> with one or more <code>&lt;source src=&quot;...&quot; type=&quot;...&quot;&gt;</code> elements and fallback text. The <code>controls</code> attribute displays the browser's playback controls.</back>
+  </note>
+  <note type="Basic" tags="html media">
+    <front>How do you embed video with HTML?</front>
+    <back>Use <code>&lt;video controls&gt;</code>, optionally with <code>width</code>, <code>poster</code>, and multiple <code>&lt;source&gt;</code> elements. Include fallback text and provide captions when dialogue or important audio is present.</back>
+  </note>
+  <note type="Basic" tags="html media accessibility">
+    <front>What is the purpose of <code>&lt;track kind=&quot;captions&quot;&gt;</code>?</front>
+    <back>It associates a timed text file, usually WebVTT, with audio or video. Captions make spoken dialogue and meaningful sounds available to deaf or hard-of-hearing users.</back>
+  </note>
+  <note type="Basic" tags="html media security">
+    <front>What does an <code>&lt;iframe&gt;</code> do, and what security control is commonly useful?</front>
+    <back>It embeds another browsing context, such as another page or an external widget. Use the <code>sandbox</code> attribute to restrict capabilities, and grant only needed exceptions with sandbox tokens.</back>
+  </note>
+
+  <!-- Lists and tables (57-68) -->
+  <note type="Basic" tags="html lists">
+    <front>When should you use <code>&lt;ul&gt;</code>?</front>
+    <back>Use an unordered list when the order of the items is not meaningful. Each direct child item should normally be an <code>&lt;li&gt;</code>.</back>
+  </note>
+  <note type="Basic" tags="html lists">
+    <front>When should you use <code>&lt;ol&gt;</code>?</front>
+    <back>Use an ordered list when sequence or ranking matters, such as steps in a procedure. Its <code>start</code>, <code>reversed</code>, and <code>type</code> attributes can adjust numbering semantics.</back>
+  </note>
+  <note type="Basic" tags="html lists">
+    <front>What are <code>&lt;dl&gt;</code>, <code>&lt;dt&gt;</code>, and <code>&lt;dd&gt;</code> for?</front>
+    <back>They represent a description list: <code>&lt;dt&gt;</code> contains a term or name and <code>&lt;dd&gt;</code> contains its description or value. They can represent glossaries, metadata, or question-and-answer pairs.</back>
+  </note>
+  <note type="Basic" tags="html lists">
+    <front>How do you create a nested list?</front>
+    <back>Place the nested <code>&lt;ul&gt;</code> or <code>&lt;ol&gt;</code> inside the parent list item's <code>&lt;li&gt;</code>, after the parent item's text. Do not make the nested list a direct child of the outer list beside an <code>&lt;li&gt;</code>.</back>
+  </note>
+  <note type="Basic" tags="html tables">
+    <front>When is the <code>&lt;table&gt;</code> element appropriate?</front>
+    <back>Use it for two-dimensional tabular data where rows and columns have relationships. Do not use tables solely for page layout; use CSS layout systems instead.</back>
+  </note>
+  <note type="Basic" tags="html tables accessibility">
+    <front>What does <code>&lt;caption&gt;</code> provide for a table?</front>
+    <back>A visible title or brief explanation of the table's purpose. It should be the first child of <code>&lt;table&gt;</code> and helps users decide whether the table is relevant.</back>
+  </note>
+  <note type="Basic" tags="html tables">
+    <front>What are <code>&lt;thead&gt;</code>, <code>&lt;tbody&gt;</code>, and <code>&lt;tfoot&gt;</code> used for?</front>
+    <back>They group table header rows, body rows, and footer or summary rows. The groups improve structure and can help styling and accessibility; <code>&lt;tbody&gt;</code> is commonly used for the main data.</back>
+  </note>
+  <note type="Basic" tags="html tables accessibility">
+    <front>What is the difference between <code>&lt;th&gt;</code> and <code>&lt;td&gt;</code>?</front>
+    <back><code>&lt;th&gt;</code> is a header cell that labels a row or column, while <code>&lt;td&gt;</code> is a data cell. Header cells carry semantic relationships that ordinary bold text does not.</back>
+  </note>
+  <note type="Basic" tags="html tables accessibility">
+    <front>What does the <code>scope</code> attribute on a table header communicate?</front>
+    <back>It identifies which cells a header applies to. Common values are <code>col</code>, <code>row</code>, <code>colgroup</code>, and <code>rowgroup</code>; this helps assistive technologies associate headers with data.</back>
+  </note>
+  <note type="Basic" tags="html tables">
+    <front>What do <code>colspan</code> and <code>rowspan</code> do?</front>
+    <back><code>colspan</code> makes a cell span multiple columns, while <code>rowspan</code> makes it span multiple rows. Their numeric values change the table's grid and must match the intended structure.</back>
+  </note>
+  <note type="Basic" tags="html tables accessibility">
+    <front>How can a complex table associate headers with data cells?</front>
+    <back>Give headers unique <code>id</code> values and put a space-separated list of those IDs in each data cell's <code>headers</code> attribute. For simpler tables, <code>scope</code> is usually preferable.</back>
+  </note>
+  <note type="Basic" tags="html tables">
+    <front>Why should CSS, rather than HTML tables, handle page layout?</front>
+    <back>Tables express data relationships and impose a tabular accessibility structure. Using them for layout makes responsive design and navigation harder and can mislead assistive technology users.</back>
+  </note>
+
+  <!-- Semantic structure (69-79) -->
+  <note type="Basic" tags="html semantics accessibility">
+    <front>What is semantic HTML?</front>
+    <back>Semantic HTML uses elements according to their meaning and purpose, such as <code>&lt;nav&gt;</code> for navigation and <code>&lt;button&gt;</code> for an action. It improves accessibility, maintainability, and machine understanding.</back>
+  </note>
+  <note type="Basic" tags="html semantics">
+    <front>What content commonly belongs in <code>&lt;header&gt;</code>?</front>
+    <back>Introductory content for a page or section, such as a heading, logo, author information, or navigation. A document can have multiple headers when sections or articles need their own introductions.</back>
+  </note>
+  <note type="Basic" tags="html semantics accessibility">
+    <front>What is <code>&lt;nav&gt;</code> for?</front>
+    <back>It marks a major block of navigation links, such as a primary menu, table of contents, or pagination. Not every group of links needs to be inside <code>&lt;nav&gt;</code>.</back>
+  </note>
+  <note type="Basic" tags="html semantics accessibility">
+    <front>What is the purpose of <code>&lt;main&gt;</code>?</front>
+    <back>It contains the dominant, unique content of the document. There should normally be one visible <code>&lt;main&gt;</code> per page, excluding repeated navigation, headers, and footers.</back>
+  </note>
+  <note type="Basic" tags="html semantics">
+    <front>When should content be an <code>&lt;article&gt;</code>?</front>
+    <back>Use <code>&lt;article&gt;</code> for a self-contained composition that could be distributed or understood independently, such as a post, news story, comment, or product card.</back>
+  </note>
+  <note type="Basic" tags="html semantics">
+    <front>When should content be a <code>&lt;section&gt;</code>?</front>
+    <back>Use <code>&lt;section&gt;</code> for a thematic grouping of content, usually with a heading. Do not use it as a generic styling wrapper when <code>&lt;div&gt;</code> is more accurate.</back>
+  </note>
+  <note type="Basic" tags="html semantics accessibility">
+    <front>What does <code>&lt;aside&gt;</code> represent?</front>
+    <back>Content tangentially related to its surrounding content, such as a sidebar, related links, pull quote, or glossary. It is not simply a synonym for any content placed on the side visually.</back>
+  </note>
+  <note type="Basic" tags="html semantics">
+    <front>What is the role of <code>&lt;footer&gt;</code>?</front>
+    <back>It contains footer information for its nearest sectioning content or the page, such as author details, copyright, related links, or navigation. A page and its articles can each have a footer.</back>
+  </note>
+  <note type="Basic" tags="html semantics">
+    <front>When should you use <code>&lt;div&gt;</code>?</front>
+    <back>Use <code>&lt;div&gt;</code> as a generic block container when no more meaningful semantic element fits. It has no inherent meaning and should not replace headings, buttons, links, or landmarks.</back>
+  </note>
+  <note type="Basic" tags="html semantics">
+    <front>What is the purpose of <code>&lt;span&gt;</code>?</front>
+    <back>It is a generic inline container with no inherent meaning, useful for styling or scripting a run of phrasing content when a semantic inline element does not apply.</back>
+  </note>
+  <note type="Basic" tags="html interactive">
+    <front>What do <code>&lt;details&gt;</code> and <code>&lt;summary&gt;</code> provide?</front>
+    <back>They create a native disclosure widget. <code>&lt;summary&gt;</code> is the always-visible label; the remaining content can be expanded or collapsed. Add <code>open</code> when it should start expanded.</back>
+  </note>
+
+  <!-- Forms and controls (80-98) -->
+  <note type="Basic" tags="html forms">
+    <front>What is the purpose of the <code>&lt;form&gt;</code> element?</front>
+    <back>It groups interactive controls for submitting user-entered data. Its <code>action</code> identifies the submission destination and its <code>method</code> selects how the data is sent.</back>
+  </note>
+  <note type="Basic" tags="html forms">
+    <front>What does a form's <code>action</code> attribute specify?</front>
+    <back>It specifies the URL that receives the submitted form data. If omitted, the browser submits to the document's current URL, subject to the form and document context.</back>
+  </note>
+  <note type="Basic" tags="html forms http">
+    <front>What are the main differences between form methods <code>GET</code> and <code>POST</code>?</front>
+    <back><code>GET</code> appends the encoded data to the URL, making it useful for safe, bookmarkable queries. <code>POST</code> sends data in the request body and is preferred for actions or larger/sensitive payloads, but HTTPS is still required for confidentiality.</back>
+  </note>
+  <note type="Basic" tags="html forms accessibility">
+    <front>How should a text input be associated with its label?</front>
+    <back>Give the control an <code>id</code> and set the label's <code>for</code> attribute to the same value, or wrap the control inside <code>&lt;label&gt;</code>. A label makes the control easier to understand and enlarges its click target.</back>
+  </note>
+  <note type="Basic" tags="html forms">
+    <front>What are useful HTML <code>&lt;input&gt;</code> types?</front>
+    <back>Examples include <code>text</code>, <code>email</code>, <code>password</code>, <code>number</code>, <code>date</code>, <code>url</code>, <code>search</code>, <code>tel</code>, <code>checkbox</code>, <code>radio</code>, <code>file</code>, and <code>hidden</code>. The type enables appropriate semantics, validation, and user-interface hints.</back>
+  </note>
+  <note type="Basic" tags="html forms">
+    <front>Why is the <code>name</code> attribute important on a form control?</front>
+    <back>It supplies the key used when the control's successful value is included in form submission. A control without a <code>name</code> generally contributes no named form data.</back>
+  </note>
+  <note type="Basic" tags="html forms">
+    <front>What does an input's <code>value</code> attribute represent?</front>
+    <back>It provides the control's initial value and, for many controls, the value submitted when selected or changed. For checkboxes and radio buttons, it is the submitted value when that control is checked.</back>
+  </note>
+  <note type="Basic" tags="html forms validation">
+    <front>What does the <code>required</code> attribute do?</front>
+    <back>It makes a supported form control fail native constraint validation when it has no value. It provides client-side guidance, not server-side security; the server must validate submitted data too.</back>
+  </note>
+  <note type="Basic" tags="html forms usability">
+    <front>Why should a placeholder not replace a label?</front>
+    <back>A placeholder disappears when the user types, can have low contrast, and is not a durable name for the control. Provide a visible <code>&lt;label&gt;</code>; use <code>placeholder</code> only for an optional format or example.</back>
+  </note>
+  <note type="Basic" tags="html forms usability">
+    <front>What does the <code>autocomplete</code> attribute control?</front>
+    <back>It tells the browser what kind of value a control or form expects and whether saved values may be suggested. Tokens such as <code>email</code>, <code>name</code>, and <code>shipping postal-code</code> help browsers fill forms accurately.</back>
+  </note>
+  <note type="Basic" tags="html forms">
+    <front>How do <code>&lt;select&gt;</code> and <code>&lt;option&gt;</code> work together?</front>
+    <back><code>&lt;select&gt;</code> creates a selection control and its <code>&lt;option&gt;</code> children represent choices. The selected option's <code>value</code> (or its text when no value is provided) is submitted under the select's <code>name</code>.</back>
+  </note>
+  <note type="Basic" tags="html forms">
+    <front>What is <code>&lt;textarea&gt;</code> used for?</front>
+    <back>It creates a multi-line text input. Its initial value is the text between the opening and closing tags, not a <code>value</code> attribute; <code>rows</code> and <code>cols</code> provide initial size hints.</back>
+  </note>
+  <note type="Basic" tags="html forms">
+    <front>What are the default button types, and which type is safest for a non-submit action inside a form?</front>
+    <back>A <code>&lt;button&gt;</code> inside a form defaults to <code>type=&quot;submit&quot;</code>. Use <code>type=&quot;button&quot;</code> for actions such as opening a dialog or changing a preview when submission is not intended; use <code>type=&quot;reset&quot;</code> only deliberately.</back>
+  </note>
+  <note type="Basic" tags="html forms accessibility">
+    <front>What do <code>&lt;fieldset&gt;</code> and <code>&lt;legend&gt;</code> provide?</front>
+    <back><code>&lt;fieldset&gt;</code> groups related form controls, and its first <code>&lt;legend&gt;</code> labels the group. This is especially useful for radio-button sets and checkbox groups.</back>
+  </note>
+  <note type="Basic" tags="html forms">
+    <front>How does a checkbox differ from a radio button?</front>
+    <back>A checkbox represents an independent on/off choice and multiple checkboxes can be selected. Radio buttons form a mutually exclusive group when they share the same <code>name</code>; normally exactly one is selected for a required choice.</back>
+  </note>
+  <note type="Basic" tags="html forms">
+    <front>What is the difference between <code>disabled</code> and <code>readonly</code>?</front>
+    <back>A disabled control cannot be focused or edited and is not submitted. A readonly text-like control cannot be edited but can usually be focused and submitted; neither replaces server-side authorization checks.</back>
+  </note>
+  <note type="Basic" tags="html forms validation">
+    <front>What do <code>min</code>, <code>max</code>, and <code>step</code> constrain?</front>
+    <back>For supported numeric, date, and time controls, <code>min</code> and <code>max</code> define bounds and <code>step</code> defines valid increments. They participate in native constraint validation.</back>
+  </note>
+  <note type="Basic" tags="html forms validation">
+    <front>What does the <code>pattern</code> attribute do?</front>
+    <back>It supplies a regular-expression constraint for supported text-like inputs. The entire value must conform for validity; use a label and helpful instructions as well, because a pattern alone does not explain the expected format.</back>
+  </note>
+  <note type="Basic" tags="html forms">
+    <front>What are <code>&lt;datalist&gt;</code> and an input's <code>list</code> attribute for?</front>
+    <back><code>&lt;datalist&gt;</code> provides suggested values for an input. Set the input's <code>list</code> attribute to the datalist's <code>id</code>. Suggestions do not necessarily restrict the user to those values.</back>
+  </note>
+
+  <!-- Accessibility and advanced HTML (99-100) -->
+  <note type="Basic" tags="html accessibility aria">
+    <front>What is ARIA, and what rule should guide its use?</front>
+    <back>ARIA (Accessible Rich Internet Applications) adds roles, states, and properties when native HTML cannot express the needed accessibility semantics. Prefer semantic native elements first: do not use ARIA to recreate a native button, link, or form control unnecessarily.</back>
+  </note>
+  <note type="Basic" tags="html accessibility keyboard">
+    <front>What does <code>tabindex</code> control, and which values should generally be avoided?</front>
+    <back>It controls whether and where an element participates in sequential keyboard focus. Avoid positive values such as <code>tabindex=&quot;1&quot;</code>, which create a brittle custom order; use native interactive elements and usually <code>tabindex=&quot;0&quot;</code> or <code>-1</code> only for specific focus-management needs.</back>
+  </note>
+
+</anki>

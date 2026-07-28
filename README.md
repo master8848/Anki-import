@@ -117,6 +117,7 @@ bun run build           # produces ./anki-xml (standalone)
 | Schema | `models`, `fields`, `tags`, `note-info` |
 | Lifecycle | `migrate`, `profile` |
 | Recovery | `checkpoint`, `rollback`, `audit-log` |
+| Add-ons | `addon` |
 | Shell | `completion` |
 
 Run `anki-xml --help` for the full surface, or `anki-xml <command> --help`

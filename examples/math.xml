@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Example math deck.
+
+  This example intentionally uses ONLY syntax that Anki renders
+  correctly without installing any add-ons:
+
+    1. Normal notation -- Unicode characters and HTML <sup>/<sub>
+       that Anki renders out of the box.
+    2. Native Anki LaTeX -- the [latex]...[/latex] block syntax,
+       which Anki processes through MathJax internally. No MathJax
+       add-on is needed; this is the documented native feature.
+
+  MathJax add-on only (NOT used here):
+    - \( ... \)   inline
+    - \[ ... \]   display
+    - $$ ... $$   display
+
+  Those delimiters only render when the MathJax add-on is installed.
+  This file keeps the source portable by avoiding them.
+-->
+<anki deck="AI Import::Math Examples">
+
+  <!-- Normal notation: HTML superscripts and Unicode multiplication. -->
+  <note type="Basic" tags="math arithmetic notation">
+    <front>What is 2<sup>3</sup> × 4?</front>
+    <back>32. The exponent is evaluated first: 2<sup>3</sup> = 8, then 8 × 4 = 32.<br><br>Native LaTeX equivalent:<br><br>[latex]2^3 \times 4 = 32[/latex]</back>
+  </note>
+
+  <!-- Native Anki LaTeX inline. -->
+  <note type="Basic" tags="math algebra latex">
+    <front>Solve the equation 3x + 5 = 17.</front>
+    <back><br>[latex]x = 4[/latex]<br><br>Subtract 5 from both sides and divide by 3.<br><br>Normal notation: 3x + 5 = 17 → x = 4.</back>
+  </note>
+
+  <!-- Native Anki LaTeX with a fraction. -->
+  <note type="Basic" tags="math algebra notation">
+    <front>What is the quadratic formula?</front>
+    <back>For <i>ax</i><sup>2</sup> + <i>bx</i> + <i>c</i> = 0, the solutions are<br><br>[latex]x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}[/latex]</back>
+  </note>
+
+  <!-- Native Anki LaTeX display block (still inside one [latex] tag). -->
+  <note type="Basic" tags="math geometry latex">
+    <front>State the Pythagorean theorem.</front>
+    <back>For a right triangle with legs <i>a</i> and <i>b</i> and hypotenuse <i>c</i>:<br><br>[latex]\displaystyle a^2 + b^2 = c^2[/latex]</back>
+  </note>
+
+  <!-- Native LaTeX with \displaystyle for display-style rendering. -->
+  <note type="Basic" tags="math calculus latex">
+    <front>What is the derivative of x<sup>n</sup>?</front>
+    <back><br>[latex]\displaystyle \frac{d}{dx} x^n = n x^{n-1}[/latex]<br><br>Normal notation: d/dx (xⁿ) = n xⁿ⁻¹.</back>
+  </note>
+
+  <!-- Native LaTeX with an integral. -->
+  <note type="Basic" tags="math calculus latex">
+    <front>Evaluate the definite integral ∫₀¹ 2x dx.</front>
+    <back><br>[latex]\displaystyle \int_0^1 2x \, dx = \left[ x^2 \right]_0^1 = 1[/latex]<br><br>Normal notation: ∫₀¹ 2x dx = 1.</back>
+  </note>
+
+  <!-- Normal HTML superscripts and subscripts. -->
+  <note type="Basic" tags="math sequences notation">
+    <front>What is the sum of the first <i>n</i> positive integers?</front>
+    <back>The sum is 1 + 2 + 3 + ⋯ + <i>n</i> = <i>n</i>(<i>n</i> + 1) / 2.<br><br>Native LaTeX:<br><br>[latex]\displaystyle \sum_{k=1}^{n} k = \frac{n(n+1)}{2}[/latex]</back>
+  </note>
+
+  <!-- Native LaTeX with probability notation. -->
+  <note type="Basic" tags="math probability latex">
+    <front>What is the probability of an event's complement?</front>
+    <back><br>[latex]P(A^c) = 1 - P(A)[/latex]<br><br>The chance that A does not happen equals 1 minus the chance that A happens.</back>
+  </note>
+
+  <!-- HTML table for a matrix, alongside native LaTeX pmatrix. -->
+  <note type="Basic" tags="math matrices notation">
+    <front>How can the 2 × 2 matrix [[1, 2], [3, 4]] be written in HTML and LaTeX?</front>
+    <back>HTML table:<br><table><tbody><tr><td>1</td><td>2</td></tr><tr><td>3</td><td>4</td></tr></tbody></table><br>Native LaTeX pmatrix:<br><br>[latex]\begin{pmatrix} 1 &amp; 2 \\ 3 &amp; 4 \end{pmatrix}[/latex]</back>
+  </note>
+
+  <!-- Native LaTeX with set-builder notation. -->
+  <note type="Basic" tags="math sets latex">
+    <front>What does the set notation A ∩ B mean?</front>
+    <back>It means the intersection: the elements that are in both A and B.<br><br>Native LaTeX:<br><br>[latex]A \cap B = \{ x \mid x \in A \text{ and } x \in B \}[/latex]</back>
+  </note>
+
+  <!-- Native LaTeX with \lim. -->
+  <note type="Basic" tags="math limits latex">
+    <front>What is the standard notation for the limit of f(x) as x approaches a?</front>
+    <back><br>[latex]\displaystyle \lim_{x \to a} f(x)[/latex]<br><br>It describes the value f(x) approaches as x gets arbitrarily close to a.</back>
+  </note>
+
+  <!-- Native LaTeX with a change-of-base formula. -->
+  <note type="Basic" tags="math logarithms latex">
+    <front>What is the change-of-base formula for logarithms?</front>
+    <back>Normal notation: log<sub>b</sub>(x) = log<sub>k</sub>(x) / log<sub>k</sub>(b), where k is any valid base.<br><br>Native LaTeX:<br><br>[latex]\displaystyle \log_b(x) = \frac{\log_k(x)}{\log_k(b)}[/latex]</back>
+  </note>
+
+</anki>
