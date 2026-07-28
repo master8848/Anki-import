@@ -48,6 +48,7 @@ export async function runValidate(opts: ValidateOptions): Promise<ValidateReport
   const { notes: validNotes, errors, warnings } = validateNotes(
     parsed.notes,
     parsed.defaultDeck,
+    source,
   );
 
   const decks = [

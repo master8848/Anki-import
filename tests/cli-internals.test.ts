@@ -36,20 +36,31 @@ describe("formatOutput", () => {
     positional: [],
     url: "http://127.0.0.1:8765",
     dryRun: false,
-    json: false,
+    json: true,
+    jsonVersion: 0,
     autoCreateDeck: null,
     showHelp: false,
     showVersion: false,
     rest: [],
   };
 
-  test("returns JSON when args.json is true", () => {
-    const out = formatOutput({ a: 1 }, { args: { ...baseArgs, json: true } }, "human");
+  test("returns JSON when args.json is true and jsonVersion=0 (legacy)", () => {
+    const out = formatOutput({ a: 1 }, { args: baseArgs, startMs: 0, command: "decks" }, "human");
     expect(out).toBe('{\n  "a": 1\n}');
   });
 
+  test("wraps in envelope when args.json=true and jsonVersion=1 (default new)", () => {
+    const out = formatOutput({ a: 1 }, { args: { ...baseArgs, jsonVersion: 1 }, startMs: 0, command: "decks" }, "human");
+    const parsed = JSON.parse(out);
+    expect(parsed.version).toBe(1);
+    expect(parsed.command).toBe("decks");
+    expect(parsed.ok).toBe(true);
+    expect(parsed.data).toEqual({ a: 1 });
+    expect(parsed.meta).toBeDefined();
+  });
+
   test("returns human string when args.json is false", () => {
-    const out = formatOutput({ a: 1 }, { args: baseArgs }, "human");
+    const out = formatOutput({ a: 1 }, { args: { ...baseArgs, json: false }, startMs: 0, command: "decks" }, "human");
     expect(out).toBe("human");
   });
 });

@@ -34,8 +34,9 @@ const command: Command<StatsSubArgs> = {
   },
   async run(args, sub) {
     return withFatal(async () => {
+      const startMs = Date.now();
       const stats = await fetchStats({ ankiConnectUrl: args.url, deck: sub.deck });
-      console.log(formatOutput(stats, { args }, renderStats(stats)));
+      console.log(formatOutput(stats, { args, startMs, command: "stats" }, renderStats(stats)));
       return 0;
     });
   },

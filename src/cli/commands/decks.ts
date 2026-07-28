@@ -11,6 +11,7 @@ const command: Command = {
   description: "List all decks and total card counts.",
   async run(args) {
     return withFatal(async () => {
+      const startMs = Date.now();
       const report = await fetchDeckReport({ ankiConnectUrl: args.url });
       const human = (() => {
         const totalDecks = report.flat.length;
@@ -18,7 +19,7 @@ const command: Command = {
         const s = `${totalDecks} deck${totalDecks === 1 ? "" : "s"}, ${totalCards} total card${totalCards === 1 ? "" : "s"}\n\n`;
         return s + renderDeckTree(report.tree);
       })();
-      console.log(formatOutput(report.flat, { args }, human));
+      console.log(formatOutput(report.flat, { args, startMs, command: "decks" }, human));
       return 0;
     });
   },

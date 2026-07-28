@@ -37,10 +37,11 @@ const command: Command<ValidateSubArgs> = {
     const file = sub.file;
 
     return withFatal(async () => {
+      const startMs = Date.now();
       const report = await runValidate({ filePath: file, strict: sub.strict });
 
       if (args.json) {
-        console.log(formatOutput(report, { args }, ""));
+        console.log(formatOutput(report, { args, startMs, command: "validate" }, ""));
         return report.valid ? 0 : 1;
       }
 
@@ -61,7 +62,8 @@ const command: Command<ValidateSubArgs> = {
         console.log(`Errors (${report.errors.length}):`);
         for (const e of report.errors) {
           const where = e.noteNumber === 0 ? "<anki>" : `Note ${e.noteNumber}`;
-          console.log(`  ${where}: ${e.message}`);
+          const loc = e.line !== undefined ? ` (line ${e.line}, col ${e.column})` : "";
+          console.log(`  ${where}${loc}: ${e.message}`);
         }
       }
       if (report.warnings.length > 0) {
@@ -69,7 +71,8 @@ const command: Command<ValidateSubArgs> = {
         console.log(`Warnings (${report.warnings.length}):`);
         for (const w of report.warnings) {
           const where = w.noteNumber === 0 ? "<anki>" : `Note ${w.noteNumber}`;
-          console.log(`  ${where}: ${w.message}`);
+          const loc = w.line !== undefined ? ` (line ${w.line}, col ${w.column})` : "";
+          console.log(`  ${where}${loc}: ${w.message}`);
         }
       }
 

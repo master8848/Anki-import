@@ -16,6 +16,12 @@ export interface ParsedArgs {
   url: string;
   dryRun: boolean;
   json: boolean;
+  /**
+   * 0 = legacy shape (raw payload), 1 = envelope shape. Default 1.
+   * Set to 0 with `--json-legacy` for one release cycle to keep
+   * existing `jq` pipelines working.
+   */
+  jsonVersion: 0 | 1;
   /** null = flag was not passed; true/false = explicit. */
   autoCreateDeck: boolean | null;
   showHelp: boolean;
@@ -56,6 +62,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
     url: "http://127.0.0.1:8765",
     dryRun: false,
     json: false,
+    jsonVersion: 1,
     autoCreateDeck: null,
     showHelp: false,
     showVersion: false,
@@ -82,6 +89,12 @@ export function parseArgs(argv: string[]): ParsedArgs {
     }
     if (a === "--json") {
       args.json = true;
+      i++;
+      continue;
+    }
+    if (a === "--json-legacy") {
+      args.json = true;
+      args.jsonVersion = 0;
       i++;
       continue;
     }

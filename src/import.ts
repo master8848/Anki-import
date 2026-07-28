@@ -74,6 +74,7 @@ export async function importFromFile(opts: ImportOptions): Promise<ImportOutcome
   const { notes: validNotes, errors: validationErrors } = validateNotes(
     parsed.notes,
     parsed.defaultDeck,
+    source,
   );
 
   // Phase 2: <note id="N"> is parsed and validated but not yet honored

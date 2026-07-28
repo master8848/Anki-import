@@ -548,6 +548,8 @@ function parseNotesInner(source: string): ParsedDocument {
       deck: attrs["@_deck"] ?? "",
       tags: attrs["@_tags"] ?? "",
       fields: [],
+      sourceOffset: nodeStart(childNode),
+      fieldSourceOffsets: [],
     };
     // Optional `id="N"` attribute: when present, the note is treated as
     // an update against an existing Anki note. Parsing/validation here
@@ -587,6 +589,7 @@ function parseNotesInner(source: string): ParsedDocument {
       }
       const { html } = extractFieldContent(source, tokens, tokenIdx);
       note.fields.push({ name: fieldName, html });
+      if (note.fieldSourceOffsets) note.fieldSourceOffsets.push(startIdx);
     }
 
     notes.push(note);
@@ -611,6 +614,7 @@ function parseNotesInner(source: string): ParsedDocument {
 export function validateNotes(
   notes: ParsedNote[],
   defaultDeck: string,
+  source?: string,
 ): ValidationResult {
   const errors: NoteValidationError[] = [];
   const warnings: NoteValidationError[] = [];
@@ -625,31 +629,31 @@ export function validateNotes(
   const seenIds = new Map<number, number>();
 
   for (const note of notes) {
-    const noteErrors: string[] = [];
+    const noteErrors: { msg: string; fieldIndex?: number }[] = [];
 
     if (!note.type.trim()) {
-      noteErrors.push("missing or empty `type` attribute on <note>");
+      noteErrors.push({ msg: "missing or empty `type` attribute on <note>" });
     } else if (!SUPPORTED_MODELS.has(note.type)) {
-      noteErrors.push(
-        `unsupported note type "${note.type}"; v1 supports: ${[...SUPPORTED_MODELS].join(", ")}`,
-      );
+      noteErrors.push({
+        msg: `unsupported note type "${note.type}"; v1 supports: ${[...SUPPORTED_MODELS].join(", ")}`,
+      });
     }
 
     const deck = note.deck.trim() || defaultDeck.trim();
     if (!deck) {
-      noteErrors.push("no deck: set `deck` on <anki> or on each <note>");
+      noteErrors.push({ msg: "no deck: set `deck` on <anki> or on each <note>" });
     }
 
     // Validate id attribute (must be a positive integer if present).
     if (note.id !== undefined) {
       if (note.id <= 0) {
-        noteErrors.push(`id attribute must be a positive integer (got ${note.id})`);
+        noteErrors.push({ msg: `id attribute must be a positive integer (got ${note.id})` });
       } else {
         const firstSeen = seenIds.get(note.id);
         if (firstSeen !== undefined) {
-          noteErrors.push(
-            `id ${note.id} is used more than once (also in note ${firstSeen})`,
-          );
+          noteErrors.push({
+            msg: `id ${note.id} is used more than once (also in note ${firstSeen})`,
+          });
         } else {
           seenIds.set(note.id, note.number);
         }
@@ -660,52 +664,75 @@ export function validateNotes(
     if (model) {
       // Detect duplicate field tags.
       const fieldNames = note.fields.map((f) => f.name);
-      const dupes = fieldNames.filter((n, i) => fieldNames.indexOf(n) !== i);
-      for (const d of new Set(dupes)) {
-        noteErrors.push(`<${d}> appears more than once`);
+      const fieldIndices = note.fields.map((_, i) => i);
+      const dupes = fieldNames
+        .map((n, i) => ({ n, i }))
+        .filter((x, idx) => fieldNames.indexOf(x.n) !== idx);
+      const seenDupes = new Set<string>();
+      for (const d of dupes) {
+        if (seenDupes.has(d.n)) continue;
+        seenDupes.add(d.n);
+        noteErrors.push({ msg: `<${d.n}> appears more than once`, fieldIndex: d.i });
       }
+      // Suppress unused linter warning.
+      void fieldIndices;
 
       // Fields used in this note that the model doesn't accept.
-      for (const field of note.fields) {
+      note.fields.forEach((field, i) => {
         if (!model.accepts.has(field.name)) {
-          noteErrors.push(
-            `<${field.name}> is not accepted by ${model.name}; expected one of: ${[...model.accepts].join(", ")}`,
-          );
+          noteErrors.push({
+            msg: `<${field.name}> is not accepted by ${model.name}; expected one of: ${[...model.accepts].join(", ")}`,
+            fieldIndex: i,
+          });
         }
-      }
+      });
 
       // Required fields that are missing.
       for (const req of model.required) {
-        const present = note.fields.find((f) => f.name === req);
-        if (!present) {
-          noteErrors.push(`${model.name} requires <${req}>`);
-          continue;
-        }
-        if (model.checkContent && !hasMeaningfulContent(present.html)) {
-          noteErrors.push(`<${req}> is empty or contains only whitespace/HTML tags`);
+        const i = note.fields.findIndex((f) => f.name === req);
+        if (i === -1) {
+          noteErrors.push({ msg: `${model.name} requires <${req}>` });
+        } else {
+          const present = note.fields[i]!;
+          if (model.checkContent && !hasMeaningfulContent(present.html)) {
+            noteErrors.push({
+              msg: `<${req}> is empty or contains only whitespace/HTML tags`,
+              fieldIndex: i,
+            });
+          }
         }
       }
 
       // Optional fields with empty content get flagged when content
       // checks are on (catches `<extra>   </extra>` accidents).
       if (model.checkContent) {
-        for (const opt of model.optional) {
-          const present = note.fields.find((f) => f.name === opt);
-          if (present && !hasMeaningfulContent(present.html)) {
-            noteErrors.push(`<${opt}> is empty or contains only whitespace/HTML tags`);
+        note.fields.forEach((field, i) => {
+          if (model.optional.has(field.name) && !hasMeaningfulContent(field.html)) {
+            noteErrors.push({
+              msg: `<${field.name}> is empty or contains only whitespace/HTML tags`,
+              fieldIndex: i,
+            });
           }
-        }
+        });
       }
 
       // Model-specific extra rules.
       if (model.validateExtras) {
         const extraErrors = model.validateExtras(note);
-        for (const msg of extraErrors) noteErrors.push(msg);
+        for (const msg of extraErrors) noteErrors.push({ msg });
       }
     }
 
     if (noteErrors.length > 0) {
-      for (const msg of noteErrors) errors.push({ noteNumber: note.number, message: msg });
+      for (const e of noteErrors) {
+        const offset = e.fieldIndex !== undefined
+          ? note.fieldSourceOffsets?.[e.fieldIndex]
+          : note.sourceOffset;
+        const loc = source !== undefined && offset !== undefined
+          ? sourceLocation(source, offset)
+          : {};
+        errors.push({ noteNumber: note.number, message: e.msg, ...loc });
+      }
       continue;
     }
 
@@ -724,6 +751,24 @@ export function validateNotes(
   }
 
   return { notes: valid, errors, warnings };
+}
+
+/**
+ * Compute the 1-based line and column for a source offset. Used by
+ * the validator to attach a precise location to each error.
+ */
+function sourceLocation(source: string, offset: number): { line: number; column: number } {
+  let line = 1;
+  let column = 1;
+  for (let i = 0; i < offset && i < source.length; i++) {
+    if (source.charCodeAt(i) === 10) {
+      line++;
+      column = 1;
+    } else {
+      column++;
+    }
+  }
+  return { line, column };
 }
 
 /**
