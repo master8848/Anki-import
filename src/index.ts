@@ -23,6 +23,8 @@ import { fetchDeckReport, renderDeckTree } from "./decks.ts";
 import { fetchStats, renderStats } from "./stats.ts";
 import { runSearch, renderSearch } from "./search.ts";
 import { loadUpdatesFromXml, runUpdate, renderUpdate, type FieldUpdate, type UpdateEntry } from "./update.ts";
+import { runValidate } from "./validate.ts";
+import { generateCompletion, SUPPORTED_SHELLS, type SupportedShell } from "./completion.ts";
 
 const VERSION = "0.1.0";
 
@@ -128,6 +130,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
       const subcommandFlags = new Set([
         "--deck", "--tag", "--limit", "--query",
         "--id", "--ids", "--file", "--field",
+        "--shell", "--strict",
       ]);
       if (!subcommandFlags.has(a)) {
         throw new CliError(`Unknown option: ${a}`);
@@ -492,6 +495,87 @@ async function runUpdateCmd(args: ParsedArgs): Promise<number> {
   }
 }
 
+// ─── validate ──────────────────────────────────────────────────────────
+
+async function runValidateCmd(args: ParsedArgs): Promise<number> {
+  const file = args.positional[0];
+  if (!file) {
+    console.error("error: missing <file> argument");
+    console.error("Usage: anki-xml validate <file.xml> [--strict] [--json]");
+    return 2;
+  }
+
+  // --strict lives in args.rest because it's not a global flag.
+  const strict = args.rest.includes("--strict");
+
+  try {
+    const report = await runValidate({ filePath: file, strict });
+    if (args.json) {
+      console.log(JSON.stringify(report, null, 2));
+      return report.valid ? 0 : 1;
+    }
+
+    // Human-readable output.
+    if (report.valid && report.warnings.length === 0) {
+      console.log(`Reading ${file} ...`);
+      console.log(`Valid: ${report.noteCount} notes, 0 errors, 0 warnings.`);
+      return 0;
+    }
+
+    console.log(`Reading ${file} ...`);
+    console.log(`Valid: ${report.valid ? "yes" : "no"}; ${report.noteCount} notes.`);
+    if (report.decks.length > 0) {
+      console.log(`Decks: ${report.decks.join(", ")}`);
+    }
+
+    if (report.errors.length > 0) {
+      console.log("");
+      console.log(`Errors (${report.errors.length}):`);
+      for (const e of report.errors) {
+        const where = e.noteNumber === 0 ? "<anki>" : `Note ${e.noteNumber}`;
+        console.log(`  ${where}: ${e.message}`);
+      }
+    }
+    if (report.warnings.length > 0) {
+      console.log("");
+      console.log(`Warnings (${report.warnings.length}):`);
+      for (const w of report.warnings) {
+        const where = w.noteNumber === 0 ? "<anki>" : `Note ${w.noteNumber}`;
+        console.log(`  ${where}: ${w.message}`);
+      }
+    }
+
+    return report.valid ? 0 : 1;
+  } catch (err) {
+    console.error(`fatal: ${(err as Error).message}`);
+    return 2;
+  }
+}
+
+// ─── completion ────────────────────────────────────────────────────────
+
+async function runCompletion(args: ParsedArgs): Promise<number> {
+  const shell = args.positional[0] as SupportedShell | undefined;
+  if (!shell) {
+    console.error(`error: missing <shell> argument.`);
+    console.error(`Usage: anki-xml completion <${SUPPORTED_SHELLS.join("|")}>`);
+    return 2;
+  }
+  if (!SUPPORTED_SHELLS.includes(shell)) {
+    console.error(
+      `error: unknown shell '${shell}'. Supported: ${SUPPORTED_SHELLS.join(", ")}`,
+    );
+    return 2;
+  }
+  try {
+    process.stdout.write(generateCompletion(shell));
+    return 0;
+  } catch (err) {
+    console.error(`fatal: ${(err as Error).message}`);
+    return 2;
+  }
+}
+
 // ─── main ──────────────────────────────────────────────────────────────
 
 async function main(): Promise<number> {
@@ -520,6 +604,8 @@ async function main(): Promise<number> {
   switch (args.command) {
     case "import":
       return await runImport(args);
+    case "validate":
+      return await runValidateCmd(args);
     case "decks":
       return await runDecks(args);
     case "stats":
@@ -528,6 +614,8 @@ async function main(): Promise<number> {
       return await runSearch(args);
     case "update":
       return await runUpdateCmd(args);
+    case "completion":
+      return await runCompletion(args);
     default:
       console.error(`error: unknown command '${args.command}'`);
       console.error("Run 'anki-xml --help' for usage.");

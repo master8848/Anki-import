@@ -1,6 +1,6 @@
 # Commands
 
-The `anki-xml` CLI has five commands. All commands accept the common
+The `anki-xml` CLI has seven commands. All commands accept the common
 flags `--url <url>` (default `http://127.0.0.1:8765`) and `--json`
 (where supported).
 
@@ -17,6 +17,25 @@ anki-xml import ./cards.xml --no-auto-create-deck # fail if a deck is missing
 
 See [`cli.md`](./cli.md) for full details. Bulk operations are atomic:
 if any note is invalid, no notes are sent.
+
+## `validate <file>`
+
+Parse and structurally validate an XML file without contacting Anki.
+This is the cheapest feedback loop — useful for "is this file safe to
+commit?" and AI agent pre-iteration validation.
+
+```bash
+anki-xml validate ./cards.xml              # human-readable
+anki-xml validate ./cards.xml --json       # machine-readable
+anki-xml validate ./cards.xml --strict     # treat warnings as errors
+```
+
+Exit codes: `0` no errors, `1` validation errors, `2` file/parse errors.
+
+Warnings include malformed tags (commas inside, very long tags, control
+characters). See [`field-names.md`](./field-names.md) for the supported
+field vocabulary and [`ai-integration.md`](./ai-integration.md) for the
+JSON shape.
 
 ## `decks`
 
@@ -188,3 +207,25 @@ All commands use the same three exit codes:
 | `0`  | success — every operation completed cleanly                  |
 | `1`  | partial failure (some updates/rejections, some succeeded)   |
 | `2`  | fatal — file unreadable, malformed XML, no AnkiConnect, etc. |
+
+## `completion <shell>`
+
+Print a static shell completion script to stdout. Re-run after upgrading
+to pick up new commands.
+
+```bash
+# bash
+anki-xml completion bash | sudo tee /etc/bash_completion.d/anki-xml
+
+# zsh
+anki-xml completion zsh > "\${fpath[1]}/_anki-xml"
+
+# fish
+anki-xml completion fish > ~/.config/fish/completions/anki-xml.fish
+
+# powershell
+anki-xml completion powershell | Out-String | Invoke-Expression
+```
+
+Supported shells: `bash`, `zsh`, `fish`, `powershell`. Exit code `2` if
+the shell name is missing or unknown.

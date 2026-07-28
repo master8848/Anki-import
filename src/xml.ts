@@ -592,11 +592,12 @@ export function validateNotes(
   defaultDeck: string,
 ): ValidationResult {
   const errors: NoteValidationError[] = [];
+  const warnings: NoteValidationError[] = [];
   const valid: ValidatedNote[] = [];
 
   if (notes.length === 0) {
     errors.push({ noteNumber: 0, message: "No <note> elements found inside <anki>" });
-    return { notes: [], errors };
+    return { notes: [], errors, warnings };
   }
 
   for (const note of notes) {
@@ -674,17 +675,52 @@ export function validateNotes(
       continue;
     }
 
+    const tags = parseTags(note.tags);
+    validateTags(tags, note.number, warnings);
+
     const validated: ValidatedNote = {
       number: note.number,
       deckName: deck,
       modelName: note.type as SupportedModel,
       fields: buildFields(note.type as SupportedModel, front, back, text, extra, addReverse),
-      tags: parseTags(note.tags),
+      tags,
     };
     valid.push(validated);
   }
 
-  return { notes: valid, errors };
+  return { notes: valid, errors, warnings };
+}
+
+/**
+ * Surface non-fatal tag problems so AI authors can fix them before
+ * they reach the collection. Each check appends to `warnings` rather
+ * than `errors` — Anki itself accepts almost anything as a tag.
+ */
+function validateTags(
+  tags: string[],
+  noteNumber: number,
+  warnings: NoteValidationError[],
+): void {
+  for (const tag of tags) {
+    if (tag.includes(",")) {
+      warnings.push({
+        noteNumber,
+        message: `tag "${tag}" contains a comma; this is usually two tags accidentally joined — split into separate whitespace-separated tags`,
+      });
+    }
+    if (tag.length > 100) {
+      warnings.push({
+        noteNumber,
+        message: `tag "${tag.slice(0, 30)}${tag.length > 30 ? "…" : ""}" is unusually long (${tag.length} chars)`,
+      });
+    }
+    if (/[\x00-\x1f\x7f]/.test(tag)) {
+      warnings.push({
+        noteNumber,
+        message: `tag contains control characters`,
+      });
+    }
+  }
 }
 
 /** Map our parsed fields onto Anki field names per supported model. */
