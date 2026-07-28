@@ -4,6 +4,7 @@
 [![Tests](https://img.shields.io/badge/tests-420%20pass-success)](tests/)
 [![Bun](https://img.shields.io/badge/runtime-bun%20%E2%89%A5%201.3-blueviolet)](https://bun.sh)
 [![AnkiConnect](https://img.shields.io/badge/AnkiConnect-%E2%89%A5%206-blue)](https://foosoft.net/projects/anki-connect/)
+[![skills.sh](https://skills.sh/b/master8848/Anki-import)](https://skills.sh/master8848/Anki-import)
 
 A command-line tool for importing, querying, and updating
 [Anki](https://apps.ankiweb.net/) flashcards via

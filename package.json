@@ -10,7 +10,8 @@
     "xml",
     "cli",
     "ai-agent",
-    "llm-tool"
+    "llm-tool",
+    "tanstack-intent"
   ],
   "homepage": "https://github.com/master8848/Anki-import#readme",
   "bugs": "https://github.com/master8848/Anki-import/issues",
@@ -32,7 +33,9 @@
     "CHANGELOG.md",
     "LICENSE",
     "CONTRIBUTING.md",
-    "SECURITY.md"
+    "SECURITY.md",
+    "skills",
+    "!skills/_artifacts"
   ],
   "directories": {
     "bin": "./dist",
