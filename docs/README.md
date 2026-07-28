@@ -57,9 +57,16 @@ schema for each.
 
 ```
 anki-xml import <file> [options]
+anki-xml decks [--json]
+anki-xml stats [--deck NAME] [--json]
+anki-xml search <phrase> [--deck D] [--tag T] [--limit N] [--query Q] [--json]
+anki-xml update (--id N | --ids "1,2,3" | --file f.xml) [--field Name=value ...] [--dry-run]
 anki-xml --help
 anki-xml --version
 ```
+
+See [`commands.md`](./commands.md) for the full per-command reference.
+For the import command's specific options, see below.
 
 | option               | default                     | meaning                                          |
 |----------------------|-----------------------------|--------------------------------------------------|
@@ -119,9 +126,11 @@ start with `language.md`.
   review of every upstream issue and the cases relevant to this importer.
 - [`../FUTURE_FEATURES.md`](../FUTURE_FEATURES.md) — proposed work kept
   separate for review; these are not current capabilities.
+- [`commands.md`](./commands.md) — full per-command reference (import,
+  decks, stats, search, update) with human and JSON output examples.
 - [`usage.md`](./usage.md) — how to write `<anki>` XML for every supported note
   type, with simple and complex examples.
-- [`cli.md`](./cli.md) — full CLI reference, including exit codes and the
+- [`cli.md`](./cli.md) — import-specific options, exit codes, and the
   `--auto-create-deck` flag.
 - [`language.md`](./language.md) — the XML schema: elements, attributes,
   required fields per model, deck inheritance, tags.
