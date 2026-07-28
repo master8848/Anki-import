@@ -33,6 +33,8 @@ is in [`ai-cookbook.md`](./ai-cookbook.md).
 ### User-facing (start here)
 - [`../README.md`](../README.md) — landing page; quick start, command
   table, recovery matrix.
+- [`install.md`](./install.md) — npm/npx / binary / source install
+  compared.
 - [`commands.md`](./commands.md) — full per-command reference (all 31
   commands) with human and JSON shapes.
 - [`cli.md`](./cli.md) — global flags, exit codes, config

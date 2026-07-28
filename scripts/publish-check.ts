@@ -18,7 +18,7 @@ console.log("1. Running tests...");
 await $`bun test`.quiet();
 console.log("   OK");
 
-console.log("2. CLI runs...");
+console.log("2. CLI runs (Bun)...");
 const version = (await $`bun run src/index.ts --version`.text()).trim();
 if (!version.startsWith("anki-xml")) {
   console.error("FAIL: --version didn't print the expected banner");
@@ -36,7 +36,23 @@ if (missing.length > 0) {
 }
 console.log(`   OK (${COMMANDS.length} commands)`);
 
-console.log("4. Required docs exist...");
+console.log("4. Building npm distribution...");
+await $`bun run build:npm`.quiet();
+if (!(await Bun.file("dist/cli.js").exists())) {
+  console.error("FAIL: dist/cli.js not produced by build:npm");
+  process.exit(1);
+}
+console.log("   OK");
+
+console.log("5. Node bundle runs...");
+const nodeVersion = (await $`node dist/cli.js --version`.text()).trim();
+if (!nodeVersion.startsWith("anki-xml")) {
+  console.error("FAIL: node dist/cli.js --version didn't print banner");
+  process.exit(1);
+}
+console.log(`   OK (${nodeVersion})`);
+
+console.log("6. Required docs exist...");
 for (const f of ["README.md", "CHANGELOG.md", "LICENSE", "CONTRIBUTING.md"]) {
   try {
     await Bun.file(f).stat();
@@ -47,4 +63,8 @@ for (const f of ["README.md", "CHANGELOG.md", "LICENSE", "CONTRIBUTING.md"]) {
 }
 console.log("   OK");
 
-console.log("\nReady to publish.");
+console.log("\nReady to publish.\n");
+console.log("Next steps:");
+console.log("  npm login                           # one-time");
+console.log("  npm publish --access public         # publish to npm");
+console.log("  npx anki-xml --version              # verify");

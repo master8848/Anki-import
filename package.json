@@ -15,30 +15,36 @@
   "homepage": "https://github.com/YOUR-USERNAME/anki-xml#readme",
   "bugs": "https://github.com/YOUR-USERNAME/anki-xml/issues",
   "license": "MIT",
+  "main": "src/index.ts",
   "bin": {
-    "anki-xml": "./src/index.ts"
+    "anki-xml": "./dist/cli.js"
   },
-  "module": "src/index.ts",
-  "type": "module",
   "exports": {
     ".": "./src/index.ts",
     "./package.json": "./package.json"
   },
   "files": [
-    "src",
+    "dist",
     "docs",
     "examples",
     "README.md",
     "CHANGELOG.md",
     "LICENSE",
-    "CONTRIBUTING.md"
+    "CONTRIBUTING.md",
+    "SECURITY.md"
   ],
+  "directories": {
+    "bin": "./dist",
+    "doc": "./docs"
+  },
   "scripts": {
     "start": "bun run src/index.ts",
     "import": "bun run src/index.ts import",
     "test": "bun test",
     "build": "bun run scripts/build.ts",
+    "build:npm": "bun run scripts/build-npm.ts",
     "typecheck": "tsc --noEmit",
+    "prepublishOnly": "bun run build:npm && bun run publish:check",
     "publish:check": "bun run scripts/publish-check.ts"
   },
   "dependencies": {
@@ -49,7 +55,7 @@
     "typescript": "^5"
   },
   "engines": {
-    "bun": ">=1.3.0"
+    "node": ">=18.0.0"
   },
   "repository": {
     "type": "git",

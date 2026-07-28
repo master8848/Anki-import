@@ -72,17 +72,30 @@ git push --follow-tags
 If you want `npx anki-xml` to work:
 
 ```sh
-bun run build                     # standalone binary in ./anki-xml
-# Publish the binary as a release; mention the install line in README
+# one-time
+npm login
+
+# build the Node bundle and publish
+bun run publish:check      # verify everything's green
+npm publish --access public
+
+# verify from anywhere
+npx anki-xml --version
 ```
 
-Or, full npm package:
+`bun run publish:check` verifies all 420 tests pass, the Bun CLI
+runs, `--help` lists every command, the Node bundle builds, and the
+Node bundle runs.
+
+The `prepublishOnly` script auto-runs `bun run build:npm &&
+bun run publish:check` before publishing, so you can't ship a
+broken bundle.
+
+After publishing, install via:
 
 ```sh
-# change package.json to:
-#   "bin": { "anki-xml": "src/index.ts" }
-# add a shebang to src/index.ts (#!/usr/bin/env bun)
-bun publish
+npm install -g anki-xml     # global
+npx anki-xml                # one-shot, no install
 ```
 
 ## 7. Verify

@@ -26,6 +26,7 @@ this project adheres to [Semantic Versioning](https://semver.org/).
 - **`createClient(args)` factory** and **`toAddNotePayload(note)` helper**
   (M7) — refactor that unifies all write commands' AnkiConnect payload building
 - **Bun standalone binary** (M18) — `bun run build --out anki-xml`
+- **npm distribution** (M21) — Node ≥ 18 CommonJS bundle (~175 KB); `npm install -g anki-xml` and `npx anki-xml` both work; `scripts/build-npm.ts` builds it; `prepublishOnly` script enforces the build; `publish:check` script verifies the bundle
 - **GitHub workflows** — `bun test` on push/PR; standalone-binary build
 - **Issue templates** — `bug_report`, `feature_request`, `agent_workflow`
 - **`scripts/publish-check.ts`** — pre-publish sanity check
@@ -36,7 +37,9 @@ this project adheres to [Semantic Versioning](https://semver.org/).
 - **Per-command `--help`** — now includes positional argument hint,
   example block, and global flag catalogue
 - **`README.md`** — GitHub-ready landing page: badges, install
-  instructions, recovery matrix
+  instructions (npm/npx/binary/source), recovery matrix
+- **`src/index.ts`** — IIFE-style entry point so the same source
+  bundles for both Bun (ESM, top-level await) and Node (CJS)
 
 ### Documentation
 - **Top-level `README.md`** (M15) — quickstart, command index, install
