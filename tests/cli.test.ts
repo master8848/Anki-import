@@ -45,6 +45,18 @@ describe("parseArgs", () => {
     expect(a.dryRun).toBe(true);
   });
 
+  test("autoCreateDeck defaults to null (caller decides -> true)", () => {
+    expect(parseArgs(["import", "foo.xml"]).autoCreateDeck).toBeNull();
+  });
+
+  test("honors --auto-create-deck", () => {
+    expect(parseArgs(["import", "foo.xml", "--auto-create-deck"]).autoCreateDeck).toBe(true);
+  });
+
+  test("honors --no-auto-create-deck", () => {
+    expect(parseArgs(["import", "foo.xml", "--no-auto-create-deck"]).autoCreateDeck).toBe(false);
+  });
+
   test("honors --help", () => {
     expect(parseArgs(["--help"]).showHelp).toBe(true);
     expect(parseArgs(["-h"]).showHelp).toBe(true);

@@ -17,7 +17,17 @@ import type { AnkiConnectResponse } from "../src/types.ts";
 function makeMockAnki(
   envelope: AnkiConnectResponse<unknown>,
 ): typeof fetch {
-  return (async () => {
+  return (async (_input, init) => {
+    // The new import pipeline always calls `createDeck` first
+    // (unless `autoCreateDeck: false` is passed). Make the mock
+    // dispatch on action so existing tests don't have to change.
+    const body = JSON.parse((init as RequestInit).body as string);
+    if (body.action === "createDeck") {
+      return new Response(JSON.stringify({ result: 1, error: null }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
     return new Response(JSON.stringify(envelope), {
       status: 200,
       headers: { "Content-Type": "application/json" },
@@ -99,7 +109,11 @@ describe("importFromFile: success", () => {
   test("forwards tags to the Anki payload", async () => {
     let captured: string | null = null;
     const fetchImpl: typeof fetch = (async (_input, init) => {
+      const body = JSON.parse((init as RequestInit).body as string);
       captured = (init as RequestInit).body as string;
+      if (body.action === "createDeck") {
+        return new Response(JSON.stringify({ result: 1, error: null }), { status: 200 });
+      }
       return new Response(JSON.stringify({ result: [1], error: null }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
@@ -116,7 +130,11 @@ describe("importFromFile: success", () => {
   test("forces allowDuplicate: false on every note", async () => {
     let captured: string | null = null;
     const fetchImpl: typeof fetch = (async (_input, init) => {
+      const body = JSON.parse((init as RequestInit).body as string);
       captured = (init as RequestInit).body as string;
+      if (body.action === "createDeck") {
+        return new Response(JSON.stringify({ result: 1, error: null }), { status: 200 });
+      }
       return new Response(JSON.stringify({ result: [1], error: null }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
@@ -177,6 +195,109 @@ describe("importFromFile: connectivity", () => {
     const fetchImpl = makeMockAnki({ result: null, error: "deck 'X' not found" });
     const path = writeTemp("enverr", `<anki deck="D"><note type="Basic"><front>Q</front><back>A</back></note></anki>`);
     await expect(importFromFile({ inputPath: path, fetchImpl })).rejects.toThrow(/deck 'X' not found/);
+  });
+});
+
+// ─── Auto-create-deck ──────────────────────────────────────────────────────
+
+describe("importFromFile: autoCreateDeck", () => {
+  test("calls createDeck for every unique deck name before addNotes (default)", async () => {
+    const calls: { action: string; params: unknown }[] = [];
+    const fetchImpl: typeof fetch = (async (_input, init) => {
+      const body = JSON.parse((init as RequestInit).body as string);
+      calls.push({ action: body.action, params: body.params });
+      // All createDeck calls succeed; addNotes returns a 2-id array.
+      if (body.action === "createDeck") {
+        return new Response(JSON.stringify({ result: 12345, error: null }), { status: 200 });
+      }
+      return new Response(JSON.stringify({ result: [1, 2], error: null }), { status: 200 });
+    }) as unknown as typeof fetch;
+
+    const path = writeTemp(
+      "two-decks",
+      `<anki>
+        <note type="Basic" deck="A::B"><front>Q1</front><back>A1</back></note>
+        <note type="Basic" deck="A::C"><front>Q2</front><back>A2</back></note>
+      </anki>`,
+    );
+    const outcome = await importFromFile({ inputPath: path, fetchImpl });
+    expect(outcome.result.created).toBe(2);
+
+    const createCalls = calls.filter((c) => c.action === "createDeck");
+    const createdDecks = createCalls.map((c) => (c.params as { deck: string }).deck).sort();
+    expect(createdDecks).toEqual(["A::B", "A::C"]);
+    // createDeck must run BEFORE addNotes — AnkiConnect would reject
+    // the notes otherwise.
+    const firstCreateIdx = calls.findIndex((c) => c.action === "createDeck");
+    const addIdx = calls.findIndex((c) => c.action === "addNotes");
+    expect(firstCreateIdx).toBeGreaterThanOrEqual(0);
+    expect(addIdx).toBeGreaterThan(firstCreateIdx);
+  });
+
+  test("deduplicates deck names across notes", async () => {
+    const deckNames: string[] = [];
+    const fetchImpl: typeof fetch = (async (_input, init) => {
+      const body = JSON.parse((init as RequestInit).body as string);
+      if (body.action === "createDeck") {
+        deckNames.push((body.params as { deck: string }).deck);
+        return new Response(JSON.stringify({ result: 1, error: null }), { status: 200 });
+      }
+      return new Response(JSON.stringify({ result: [1, 1, 1], error: null }), { status: 200 });
+    }) as unknown as typeof fetch;
+
+    const path = writeTemp(
+      "same-deck",
+      `<anki deck="Only">
+        <note type="Basic"><front>1</front><back>1</back></note>
+        <note type="Basic"><front>2</front><back>2</back></note>
+        <note type="Basic"><front>3</front><back>3</back></note>
+      </anki>`,
+    );
+    await importFromFile({ inputPath: path, fetchImpl });
+    expect(deckNames).toEqual(["Only"]);
+  });
+
+  test("does not call createDeck in dry-run mode", async () => {
+    let createCalled = false;
+    const fetchImpl: typeof fetch = (async (_input, init) => {
+      const body = JSON.parse((init as RequestInit).body as string);
+      if (body.action === "createDeck") createCalled = true;
+      return new Response(JSON.stringify({ result: [1], error: null }), { status: 200 });
+    }) as unknown as typeof fetch;
+    const path = writeTemp("dry-deck", `<anki deck="X"><note type="Basic"><front>Q</front><back>A</back></note></anki>`);
+    await importFromFile({ inputPath: path, fetchImpl, dryRun: true });
+    expect(createCalled).toBe(false);
+  });
+
+  test("does not call createDeck when autoCreateDeck is false", async () => {
+    let createCalled = false;
+    const fetchImpl: typeof fetch = (async (_input, init) => {
+      const body = JSON.parse((init as RequestInit).body as string);
+      if (body.action === "createDeck") createCalled = true;
+      return new Response(JSON.stringify({ result: [1, 2], error: null }), { status: 200 });
+    }) as unknown as typeof fetch;
+    const path = writeTemp(
+      "noauto-deck",
+      `<anki deck="X">
+        <note type="Basic"><front>1</front><back>1</back></note>
+        <note type="Basic"><front>2</front><back>2</back></note>
+      </anki>`,
+    );
+    await importFromFile({ inputPath: path, fetchImpl, autoCreateDeck: false });
+    expect(createCalled).toBe(false);
+  });
+
+  test("surfaces AnkiConnect error from createDeck", async () => {
+    const fetchImpl: typeof fetch = (async () => {
+      return new Response(
+        JSON.stringify({ result: null, error: "deck name invalid" }),
+        { status: 200 },
+      );
+    }) as unknown as typeof fetch;
+    const path = writeTemp("createrr", `<anki deck="X"><note type="Basic"><front>Q</front><back>A</back></note></anki>`);
+    await expect(importFromFile({ inputPath: path, fetchImpl })).rejects.toThrow(
+      /deck name invalid/,
+    );
   });
 });
 

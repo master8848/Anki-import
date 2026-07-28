@@ -5,6 +5,7 @@
  * Usage:
  *
  *   anki-xml import <file.xml> [--url http://127.0.0.1:8765] [--dry-run]
+ *                       [--[no-]auto-create-deck]
  *   anki-xml --version | --help
  *
  * Exit codes:
@@ -29,15 +30,18 @@ Usage:
   anki-xml --version
 
 Options:
-  --url <url>    AnkiConnect endpoint (default http://127.0.0.1:8765)
-  --dry-run      Validate and report; do not contact AnkiConnect
-  --help, -h     Show this help
-  --version, -v  Print the version
+  --url <url>               AnkiConnect endpoint (default http://127.0.0.1:8765)
+  --dry-run                 Validate and report; do not contact AnkiConnect
+  --auto-create-deck        Create any missing decks before posting notes (default)
+  --no-auto-create-deck     Skip deck creation; fail if a deck is missing
+  --help, -h                Show this help
+  --version, -v             Print the version
 
 Examples:
   anki-xml import ./cards.xml
   anki-xml import ./cards.xml --url http://localhost:8765
-  anki-xml import ./cards.xml --dry-run`);
+  anki-xml import ./cards.xml --dry-run
+  anki-xml import ./cards.xml --no-auto-create-deck`);
 }
 
 interface ParsedArgs {
@@ -45,6 +49,8 @@ interface ParsedArgs {
   positional: string[];
   url: string;
   dryRun: boolean;
+  /** null = flag was not passed; true/false = explicit. */
+  autoCreateDeck: boolean | null;
   showHelp: boolean;
   showVersion: boolean;
 }
@@ -55,6 +61,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
     positional: [],
     url: "http://127.0.0.1:8765",
     dryRun: false,
+    autoCreateDeck: null,
     showHelp: false,
     showVersion: false,
   };
@@ -74,6 +81,16 @@ export function parseArgs(argv: string[]): ParsedArgs {
     }
     if (a === "--dry-run") {
       args.dryRun = true;
+      i++;
+      continue;
+    }
+    if (a === "--auto-create-deck") {
+      args.autoCreateDeck = true;
+      i++;
+      continue;
+    }
+    if (a === "--no-auto-create-deck") {
+      args.autoCreateDeck = false;
       i++;
       continue;
     }
@@ -120,6 +137,7 @@ async function runImport(args: ParsedArgs): Promise<number> {
       inputPath: file,
       ankiConnectUrl: args.url,
       dryRun: args.dryRun,
+      autoCreateDeck: args.autoCreateDeck ?? true,
     });
   } catch (err) {
     if (err instanceof CliError) {

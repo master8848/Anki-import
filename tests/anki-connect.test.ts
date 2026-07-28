@@ -195,6 +195,54 @@ describe("AnkiConnectClient.addNotes", () => {
   });
 });
 
+// ─── createDeck ───────────────────────────────────────────────────────────
+
+describe("AnkiConnectClient.createDeck", () => {
+  test("returns the new deck id", async () => {
+    const c = new AnkiConnectClient({
+      url: "http://x",
+      fetchImpl: makeFetch({ envelope: { result: 1784100422340, error: null } }),
+    });
+    expect(await c.createDeck("A::B")).toBe(1784100422340);
+  });
+
+  test("sends POST with deck name in params", async () => {
+    let captured: { url: string; body: string } | null = null;
+    const realFetch: typeof fetch = async (input, init) => {
+      captured = {
+        url: String(input),
+        body: (init as RequestInit).body as string,
+      };
+      return new Response(JSON.stringify({ result: 1, error: null }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    };
+    const c = new AnkiConnectClient({ url: "http://x:8765", fetchImpl: realFetch });
+    await c.createDeck("Foo::Bar::Baz");
+    expect(captured!.url).toBe("http://x:8765/");
+    const parsed = JSON.parse(captured!.body);
+    expect(parsed.action).toBe("createDeck");
+    expect(parsed.params.deck).toBe("Foo::Bar::Baz");
+  });
+
+  test("throws on envelope error", async () => {
+    const c = new AnkiConnectClient({
+      url: "http://x",
+      fetchImpl: makeFetch({ envelope: { result: null, error: "denied" } }),
+    });
+    await expect(c.createDeck("X")).rejects.toThrow(/denied/);
+  });
+
+  test("throws on non-numeric result", async () => {
+    const c = new AnkiConnectClient({
+      url: "http://x",
+      fetchImpl: makeFetch({ envelope: { result: "nope", error: null } }),
+    });
+    await expect(c.createDeck("X")).rejects.toThrow(/Unexpected/);
+  });
+});
+
 // ─── AnkiConnectError class ───────────────────────────────────────────────
 
 describe("AnkiConnectError", () => {

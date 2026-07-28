@@ -26,6 +26,14 @@ export interface ImportOptions {
    * `validCount` reflects how many notes *would* have been sent.
    */
   dryRun?: boolean;
+  /**
+   * Create any missing decks before posting notes. Defaults to `true`.
+   * AnkiConnect's `createDeck` is idempotent — calling it for a deck
+   * that already exists is a no-op, so leaving this on is safe.
+   * Set to `false` to surface the original `deck was not found` error
+   * and abort the import (handy for CI / strict workflows).
+   */
+  autoCreateDeck?: boolean;
 }
 
 export interface ImportOutcome {
@@ -91,6 +99,17 @@ export async function importFromFile(opts: ImportOptions): Promise<ImportOutcome
     url: opts.ankiConnectUrl ?? "http://127.0.0.1:8765",
     fetchImpl: opts.fetchImpl,
   });
+
+  // Ensure every deck referenced by the batch exists. AnkiConnect's
+  // createDeck is idempotent and creates missing parents on the fly,
+  // so we can safely call it for the full set of unique deck names.
+  if (opts.autoCreateDeck ?? true) {
+    const uniqueDecks = [...new Set(validNotes.map((n) => n.deckName))];
+    for (const name of uniqueDecks) {
+      if (!name) continue; // belt-and-braces; validation already errors on empty deck
+      await client.createDeck(name);
+    }
+  }
 
   const payloads: AnkiConnectNote[] = validNotes.map((n) => ({
     deckName: n.deckName,
