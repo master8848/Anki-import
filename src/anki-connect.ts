@@ -255,6 +255,35 @@ export class AnkiConnectClient {
     return await this.invoke<number[]>("cardsOfNote", { note: noteId });
   }
 
+  /** Create a new model. Used for custom note types (P4.2). */
+  async createModel(opts: {
+    modelName: string;
+    inOrderFields: string[];
+    css?: string;
+    cardTemplates: { Name: string; Front: string; Back: string }[];
+  }): Promise<{ id: number; name: string }> {
+    return await this.invoke<{ id: number; name: string }>("createModel", {
+      modelName: opts.modelName,
+      inOrderFields: opts.inOrderFields,
+      css: opts.css ?? "",
+      isCloze: false,
+      cardTemplates: opts.cardTemplates,
+    });
+  }
+
+  /** Upload a media file. Returns the stored filename. */
+  async storeMediaFile(filename: string, base64Data: string): Promise<string> {
+    return await this.invoke<string>("storeMediaFile", {
+      filename,
+      data: base64Data,
+    });
+  }
+
+  /** Open Anki's browser on a query. Used by the `preview` command. */
+  async guiBrowse(query: string): Promise<void> {
+    await this.invoke<null>("guiBrowse", { query });
+  }
+
   /** Remove tags from an existing note (idempotent). */
   async removeTags(noteIds: number[], tags: string): Promise<void> {
     await this.invoke<null>("removeTags", { notes: noteIds, tags });

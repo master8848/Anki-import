@@ -30,6 +30,8 @@ import { suspendCmd, unsuspendCmd, buryCmd } from "./commands/scheduling.ts";
 import migrateCmd from "./commands/migrate.ts";
 import diffCmd from "./commands/diff.ts";
 import syncCmd from "./commands/sync.ts";
+import previewCmd from "./commands/preview.ts";
+import profileCmd from "./commands/profile.ts";
 import completionCmd from "./commands/completion.ts";
 
 export const COMMANDS: Command[] = [
@@ -53,6 +55,8 @@ export const COMMANDS: Command[] = [
   migrateCmd,
   diffCmd,
   syncCmd,
+  previewCmd,
+  profileCmd,
   completionCmd,
 ];
 
