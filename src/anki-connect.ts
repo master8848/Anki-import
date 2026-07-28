@@ -212,6 +212,49 @@ export class AnkiConnectClient {
     return await this.invoke<string[]>("deckNames");
   }
 
+  /** Delete a list of notes. Permanent; not undoable. */
+  async deleteNotes(noteIds: number[]): Promise<void> {
+    await this.invoke<null>("deleteNotes", { notes: noteIds });
+  }
+
+  /** Rename a deck. */
+  async renameDeck(oldName: string, newName: string): Promise<void> {
+    await this.invoke<null>("changeDeck", { name: oldName, newName });
+    // changeDeck does not move child decks. For a true rename, walk the
+    // tree and reparent; for now we surface a flat rename.
+    void newName;
+  }
+
+  /** Move notes to a target deck. */
+  async moveNotesToDeck(noteIds: number[], deck: string): Promise<void> {
+    await this.invoke<null>("changeDeck", { notes: noteIds, deck });
+  }
+
+  /** Delete an entire deck. Permanent; not undoable. */
+  async deleteDeck(name: string, cardsToo: boolean): Promise<void> {
+    await this.invoke<null>("deleteDeck", { name, cardsToo });
+  }
+
+  /** Suspend a list of cards. */
+  async suspendCards(cardIds: number[]): Promise<void> {
+    await this.invoke<null>("suspend", { cards: cardIds });
+  }
+
+  /** Unsuspend a list of cards. */
+  async unsuspendCards(cardIds: number[]): Promise<void> {
+    await this.invoke<null>("unsuspend", { cards: cardIds });
+  }
+
+  /** Bury a list of cards (hide from review until the next day). */
+  async buryCards(cardIds: number[]): Promise<void> {
+    await this.invoke<null>("buryCards", { cards: cardIds });
+  }
+
+  /** Return the card ids for a note id. */
+  async cardsForNote(noteId: number): Promise<number[]> {
+    return await this.invoke<number[]>("cardsOfNote", { note: noteId });
+  }
+
   /** Remove tags from an existing note (idempotent). */
   async removeTags(noteIds: number[], tags: string): Promise<void> {
     await this.invoke<null>("removeTags", { notes: noteIds, tags });
