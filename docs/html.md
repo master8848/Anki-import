@@ -138,9 +138,15 @@ The attribute value is **not** entity-decoded or re-encoded. We treat
 the source range between `<a ` and the closing `>` of the tag as an
 opaque string.
 
-If you need a `<` or `&` inside an attribute value, you must use
-CDATA for that — but CDATA cannot appear inside a tag's attributes
-in XML. So in practice: keep attribute values simple.
+If an attribute needs XML-significant characters, use the normal XML entity
+syntax, for example `&amp;` in a query string:
+
+```xml
+<back><a href="https://example.test/?a=1&amp;b=2">search</a></back>
+```
+
+CDATA cannot appear inside a tag's attributes. The importer copies the source
+attribute spelling verbatim.
 
 ## 5. Comments inside fields
 

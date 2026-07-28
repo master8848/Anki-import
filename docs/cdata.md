@@ -146,18 +146,15 @@ Speed of light: <b>{{c1::299,792,458}}</b> m/s.
 
 ## 5. The `]]>` problem
 
-The literal sequence `]]>` cannot appear inside a CDATA section
-because it would close the section prematurely. To embed it, split
-the CDATA:
+The literal sequence `]]>` cannot appear inside a CDATA section because it
+closes that section. Split the content into adjacent sections:
 
 ```xml
-<front><![CDATA[a]] > b]]></front>
+<front><![CDATA[a]]]]><![CDATA[>b]]></front>
 ```
 
-(Note the space between `]]` and `>`.) Our tokenizer treats this as a
-CDATA section with content `a]] > b`. The literal `]]>` is then
-absent from the field entirely — the author wrote it as `]] >` to
-get it past the parser, and the human-visible text is `a]]>b`.
+The result contains the literal `a]]>b` (with the surrounding CDATA content
+escaped for HTML as usual).
 
 ## 6. Why we don't escape whole fields
 

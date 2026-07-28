@@ -49,9 +49,16 @@ anki-xml import ./cards.xml --dry-run
 anki-xml import ./cards.xml --url http://localhost:8765
 
 # Strict mode: don't create missing decks. If a note's deck
-# doesn't exist in Anki, the import aborts with status 1.
+# doesn't exist in Anki, the import aborts with status 2 (fatal).
 anki-xml import ./cards.xml --no-auto-create-deck
 ```
+
+#### Validation is atomic
+
+The file is validated before deck creation or `addNotes`. If one note is
+invalid, no valid subset is sent; fix the reported errors and run the file
+again. After a valid request reaches AnkiConnect, the API can still report
+per-note failures (for example, duplicates).
 
 ## `--auto-create-deck`
 
@@ -112,11 +119,12 @@ Reading ./new-deck.xml ...
 Created: 5
 All notes created successfully.
 
-# Re-import of the same file: idempotent, no errors.
+# Re-import: deck creation is idempotent, but note creation is not.
+# allowDuplicate=false means existing notes are reported as failures.
 $ anki-xml import ./new-deck.xml
 Reading ./new-deck.xml ...
-Created: 5
-All notes created successfully.
+Created: 0
+Failed: 5
 
 # Multi-deck file: every deck (and parent) created in one call.
 $ cat multi-deck.xml
