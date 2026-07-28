@@ -34,6 +34,8 @@ export interface ParsedArgs {
   format: "default" | "ndjson";
   /** Multi-collection profile name. */
   profile: string | null;
+  /** Idempotency key (M10). */
+  idempotencyKey: string | null;
   /** Loose bag of subcommand-specific flags. Parsed by each command. */
   rest: string[];
 }
@@ -91,6 +93,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
     quiet: false,
     format: "default",
     profile: null,
+    idempotencyKey: null,
     rest: [],
   };
 
@@ -157,6 +160,13 @@ export function parseArgs(argv: string[]): ParsedArgs {
       const next = argv[i + 1];
       if (!next) throw new CliError("--profile requires a value");
       args.profile = next;
+      i += 2;
+      continue;
+    }
+    if (a === "--idempotency-key") {
+      const next = argv[i + 1];
+      if (!next) throw new CliError("--idempotency-key requires a value");
+      args.idempotencyKey = next;
       i += 2;
       continue;
     }

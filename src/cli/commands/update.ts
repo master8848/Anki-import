@@ -2,10 +2,10 @@
  * `update` command — change field values / tags on existing notes.
  */
 
-import { loadUpdatesFromXml, renderUpdate, runUpdate, type FieldUpdate, type UpdateEntry } from "../../update.ts";
+import { loadUpdatesFromXml, renderUpdate, runRenameField, runUpdate, type FieldUpdate, type UpdateEntry } from "../../update.ts";
 import { CliError } from "../args.ts";
 import type { Command } from "../command.ts";
-import { withFatal } from "../output.ts";
+import { formatOutput, withFatal } from "../output.ts";
 
 export interface UpdateSubArgs {
   id?: number;
@@ -14,6 +14,7 @@ export interface UpdateSubArgs {
   fields: FieldUpdate[];
   tags?: string[];
   tagsMode: "replace" | "add" | "remove";
+  renameField?: { from: string; to: string };
 }
 
 function parseSubArgs(positional: string[], rest: string[]): UpdateSubArgs {
@@ -77,6 +78,18 @@ function parseSubArgs(positional: string[], rest: string[]): UpdateSubArgs {
       out.tags = v.split(/[\s,]+/).map((t) => t.trim()).filter((t) => t.length > 0);
       out.tagsMode = "remove";
       i++;
+    } else if (a === "--rename-field") {
+      const v = rest[i + 1];
+      if (v === undefined) throw new CliError("--rename-field requires a value");
+      const eq = v.indexOf("=");
+      if (eq < 0) {
+        throw new CliError(`--rename-field expects Old=New (got "${v}")`);
+      }
+      const from = v.slice(0, eq).trim();
+      const to = v.slice(eq + 1).trim();
+      if (!from || !to) throw new CliError(`--rename-field requires non-empty Old and New`);
+      out.renameField = { from, to };
+      i++;
     }
   }
   if (out.id === undefined && positional.length > 0) {
@@ -99,6 +112,7 @@ const command: Command<UpdateSubArgs> = {
     "--tags <list>": "Replace the tag list (whitespace or comma separated).",
     "--add-tags <list>": "Add tags to existing tags (does not remove).",
     "--remove-tags <list>": "Remove tags from existing tags.",
+    "--rename-field <Old=New>": "Migrate a field's value to a new name (with --ids).",
     "--dry-run": "Validate and report; do not contact AnkiConnect.",
   },
   parseSubArgs(positional, rest) {
@@ -107,6 +121,31 @@ const command: Command<UpdateSubArgs> = {
   async run(args, sub) {
     return withFatal(async () => {
       const entries: UpdateEntry[] = [];
+
+      if (sub.renameField && sub.ids && sub.ids.length > 0) {
+        const result = await runRenameField({
+          from: sub.renameField.from,
+          to: sub.renameField.to,
+          noteIds: sub.ids,
+          ankiConnectUrl: args.url,
+        });
+        const data = {
+          from: sub.renameField.from,
+          to: sub.renameField.to,
+          attempted: result.attempted,
+          renamed: result.renamed,
+          failed: result.failed.length,
+        };
+        const human = [
+          `Renamed '${sub.renameField.from}' -> '${sub.renameField.to}'`,
+          `  attempted: ${result.attempted}`,
+          `  renamed:   ${result.renamed}`,
+          `  failed:    ${result.failed.length}`,
+          ...result.failed.map((f) => `    note ${f.noteId}: ${f.reason}`),
+        ].join("\n");
+        console.log(formatOutput(data, { args, startMs: Date.now(), command: "update" }, human));
+        return result.failed.length === 0 ? 0 : 1;
+      }
 
       if (sub.id !== undefined) {
         if (sub.fields.length === 0 && sub.tags === undefined) {
