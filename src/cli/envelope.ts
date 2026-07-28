@@ -22,7 +22,7 @@
  *     "meta": {
  *       "duration_ms": 142,
  *       "timestamp": "2024-...Z",
- *       "version": "0.1.0"
+ *       "version": "0.0.1"
  *     }
  *   }
  *
@@ -149,7 +149,7 @@ function meta(startMs: number): EnvelopeMeta {
   return {
     duration_ms: Date.now() - startMs,
     timestamp: new Date().toISOString(),
-    version: "0.1.0",
+    version: "0.0.1",
   };
 }
 

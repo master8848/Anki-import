@@ -36,7 +36,7 @@ executable so `npm` symlinks it directly into your `bin`.
 ### Verify the install
 
 ```sh
-npx anki-xml --version        # anki-xml v0.1.0
+npx anki-xml --version        # anki-xml v0.0.1
 npx anki-xml --help           # grouped help
 npx anki-xml doctor           # verify environment
 ```
@@ -50,7 +50,7 @@ npm update -g anki-xml
 To pin to a version:
 
 ```sh
-npm install -g anki-xml@0.1.0
+npm install -g anki-xml@0.0.1
 ```
 
 ## Standalone binary
@@ -59,7 +59,7 @@ Single file. No runtime required. Cross-platform.
 
 ```sh
 # macOS arm64
-curl -L https://github.com/YOUR-USERNAME/anki-xml/releases/latest/download/anki-xml-darwin-arm64 \
+curl -L https://github.com/master8848/Anki-import/releases/latest/download/anki-xml-darwin-arm64 \
   -o /usr/local/bin/anki-xml
 chmod +x /usr/local/bin/anki-xml
 anki-xml --version
@@ -74,12 +74,12 @@ bun run build --out anki-xml
 
 Binaries are produced by GitHub Actions on every release and
 attached as release artifacts. See the
-[Releases page](https://github.com/YOUR-USERNAME/anki-xml/releases).
+[Releases page](https://github.com/master8848/Anki-import/releases).
 
 ## Build from source
 
 ```sh
-git clone https://github.com/YOUR-USERNAME/anki-xml
+git clone https://github.com/master8848/Anki-import
 cd anki-xml
 bun install
 bun run build:npm       # dist/cli.js (for npm publish)

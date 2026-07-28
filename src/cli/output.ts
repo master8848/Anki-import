@@ -81,7 +81,7 @@ export function formatNdjsonRecord<T>(
       _meta: {
         duration_ms: Date.now() - ctx.startMs,
         timestamp: new Date().toISOString(),
-        version: "0.1.0",
+        version: "0.0.1",
         command: ctx.command,
       },
     });

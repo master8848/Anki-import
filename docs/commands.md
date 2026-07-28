@@ -1,6 +1,6 @@
 # Commands
 
-`anki-xml` ships **31 commands** grouped by purpose. Every command
+`anki-xml` ships **34 commands** grouped by purpose. Every command
 accepts the [global flags](#global-flags) below. Per-command `Usage:` and
 `Example(s):` appear in `--help`; this page explains the why, the
 how, and the trade-offs.

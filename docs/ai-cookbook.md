@@ -59,7 +59,7 @@ Every command's `--json` output is wrapped in the v1 envelope:
     "warnings": [],
     "decks": ["AI Import::Spanish"]
   },
-  "meta": { "duration_ms": 4, "timestamp": "2024-...", "version": "0.1.0" }
+  "meta": { "duration_ms": 4, "timestamp": "2024-...", "version": "0.0.1" }
 }
 ```
 

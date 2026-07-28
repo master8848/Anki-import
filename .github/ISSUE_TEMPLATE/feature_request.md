@@ -24,5 +24,5 @@ What did you try instead?
 
 ## Out of scope if requests are low
 
-Per [`extension-policy.md`](https://github.com/YOUR-USERNAME/anki-xml/blob/main/docs/extension-policy.md),
+Per [`extension-policy.md`](https://github.com/master8848/Anki-import/blob/main/docs/extension-policy.md),
 some features are deferred until enough requests materialize.
