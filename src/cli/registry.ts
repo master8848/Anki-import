@@ -36,6 +36,9 @@ import modelsCmd from "./commands/models.ts";
 import fieldsCmd from "./commands/fields.ts";
 import tagsCmd from "./commands/tags.ts";
 import noteInfoCmd from "./commands/note-info.ts";
+import checkpointCmd from "./commands/checkpoint.ts";
+import rollbackCmd from "./commands/rollback.ts";
+import auditLogCmd from "./commands/audit-log.ts";
 import completionCmd from "./commands/completion.ts";
 
 export const COMMANDS: Command[] = [
@@ -65,6 +68,9 @@ export const COMMANDS: Command[] = [
   fieldsCmd,
   tagsCmd,
   noteInfoCmd,
+  checkpointCmd,
+  rollbackCmd,
+  auditLogCmd,
   completionCmd,
 ];
 
