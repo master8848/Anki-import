@@ -10,7 +10,7 @@
 
 import * as fs from "node:fs/promises";
 import { AnkiConnectClient, AnkiConnectError } from "./anki-connect.ts";
-import { parseNotes, validateNotes, XmlParseError } from "./xml.ts";
+import { parseDocument, validateNotes, XmlParseError } from "./xml.ts";
 import type { AnkiConnectNote, ImportResult } from "./types.ts";
 
 export interface ImportOptions {
@@ -42,9 +42,9 @@ export async function importFromFile(opts: ImportOptions): Promise<ImportOutcome
   const source = await fs.readFile(opts.inputPath, "utf8");
 
   // 1) Parse and validate.
-  let notes;
+  let parsed;
   try {
-    notes = parseNotes(source);
+    parsed = parseDocument(source);
   } catch (err) {
     if (err instanceof XmlParseError) {
       throw err;
@@ -52,8 +52,10 @@ export async function importFromFile(opts: ImportOptions): Promise<ImportOutcome
     throw err;
   }
 
-  const defaultDeck = extractDefaultDeck(source);
-  const { notes: validNotes, errors: validationErrors } = validateNotes(notes, defaultDeck);
+  const { notes: validNotes, errors: validationErrors } = validateNotes(
+    parsed.notes,
+    parsed.defaultDeck,
+  );
 
   // Short-circuit when validation failed entirely; nothing to send.
   if (validNotes.length === 0) {
@@ -107,18 +109,4 @@ export async function importFromFile(opts: ImportOptions): Promise<ImportOutcome
     result: { created, failed },
     validationErrors,
   };
-}
-
-/**
- * Re-parse the source (cheap) to recover the optional default-deck
- * attribute on `<anki deck="...">`. We could refactor `parseNotes` to
- * return it directly, but keeping the surface small is worth the
- * duplicate parse.
- */
-function extractDefaultDeck(source: string): string {
-  const m = source.match(/<anki\b([^>]*)>/);
-  if (!m) return "";
-  const attrText = m[1] ?? "";
-  const d = attrText.match(/\bdeck\s*=\s*"([^"]*)"/);
-  return d ? d[1]! : "";
 }

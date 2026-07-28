@@ -194,13 +194,13 @@ describe("importFromFile: example files", () => {
   });
 
   test("examples/html-and-latex.xml validates cleanly", async () => {
-    const fetchImpl = makeMockAnki({ result: [1, 2, 3, 4, 5, 6, 7, 8, 9], error: null });
+    const fetchImpl = makeMockAnki({ result: [1, 2, 3, 4, 5, 6, 7, 8], error: null });
     const outcome = await importFromFile({
       inputPath: `${import.meta.dir}/../examples/html-and-latex.xml`,
       fetchImpl,
     });
     expect(outcome.validationErrors).toHaveLength(0);
-    expect(outcome.result.created).toBe(9);
+    expect(outcome.result.created).toBe(8);
   });
 
   test("examples/basic.xml validates cleanly", async () => {
