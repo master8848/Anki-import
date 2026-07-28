@@ -35,6 +35,13 @@ export interface ImportOptions {
    * and abort the import (handy for CI / strict workflows).
    */
   autoCreateDeck?: boolean;
+  /**
+   * Resume from a named checkpoint (M11). When set, notes whose
+   * payload already appears in the checkpoint (same deck+model+
+   * fields hash) are skipped, allowing recovery from a network
+   * drop or partial failure.
+   */
+  resumeFromCheckpoint?: string;
 }
 
 export interface ImportOutcome {
@@ -139,6 +146,31 @@ export async function importFromFile(opts: ImportOptions): Promise<ImportOutcome
     fetchImpl: opts.fetchImpl,
   });
 
+  // Resume filter (M11): if a checkpoint is supplied, skip any note
+  // whose (deck, model, fields) fingerprint matches a snapshotted note.
+  // The checkpoint's noteId is what got assigned last time; we use the
+  // fields fingerprint as the identity so renamed fields still match.
+  let resumeFingerprints: Set<string> | null = null;
+  if (opts.resumeFromCheckpoint) {
+    const { loadCheckpoint } = await import("./checkpoints.ts");
+    const snap = await loadCheckpoint(opts.resumeFromCheckpoint);
+    resumeFingerprints = new Set();
+    for (const snapNote of Object.values(snap.notes)) {
+      resumeFingerprints.add(fingerprintNote(snapNote.deckName, snapNote.modelName, snapNote.fields));
+    }
+  }
+  const skippedByResume = new Set<number>();
+  if (resumeFingerprints) {
+    for (let i = createNotes.length - 1; i >= 0; i--) {
+      const n = createNotes[i]!;
+      const fp = fingerprintNote(n.deckName, n.modelName, n.fields);
+      if (resumeFingerprints.has(fp)) {
+        skippedByResume.add(n.number);
+        createNotes.splice(i, 1);
+      }
+    }
+  }
+
   // Ensure every deck referenced by the batch exists. AnkiConnect's
   // createDeck is idempotent and creates missing parents on the fly,
   // so we can safely call it for the full set of unique deck names.
@@ -167,22 +199,42 @@ export async function importFromFile(opts: ImportOptions): Promise<ImportOutcome
   let created = 0;
   const failed: { noteNumber: number; reason: string }[] = [];
 
-  if (ids.length !== validNotes.length) {
+  if (ids.length !== createNotes.length) {
     throw new AnkiConnectError(
-      `AnkiConnect returned ${ids.length} ids for ${validNotes.length} notes — protocol mismatch`,
+      `AnkiConnect returned ${ids.length} ids for ${createNotes.length} notes — protocol mismatch`,
     );
   }
 
-  for (let i = 0; i < validNotes.length; i++) {
-    const note = validNotes[i]!;
+  for (let i = 0; i < createNotes.length; i++) {
+    const note = createNotes[i]!;
     const id = ids[i];
     if (typeof id === "number") created++;
     else failed.push({ noteNumber: note.number, reason: "AnkiConnect rejected this note" });
   }
+  // Resume-skip report: each skipped note is treated as a successful
+  // creation from the caller's perspective.
+  const skipped = skippedByResume.size;
+  created += skipped;
 
   return {
     result: { created, failed },
     validationErrors,
     validCount: validNotes.length,
   };
+}
+
+/**
+ * Compute a stable fingerprint of a note's content identity (excluding
+ * the Anki-assigned id). Used by resume-from to recognize notes that
+ * were already successfully imported in a previous run.
+ */
+function fingerprintNote(deck: string, model: string, fields: Record<string, string>): string {
+  const sortedKeys = Object.keys(fields).sort();
+  const payload = [deck, model, ...sortedKeys.map((k) => `${k}=${fields[k]}`)].join("\u0001");
+  let h = 0x811c9dc5;
+  for (let i = 0; i < payload.length; i++) {
+    h ^= payload.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return ("00000000" + (h >>> 0).toString(16)).slice(-8);
 }

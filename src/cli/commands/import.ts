@@ -9,6 +9,7 @@ import { formatOutput, withFatal } from "../output.ts";
 export interface ImportSubArgs {
   file: string | null;
   allowDuplicate: boolean;
+  resumeFrom: string | null;
 }
 
 const command: Command<ImportSubArgs> = {
@@ -18,12 +19,21 @@ const command: Command<ImportSubArgs> = {
     "--auto-create-deck": "Create decks referenced by notes (default: on)",
     "--no-auto-create-deck": "Fail if a referenced deck does not exist",
     "--allow-duplicate": "Allow duplicate notes (default: reject duplicates).",
+    "--resume-from <name>": "Skip notes already captured in this checkpoint.",
     "--dry-run": "Validate and report; do not contact AnkiConnect",
   },
   parseSubArgs(positional, rest) {
+    let resumeFrom: string | null = null;
+    for (let i = 0; i < rest.length; i++) {
+      if (rest[i] === "--resume-from") {
+        resumeFrom = rest[i + 1] ?? null;
+        i++;
+      }
+    }
     return {
       file: positional[0] ?? null,
       allowDuplicate: rest.includes("--allow-duplicate"),
+      resumeFrom,
     };
   },
   async run(args, sub) {
@@ -43,6 +53,7 @@ const command: Command<ImportSubArgs> = {
         dryRun: args.dryRun,
         autoCreateDeck: args.autoCreateDeck ?? true,
         allowDuplicate: sub.allowDuplicate,
+        resumeFromCheckpoint: sub.resumeFrom ?? undefined,
       });
 
       if (outcome.validationErrors.length > 0) {
