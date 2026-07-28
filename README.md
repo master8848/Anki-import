@@ -61,20 +61,20 @@ Single self-contained executable. No runtime required at all (Bun
 is bundled in):
 
 ```sh
-curl -L https://github.com/YOUR-USERNAME/anki-xml/releases/latest/download/anki-xml -o /usr/local/bin/anki-xml
+curl -L https://github.com/master8848/Anki-import/releases/latest/download/anki-xml -o /usr/local/bin/anki-xml
 chmod +x /usr/local/bin/anki-xml
 anki-xml --version
 ```
 
 Available for macOS (arm64 / x86_64), Linux (x86_64 / aarch64),
-and Windows. See the [Releases page](https://github.com/YOUR-USERNAME/anki-xml/releases).
+and Windows. See the [Releases page](https://github.com/master8848/Anki-import/releases).
 
 ### Build from source
 
 Requires [Bun](https://bun.sh) ≥ 1.3:
 
 ```sh
-git clone https://github.com/YOUR-USERNAME/anki-xml
+git clone https://github.com/master8848/Anki-import
 cd anki-xml
 bun install
 bun run build:npm       # produces ./dist/cli.js (Node bundle)
@@ -108,7 +108,7 @@ bun run build           # produces ./anki-xml (standalone)
    anki-xml import ./cards.xml
    ```
 
-## Commands (31)
+## Commands (34)
 
 | Group | Commands |
 |---|---|
@@ -197,7 +197,7 @@ Every checkpoint is a JSON snapshot at
 
 ```sh
 bun install                  # install deps
-bun test                     # run all 420 tests
+bun test                     # run all 430 tests
 bun test tests/cli.test.ts   # one test file
 bunx tsc --noEmit            # type-check
 bun run build                # standalone binary

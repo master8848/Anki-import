@@ -101,14 +101,14 @@ future plan.
 
 ## CLI
 
-31 commands in 6 surface groups (Read/Query, Write, Schema,
-Lifecycle, Recovery, Shell). Run `anki-xml --help` for the full list.
+34 commands in 7 surface groups (Read/Query, Write, Schema,
+Lifecycle, Recovery, Add-ons, Shell). Run `anki-xml --help` for the full list.
 
 ## Development
 
 ```bash
 bun install
-bun test                  # all 420 tests
+bun test                  # all 430 tests
 bun test tests/cli.test.ts
 bunx tsc --noEmit
 bun run build             # standalone binary

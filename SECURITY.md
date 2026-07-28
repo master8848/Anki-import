@@ -3,7 +3,7 @@
 ## Reporting a vulnerability
 
 Please open a private security advisory at:
-<https://github.com/YOUR-USERNAME/anki-xml/security/advisories/new>
+<https://github.com/master8848/Anki-import/security/advisories/new>
 
 Do not file a public issue. Give us 7 days to respond before going
 public.

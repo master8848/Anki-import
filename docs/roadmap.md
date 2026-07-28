@@ -100,7 +100,7 @@ In order:
 | M11 | `import --resume-from <checkpoint>` | ✅ shipped |
 | M12 | `update --rename-field Old=New` | ✅ shipped |
 
-### M13..M18 — Polish + distribution
+### M13..M22 — Polish + distribution + add-ons
 
 | # | Feature | Status |
 |---|---|---|
@@ -113,6 +113,7 @@ In order:
 | M19 | Top-level `README.md` help surface grouped by category | ✅ shipped |
 | M20 | Per-command help with positional argument + examples | ✅ shipped |
 | M21 | npm distribution (Node ≥ 18 CommonJS bundle; `npm i -g` and `npx`) | ✅ shipped |
+| M22 | `addon` command + `doctor` add-on checks + MathJax detection | ✅ shipped |
 
 ## Original commit log (Phase 1..4)
 
@@ -135,9 +136,9 @@ All 11 priority commits shipped. See `git log`.
 
 ## Status (current)
 
-**31 commands ship.** 420 tests pass. The CLI is feature-complete for
+**34 commands ship.** 430 tests pass. The CLI is feature-complete for
 every phase-1..4 item that didn't require plugin hosts, plus the
-M1..M18 reliability and distribution layer.
+M1..M22 reliability, distribution, and add-on layer.
 
 **Deferred items:**
 

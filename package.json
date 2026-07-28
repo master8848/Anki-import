@@ -1,6 +1,6 @@
 {
   "name": "anki-xml",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "description": "AI-agent-friendly CLI for importing, querying, and updating Anki flashcards via AnkiConnect. Built for autonomous loops: deterministic, idempotent, recoverable, composable.",
   "keywords": [
     "anki",
@@ -12,8 +12,9 @@
     "ai-agent",
     "llm-tool"
   ],
-  "homepage": "https://github.com/YOUR-USERNAME/anki-xml#readme",
-  "bugs": "https://github.com/YOUR-USERNAME/anki-xml/issues",
+  "homepage": "https://github.com/master8848/Anki-import#readme",
+  "bugs": "https://github.com/master8848/Anki-import/issues",
+  "author": "master8848",
   "license": "MIT",
   "main": "src/index.ts",
   "bin": {
@@ -59,7 +60,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/YOUR-USERNAME/anki-xml.git",
+    "url": "https://github.com/master8848/Anki-import.git",
     "directory": "."
   }
 }
