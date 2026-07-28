@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<anki deck="AI Import::Vocab">
+  <note type="Basic" tags="greetings">
+    <front>Hola</front>
+    <back>Hello</back>
+  </note>
+  <note type="Basic" tags="greetings">
+    <front>Adios</front>
+    <back>Goodbye</back>
+  </note>
+  <note type="Basic" tags="greetings">
+    <front>Gracias</front>
+    <back>Thank you</back>
+  </note>
+</anki>
