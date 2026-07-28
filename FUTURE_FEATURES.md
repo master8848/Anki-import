@@ -12,6 +12,13 @@
 - For **what's actually built**: see [`docs/commands.md`](./docs/commands.md).
 - For **design rationale**: see [`docs/architecture-review.md`](./docs/architecture-review.md).
 
+## Plugin hooks (P4.9) — DEFERRED
+
+The plugin system is **deferred** per `docs/roadmap.md` until 3 real
+plugin requests materialize. The rationale and the design shape
+that will guide the eventual implementation are documented in
+[`src/plugins.ts`](src/plugins.ts).
+
 ## Proposals tracked here (now in roadmap)
 
 | Original proposal | Roadmap ID |
