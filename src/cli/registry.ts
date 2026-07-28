@@ -21,6 +21,9 @@ import decksCmd from "./commands/decks.ts";
 import statsCmd from "./commands/stats.ts";
 import searchCmd from "./commands/search.ts";
 import updateCmd from "./commands/update.ts";
+import tagCmd from "./commands/tag.ts";
+import untagCmd from "./commands/untag.ts";
+import exportCmd from "./commands/export.ts";
 import completionCmd from "./commands/completion.ts";
 
 export const COMMANDS: Command[] = [
@@ -31,6 +34,9 @@ export const COMMANDS: Command[] = [
   statsCmd,
   searchCmd,
   updateCmd,
+  tagCmd,
+  untagCmd,
+  exportCmd,
   completionCmd,
 ];
 

@@ -119,6 +119,9 @@ describe("command registry", () => {
       "stats",
       "search",
       "update",
+      "tag",
+      "untag",
+      "export",
       "completion",
     ]);
   });

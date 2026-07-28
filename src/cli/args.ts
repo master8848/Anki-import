@@ -30,6 +30,8 @@ export interface ParsedArgs {
   noColor: boolean;
   /** Emit summary-only output. Defaults to false. */
   quiet: boolean;
+  /** Output format hint: "ndjson" streams one JSON record per line. */
+  format: "default" | "ndjson";
   /** Loose bag of subcommand-specific flags. Parsed by each command. */
   rest: string[];
 }
@@ -56,6 +58,8 @@ export const SUBCOMMAND_FLAGS = new Set([
   "--strict",
   "--allow-duplicate",
   "--no-preflight",
+  "--out",
+  "--with-ids",
 ]);
 
 /** Flags that take no value (booleans). */
@@ -63,6 +67,7 @@ export const BOOLEAN_FLAGS = new Set([
   "--strict",
   "--allow-duplicate",
   "--no-preflight",
+  "--with-ids",
 ]);
 
 export function parseArgs(argv: string[]): ParsedArgs {
@@ -78,6 +83,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
     showVersion: false,
     noColor: false,
     quiet: false,
+    format: "default",
     rest: [],
   };
 
@@ -128,6 +134,16 @@ export function parseArgs(argv: string[]): ParsedArgs {
     if (a === "--quiet") {
       args.quiet = true;
       i++;
+      continue;
+    }
+    if (a === "--format") {
+      const next = argv[i + 1];
+      if (!next) throw new CliError("--format requires a value");
+      if (next !== "ndjson" && next !== "default") {
+        throw new CliError(`--format must be 'ndjson' or 'default' (got '${next}')`);
+      }
+      args.format = next;
+      i += 2;
       continue;
     }
     if (a === "--url") {
