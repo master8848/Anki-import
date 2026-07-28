@@ -61,6 +61,7 @@ export const SUBCOMMAND_FLAGS = new Set([
   "--out",
   "--with-ids",
   "--cards-too",
+  "--yes",
 ]);
 
 /** Flags that take no value (booleans). */
@@ -70,6 +71,7 @@ export const BOOLEAN_FLAGS = new Set([
   "--no-preflight",
   "--with-ids",
   "--cards-too",
+  "--yes",
 ]);
 
 export function parseArgs(argv: string[]): ParsedArgs {

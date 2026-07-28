@@ -129,6 +129,9 @@ describe("command registry", () => {
       "suspend",
       "unsuspend",
       "bury",
+      "migrate",
+      "diff",
+      "sync",
       "completion",
     ]);
   });

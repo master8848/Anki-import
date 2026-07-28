@@ -27,6 +27,9 @@ import exportCmd from "./commands/export.ts";
 import deleteCmd from "./commands/delete.ts";
 import { renameCmd, deleteDeckCmd, moveNotesCmd } from "./commands/deck-ops.ts";
 import { suspendCmd, unsuspendCmd, buryCmd } from "./commands/scheduling.ts";
+import migrateCmd from "./commands/migrate.ts";
+import diffCmd from "./commands/diff.ts";
+import syncCmd from "./commands/sync.ts";
 import completionCmd from "./commands/completion.ts";
 
 export const COMMANDS: Command[] = [
@@ -47,6 +50,9 @@ export const COMMANDS: Command[] = [
   suspendCmd,
   unsuspendCmd,
   buryCmd,
+  migrateCmd,
+  diffCmd,
+  syncCmd,
   completionCmd,
 ];
 
