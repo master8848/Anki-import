@@ -134,6 +134,10 @@ describe("command registry", () => {
       "sync",
       "preview",
       "profile",
+      "models",
+      "fields",
+      "tags",
+      "note-info",
       "completion",
     ]);
   });
