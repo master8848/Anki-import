@@ -4,6 +4,7 @@
 
 import { loadUpdatesFromXml, renderUpdate, runRenameField, runUpdate, type FieldUpdate, type UpdateEntry } from "../../update.ts";
 import { CliError } from "../args.ts";
+import { withBatch } from "../../batch.ts";
 import type { Command } from "../command.ts";
 import { formatOutput, withFatal } from "../output.ts";
 
@@ -203,6 +204,26 @@ const command: Command<UpdateSubArgs> = {
         entries,
         dryRun: false,
       });
+      // Atomic batch wrapper (M9): if --batch-id is set and any entry
+      // fails with --rollback-on-partial, restore the prior state.
+      if (args.batchId && result.failed.length > 0) {
+        if (args.rollbackOnPartial) {
+          const batchResult = await withBatch(
+            {
+              batchId: args.batchId,
+              rollbackOnPartial: true,
+              ankiConnectUrl: args.url,
+              preSnapshotIds: entries.map((e) => e.noteId),
+            },
+            async () => ({ result, failureCount: 0 }), // no-op: work already done
+          );
+          if (batchResult.rolledBack) {
+            console.log(
+              `Batch '${args.batchId}' failed and was rolled back (checkpoint '${batchResult.checkpointName}').`,
+            );
+          }
+        }
+      }
       console.log(renderUpdate(result));
       return result.failed.length === 0 ? 0 : 1;
     });
