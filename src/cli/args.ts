@@ -55,10 +55,15 @@ export const SUBCOMMAND_FLAGS = new Set([
   "--shell",
   "--strict",
   "--allow-duplicate",
+  "--no-preflight",
 ]);
 
 /** Flags that take no value (booleans). */
-export const BOOLEAN_FLAGS = new Set(["--strict", "--allow-duplicate"]);
+export const BOOLEAN_FLAGS = new Set([
+  "--strict",
+  "--allow-duplicate",
+  "--no-preflight",
+]);
 
 export function parseArgs(argv: string[]): ParsedArgs {
   const args: ParsedArgs = {

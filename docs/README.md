@@ -58,6 +58,7 @@ schema for each.
 ```
 anki-xml import <file> [options]
 anki-xml validate <file> [--strict] [--json]
+anki-xml plan <file> [--no-preflight] [--json]
 anki-xml decks [--json]
 anki-xml stats [--deck NAME] [--json]
 anki-xml search <phrase> [--deck D] [--tag T] [--limit N] [--query Q] [--json]
