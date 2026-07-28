@@ -12,10 +12,12 @@ export interface UpdateSubArgs {
   ids?: number[];
   file?: string;
   fields: FieldUpdate[];
+  tags?: string[];
+  tagsMode: "replace" | "add" | "remove";
 }
 
 function parseSubArgs(positional: string[], rest: string[]): UpdateSubArgs {
-  const out: UpdateSubArgs = { fields: [] };
+  const out: UpdateSubArgs = { fields: [], tagsMode: "replace" };
   for (let i = 0; i < rest.length; i++) {
     const a = rest[i]!;
     if (a === "--id") {
@@ -57,6 +59,24 @@ function parseSubArgs(positional: string[], rest: string[]): UpdateSubArgs {
       if (!name) throw new CliError(`--field name cannot be empty (got "${v}")`);
       out.fields.push({ name, value });
       i++;
+    } else if (a === "--tags") {
+      const v = rest[i + 1];
+      if (v === undefined) throw new CliError("--tags requires a value");
+      out.tags = v.split(/[\s,]+/).map((t) => t.trim()).filter((t) => t.length > 0);
+      out.tagsMode = "replace";
+      i++;
+    } else if (a === "--add-tags") {
+      const v = rest[i + 1];
+      if (v === undefined) throw new CliError("--add-tags requires a value");
+      out.tags = v.split(/[\s,]+/).map((t) => t.trim()).filter((t) => t.length > 0);
+      out.tagsMode = "add";
+      i++;
+    } else if (a === "--remove-tags") {
+      const v = rest[i + 1];
+      if (v === undefined) throw new CliError("--remove-tags requires a value");
+      out.tags = v.split(/[\s,]+/).map((t) => t.trim()).filter((t) => t.length > 0);
+      out.tagsMode = "remove";
+      i++;
     }
   }
   if (out.id === undefined && positional.length > 0) {
@@ -76,7 +96,9 @@ const command: Command<UpdateSubArgs> = {
     "--ids <list>": "Update notes by comma-separated ids (requires --file).",
     "--file <path>": "Read updates from an XML file.",
     "--field <Name=value>": "Field to update (repeatable; use Anki display name).",
-    "--tags <list>": "Replace tags.",
+    "--tags <list>": "Replace the tag list (whitespace or comma separated).",
+    "--add-tags <list>": "Add tags to existing tags (does not remove).",
+    "--remove-tags <list>": "Remove tags from existing tags.",
     "--dry-run": "Validate and report; do not contact AnkiConnect.",
   },
   parseSubArgs(positional, rest) {
@@ -87,11 +109,16 @@ const command: Command<UpdateSubArgs> = {
       const entries: UpdateEntry[] = [];
 
       if (sub.id !== undefined) {
-        if (sub.fields.length === 0) {
-          console.error("error: --id requires at least one --field Name=value");
+        if (sub.fields.length === 0 && sub.tags === undefined) {
+          console.error("error: --id requires at least one --field or --tags/--add-tags/--remove-tags");
           return 2;
         }
-        entries.push({ noteId: sub.id, fields: sub.fields });
+        entries.push({
+          noteId: sub.id,
+          fields: sub.fields,
+          tags: sub.tags,
+          tagsMode: sub.tagsMode,
+        });
       }
 
       if (sub.ids && sub.file) {
@@ -106,6 +133,8 @@ const command: Command<UpdateSubArgs> = {
           entries.push({
             noteId: sub.ids[i]!,
             fields: fileEntries[i]!.fields,
+            tags: sub.tags,
+            tagsMode: sub.tagsMode,
           });
         }
       } else if (sub.file) {

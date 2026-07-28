@@ -36,6 +36,18 @@ export interface UpdateEntry {
   noteId: number;
   /** Fields to replace, in document order. */
   fields: FieldUpdate[];
+  /**
+   * Optional tag list. When present, the tag list is set to exactly
+   * these values (replaces, does not merge). Use the `addTags` /
+   * `removeTags` knob for incremental tag changes.
+   */
+  tags?: string[];
+  /**
+   * Optional tag-mode hint for the caller. When 'add', the tags are
+   * merged with the existing list; when 'remove', they're removed.
+   * Field updates are still applied in the same call.
+   */
+  tagsMode?: "replace" | "add" | "remove";
 }
 
 export interface UpdateOptions {
@@ -175,7 +187,13 @@ export async function runUpdate(opts: UpdateOptions): Promise<UpdateResult> {
     try {
       const fields: Record<string, string> = {};
       for (const f of entry.fields) fields[f.name] = f.value;
-      await client.updateNoteFields(entry.noteId, fields);
+      const tagsOption = entry.tags !== undefined ? { tags: entry.tags } : undefined;
+      await client.updateNoteFields(entry.noteId, fields, tagsOption);
+      if (entry.tagsMode === "add" && entry.tags && entry.tags.length > 0) {
+        await client.addTags([entry.noteId], entry.tags.join(" "));
+      } else if (entry.tagsMode === "remove" && entry.tags && entry.tags.length > 0) {
+        await client.removeTags([entry.noteId], entry.tags.join(" "));
+      }
       result.updated++;
     } catch (err) {
       result.failed.push({
