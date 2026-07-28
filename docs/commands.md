@@ -1,67 +1,96 @@
 # Commands
 
-The `anki-xml` CLI has seven commands. All commands accept the common
-flags `--url <url>` (default `http://127.0.0.1:8765`) and `--json`
-(where supported).
+`anki-xml` ships **31 commands** grouped by purpose. Every command
+accepts the [global flags](#global-flags) below. Per-command `Usage:` and
+`Example(s):` appear in `--help`; this page explains the why, the
+how, and the trade-offs.
 
-## `import <file>`
+## Command index
 
-Create Anki notes from an XML file. This is the only command that
-*writes* to Anki by default.
-
-```bash
-anki-xml import ./cards.xml
-anki-xml import ./cards.xml --dry-run             # validate, don't send
-anki-xml import ./cards.xml --no-auto-create-deck # fail if a deck is missing
+```
+Read / Query     validate  plan  decks  stats  search  export  diff
+                 preview   sample  schema-validate  doctor
+Write            import  update  tag  untag  delete  rename-deck
+                 delete-deck  move-notes  suspend  unsuspend  bury  sync
+Schema           models  fields  tags  note-info
+Lifecycle        migrate  profile
+Recovery         checkpoint  rollback  audit-log
+Shell            completion
 ```
 
-See [`cli.md`](./cli.md) for full details. Bulk operations are atomic:
-if any note is invalid, no notes are sent.
+---
 
-## `validate <file>`
+## Global flags
+
+These work on every command:
+
+| Flag | Purpose |
+|---|---|
+| `--url <url>` | AnkiConnect endpoint (default `http://127.0.0.1:8765`) |
+| `--json` | Emit machine-readable JSON envelope |
+| `--json-legacy` | Emit legacy JSON shape (raw payload, pre-v1) |
+| `--format <ndjson \| default>` | Stream one record per line |
+| `--dry-run` | Validate; never contact AnkiConnect |
+| `--quiet` | Summary only; no per-op detail |
+| `--no-color` | Strip ANSI from output |
+| `--profile <name>` | Use a named AnkiConnect URL profile |
+| `--config <path>` | Use a custom config file |
+| `--batch-id <id>` | Wrap writes in a named atomic batch |
+| `--rollback-on-partial` | Auto-rollback the batch on any failure |
+| `--idempotency-key <key>` | Skip if this key already succeeded |
+
+## Exit codes
+
+| code | meaning |
+|---|---|
+| 0 | success — every operation completed cleanly |
+| 1 | partial failure (some succeeded, some failed) |
+| 2 | fatal — file unreadable, malformed XML, no AnkiConnect, etc. |
+
+---
+
+## Read / Query
+
+These commands never mutate the collection.
+
+### `validate <file>`
 
 Parse and structurally validate an XML file without contacting Anki.
-This is the cheapest feedback loop — useful for "is this file safe to
-commit?" and AI agent pre-iteration validation.
+Cheapest feedback loop — useful for "is this file safe to commit?"
+and AI pre-iteration validation.
 
 ```bash
 anki-xml validate ./cards.xml              # human-readable
 anki-xml validate ./cards.xml --json       # machine-readable
-anki-xml validate ./cards.xml --strict     # treat warnings as errors
+anki-xml validate ./cards.xml --strict     # warnings → errors
 ```
 
-Exit codes: `0` no errors, `1` validation errors, `2` file/parse errors.
+Warnings: malformed tags (commas, very long tags, control chars).
+Exit 0 if no errors, 1 if validation errors, 2 if file/parse errors.
 
-Warnings include malformed tags (commas inside, very long tags, control
-characters). See [`field-names.md`](./field-names.md) for the supported
-field vocabulary and [`ai-integration.md`](./ai-integration.md) for the
-JSON shape.
+### `plan <file>`
 
-## `plan <file>`
-
-Preflight check for an import. Validates the file, asks AnkiConnect
-which decks already exist, and uses `canAddNotes` to predict which
-notes would be rejected as duplicates. **No mutation.**
+Preflight for an `import`. Validates the file, asks AnkiConnect which
+decks exist, uses `canAddNotes` to predict which notes would be
+rejected as duplicates. **No mutation.**
 
 ```bash
 anki-xml plan ./cards.xml                # full preflight (default)
-anki-xml plan ./cards.xml --no-preflight # offline plan (no network)
-anki-xml plan ./cards.xml --json         # machine-readable
+anki-xml plan ./cards.xml --no-preflight # offline plan, no network
+anki-xml plan ./cards.xml --json
 ```
 
-This is the AI-loop's read-before-write primitive: read the plan,
-decide whether to proceed, then call `import`. See
-[`ai-cookbook.md`](./ai-cookbook.md) for the pattern.
+This is the read-before-write primitive for AI loops. See
+[`ai-cookbook.md`](./ai-cookbook.md).
 
-## `decks`
+### `decks`
 
-List every deck and subdeck with its card count (own + descendant
-totals). Useful for AI to understand the structure of a collection
-before generating or updating content.
+List every deck and subdeck with own and descendant card counts.
+AI uses this to understand a collection before generating content.
 
 ```bash
 anki-xml decks                 # human-readable tree
-anki-xml decks --json          # flat list as JSON
+anki-xml decks --json          # flat array
 ```
 
 Human output:
@@ -75,166 +104,388 @@ Languages  —  47 cards
   Languages::German   —  14 cards (6 direct)
 ```
 
-`--json` output is a flat array of `{name, totalCards, ownCards, id?}`.
+`--json` is a flat array of `{name, totalCards, ownCards, id?}`.
 
-## `stats`
+### `stats`
 
-Count cards by Anki scheduler state. The mapping is:
+Count cards by Anki scheduler state. With `--field <name>`, reports
+the cardinality of values in that field — the single best signal
+for "what should the next deck contain?".
+
+```bash
+anki-xml stats --deck "Languages::Spanish"
+anki-xml stats --field Front --top 10
+```
+
+State buckets:
 
 - `new` + `learn` = **incomplete** (not yet graduated)
-- `review` = **completed** (graduated into the review queue)
-- `suspended` / `buried` = paused by user or scheduler
+- `review` = **completed** (graduated)
+- `suspended` / `buried` = paused
 
-```bash
-anki-xml stats                          # whole collection
-anki-xml stats --deck "Languages::Spanish"   # one deck
-anki-xml stats --json                   # machine-readable
-```
+`--field` mode uses `notesInfo` to walk every note and tally values
+(top N then by name). See [`stats.ts`](../src/stats.ts).
 
-Human output:
-
-```
-Collection
-  Cards: 116
-    new:       10
-    learn:      3
-    review:    100
-    suspended:  2
-    buried:     0
-  Completed (review):    100
-  Incomplete (new+learn): 13
-  Notes: 80
-```
-
-Note: `--deck` uses Anki's own `deck:` search operator. Anki treats
-`Languages::Spanish` as a prefix, so the count *includes* any
-subdecks unless you also add `"-subdeck"` to the search. The current
-CLI does not auto-include children, so pass the exact full name.
-
-## `search <phrase>`
+### `search [phrase]`
 
 Full-text search across all notes. Uses Anki's own search engine
-(so it understands HTML stripping, case-insensitivity, and Anki
-operators like `is:new`, `tag:`, `deck:`). The phrase is quoted
-for substring matching.
+(strips HTML, understands `is:new`, `tag:`, `deck:`).
 
 ```bash
-anki-xml search "serendipity"                    # phrase in any field
-anki-xml search "hola" --deck "Spanish"          # within a deck
-anki-xml search "hola" --tag "greeting" --tag "common"  # multiple tags
-anki-xml search --query "deck:Spanish is:review" # raw Anki query
-anki-xml search "x" --limit 50 --json            # cap results, JSON output
+anki-xml search "hola" --deck "Spanish" --tag "greeting" --limit 5
+anki-xml search --query "deck:Spanish is:review"
 ```
 
-Each result includes:
+Each result includes `noteId` (use with `update --id`), `cards`,
+`modelName`, `tags`, `snippet`, and `plainText` (HTML stripped,
+prefixed with `[FieldName]`).
 
-- `noteId` — use this with `update --id`
-- `cards` — Anki's card ids (a note generates 1..N cards)
-- `modelName` and `tags`
-- `snippet` and `snippetField` — the first matching field, truncated
-- `plainText` — every field, HTML stripped, prefixed with `[FieldName]`
+### `export <out.xml>`
 
-Human output:
+Read notes and emit round-trippable XML.
 
-```
-2 matches:
-
-Note 1234567890  (Basic)  [greeting spanish]
-  cards: #1500000000001, #1500000000002
-  Hola  (in Front)
-
-Note 1234567891  (Basic)
-  cards: #1500000000003
-  Adios  (in Front)
+```bash
+anki-xml export "deck:Spanish" spanish-deck.xml
 ```
 
-## `update`
+By default, ids are stripped (exportable + re-importable as new
+notes). Pass `--with-ids` to keep ids and treat the result as an
+update batch.
 
-Change the fields of existing notes. Three input modes:
+### `diff <file>`
 
-### Single note from the command line
+Compare a local file against the live collection and emit a
+structured `added` / `changed` / `removed` set. By default uses
+`guid` from `<note id="...">`; falls back to content fingerprint.
 
+```bash
+anki-xml diff ./cards.xml            # human-readable
+anki-xml diff ./cards.xml --json     # machine-readable
+```
+
+### `preview`
+
+Open Anki's browser on a query. Uses `guiBrowse`. The agent uses
+this to get visual confirmation; humans use it for fast lookup.
+
+```bash
+anki-xml preview --query "deck:Spanish"
+anki-xml preview --query "tag:scratch"
+```
+
+### `sample <N>`
+
+Random sample of N notes. Deterministic with `--seed`.
+
+```bash
+anki-xml sample 5 --seed 42
+anki-xml sample 5 --query "deck:Spanish" --seed 7
+```
+
+PRNG: Mulberry32. Without a seed, uses `Math.random()`-based default.
+
+### `schema-validate <file>`
+
+Static validation **plus** a check against the LIVE collection's
+schema. Catches drift like a renamed field, a removed model, or a
+required field that no longer exists.
+
+```bash
+anki-xml schema-validate ./cards.xml
+anki-xml schema-validate ./cards.xml --json
+```
+
+See [`schema-v2.md`](./schema-v2.md) for the future schema v2 story.
+
+### `doctor`
+
+Pre-flight check: connectivity, version, collection. The agent
+should run this before real work.
+
+```bash
+anki-xml doctor
+```
+
+Exits 0 when everything is healthy, 1 when any check fails.
+
+---
+
+## Write
+
+These commands mutate the collection. Every one supports `--dry-run`
+and writes an audit-log entry on success.
+
+### `import <file>`
+
+Create notes from an XML file.
+
+```bash
+anki-xml import ./cards.xml
+anki-xml import ./cards.xml --dry-run
+anki-xml import ./cards.xml --no-auto-create-deck
+anki-xml import ./cards.xml --resume-from pre-batch   # M11
+anki-xml import ./cards.xml --batch-id nightly --rollback-on-partial
+```
+
+Atomic at the file-validation boundary: if any note is invalid, the
+whole batch is rejected before AnkiConnect is contacted. Within a
+file, partial failures from AnkiConnect (e.g. `null` ids) are
+reported and counted, but valid ids are still kept.
+
+Flags:
+
+| Flag | Purpose |
+|---|---|
+| `--auto-create-deck` / `--no-auto-create-deck` | Create missing decks (default on) |
+| `--allow-duplicate` | Allow duplicates (default rejects) |
+| `--resume-from <name>` | Skip notes already captured in this checkpoint |
+
+### `update`
+
+Change fields and/or tags on existing notes. Three input modes:
+
+**Single note from CLI:**
 ```bash
 anki-xml update --id 1234567890 --field Front="new Q" --field Back="new A"
+anki-xml update --id 1234567890 --tags "spanish v2"
+anki-xml update --id 1234567890 --add-tags "v2" --remove-tags "v1"
 ```
 
-You can pass multiple `--field Name=value` flags. Field names are
-the Anki **display** names (`Front`, `Back`, `Text`, `Extra`).
-
-### Multiple notes from one XML file
-
-Each `<note>` carries its own `id="..."` attribute:
-
+**Multiple notes from a file (each `<note id="N">` carries its id):**
 ```xml
 <anki>
   <note id="1234567890" type="Basic">
-    <front>updated Q 1</front>
-    <back>updated A 1</back>
-  </note>
-  <note id="1234567891" type="Basic">
-    <front>updated Q 2</front>
-    <back>updated A 2</back>
+    <front>updated Q</front>
+    <back>updated A</back>
   </note>
 </anki>
 ```
-
 ```bash
 anki-xml update --file ./updates.xml
 anki-xml update --file ./updates.xml --dry-run
 ```
 
-### Multiple notes mapped from `--ids`
+**Mapped update:** `anki-xml update --ids "1,2,3" --file ./updates.xml`
+maps notes by position (first → 1, second → 2).
+
+**Rename field (M12):** `anki-xml update --rename-field Fron=Front --ids 1,2,3`
+migrates a field's value across many notes.
+
+Update semantics:
+
+- Only named fields are changed. Unnamed fields keep their current value.
+- Tags are NOT touched unless you pass `--tags` / `--add-tags` / `--remove-tags`.
+- Model of an existing note is NOT changed.
+- Deck of an existing note is NOT changed.
+- Per-note failures are reported, not aborting.
+
+### `tag <tag>` / `untag <tag>`
+
+Add or remove a tag on notes matching a query.
 
 ```bash
-anki-xml update --ids "1,2,3" --file ./updates.xml
+anki-xml tag --ids 1,2,3 reading
+anki-xml tag --query "deck:Spanish" spanish
+anki-xml untag --ids 1,2,3 scratch
 ```
 
-The first `<note>` in `updates.xml` is applied to id 1, the second to
-id 2, etc. The counts must match — if they don't, the command exits
-without contacting Anki.
+### `delete`
 
-### Update semantics
-
-- Only the fields you name are changed. Unnamed fields keep their
-  current Anki content.
-- Tags are NOT touched. (A future `--tags` flag may add this.)
-- The model of an existing note is NOT changed.
-- The deck of an existing note is NOT changed.
-- If one update fails (e.g. wrong field name), the others still run.
-  Failures are listed at the end with the note id and the reason.
-
-### Common workflow with `search`
+Delete notes that match a query, deck, tag, or explicit ids.
 
 ```bash
-# 1. Find a note
-$ anki-xml search "hola" --json | jq '.[0].noteId'
-1234567890
-
-# 2. Edit it
-$ anki-xml update --id 1234567890 --field Front="Hola, ¿qué tal?"
+anki-xml delete --query "deck:Tmp tag:scratch" --yes
+anki-xml delete --ids 1,2,3 --cards-too
 ```
 
-## Exit codes
+The `--yes` flag confirms without a prompt. Required for any
+non-`--dry-run` invocation.
 
-All commands use the same three exit codes:
+### `rename-deck <old> <new>`
 
-| code | meaning                                                      |
-|------|--------------------------------------------------------------|
-| `0`  | success — every operation completed cleanly                  |
-| `1`  | partial failure (some updates/rejections, some succeeded)   |
-| `2`  | fatal — file unreadable, malformed XML, no AnkiConnect, etc. |
+Rename a deck. Children of `<old>` are NOT moved; use `move-notes`
+for that.
 
-## `completion <shell>`
+```bash
+anki-xml rename-deck "Old Name" "New Name"
+```
 
-Print a static shell completion script to stdout. Re-run after upgrading
-to pick up new commands.
+### `delete-deck <name>`
+
+Delete a deck and (optionally) its cards. By default only the
+deck is dropped; cards are moved to Anki's "Default" deck.
+
+```bash
+anki-xml delete-deck "Tmp" --yes
+anki-xml delete-deck "Tmp" --yes --cards-too
+```
+
+### `move-notes <deck>`
+
+Move every note matching a query to a target deck.
+
+```bash
+anki-xml move-notes "Languages::Spanish::Verbs" --ids 1,2,3
+anki-xml move-notes "Default" --query "tag:archive"
+```
+
+### `suspend` / `unsuspend` / `bury`
+
+Card scheduling helpers.
+
+```bash
+anki-xml suspend --ids 1,2,3
+anki-xml unsuspend --ids 1,2,3
+anki-xml bury --ids 1,2,3
+```
+
+### `sync <file>`
+
+Three-way reconcile a file against the live collection. Reports
+`added` / `changed` / `removed` then applies. Requires `--yes`.
+
+```bash
+anki-xml sync ./cards.xml --json
+anki-xml sync ./cards.xml --yes
+```
+
+Use `--dry-run` to preview.
+
+---
+
+## Schema discovery
+
+These are read-only commands that probe AnkiConnect's schema.
+The agent should call them before generating content.
+
+### `models`
+
+List every note model with its field names and card templates.
+
+```bash
+anki-xml models                   # human
+anki-xml models --json            # one ModelInfo per model
+```
+
+### `fields <model>`
+
+List field names for one model.
+
+```bash
+anki-xml fields Basic
+anki-xml fields "Basic (and reversed card)"
+```
+
+Returns `[]` for an unknown model — no error.
+
+### `tags`
+
+Every tag in the collection with note counts.
+
+```bash
+anki-xml tags
+anki-xml tags --json
+anki-xml tags --query "deck:Spanish"
+```
+
+### `note-info <id>`
+
+Full info on one note: fields, tags, deck, cards, model.
+
+```bash
+anki-xml note-info 1234567890
+anki-xml note-info 1234567890 --json
+```
+
+Returns null when the id doesn't exist.
+
+---
+
+## Lifecycle
+
+### `migrate <subcommand> <file>`
+
+Apply schema-migration transforms to a file. The output is written
+back to the file (or to stdout with `--out`).
+
+```bash
+anki-xml migrate assign-guids ./cards.xml
+anki-xml migrate v1-to-v2 ./cards.xml --out ./cards-v2.xml
+```
+
+**assign-guids**: writes a `guid` attribute on each `<note>` so
+future diffs and syncs are stable. Run this once before adopting
+`diff` or `sync`.
+
+### `profile <subcommand>`
+
+Manage named AnkiConnect URL profiles.
+
+```bash
+anki-xml profile add work http://10.0.0.42:8765
+anki-xml profile list
+anki-xml profile remove work
+```
+
+Profiles are stored at `$XDG_CONFIG_HOME/anki-xml/profiles.json`.
+
+---
+
+## Recovery
+
+### `checkpoint <subcommand>`
+
+Capture / list / delete note snapshots. Every checkpoint is a JSON
+snapshot of one or more notes' fields, tags, and deck.
+
+```bash
+anki-xml checkpoint create pre-batch --ids 1,2,3
+anki-xml checkpoint list
+anki-xml checkpoint show pre-batch
+anki-xml checkpoint delete pre-batch
+```
+
+Stored under `$XDG_DATA_HOME/anki-xml/checkpoints/<name>.json`.
+
+### `rollback --to <name>`
+
+Restore a checkpoint. Each affected note is rewritten to its
+captured state via `updateNoteFields` and `changeDeck`.
+
+```bash
+anki-xml rollback --to pre-batch
+anki-xml rollback --to pre-batch --dry-run   # preview the diff first
+```
+
+### `audit-log`
+
+Show recent audit-log entries. Every write op records one JSONL
+line with command, target ids, outcome, timestamp, and
+optional `batch` / `op` (operation id from `--idempotency-key`).
+
+```bash
+anki-xml audit-log                          # last 20
+anki-xml audit-log --limit 100
+anki-xml audit-log --command import         # one command
+anki-xml audit-log --limit 20 --json        # machine-readable
+```
+
+Log file: `$XDG_DATA_HOME/anki-xml/audit.log`.
+
+---
+
+## Shell
+
+### `completion <shell>`
+
+Print a shell completion script to stdout.
 
 ```bash
 # bash
 anki-xml completion bash | sudo tee /etc/bash_completion.d/anki-xml
 
 # zsh
-anki-xml completion zsh > "\${fpath[1]}/_anki-xml"
+anki-xml completion zsh > "${fpath[1]}/_anki-xml"
 
 # fish
 anki-xml completion fish > ~/.config/fish/completions/anki-xml.fish
@@ -243,5 +494,15 @@ anki-xml completion fish > ~/.config/fish/completions/anki-xml.fish
 anki-xml completion powershell | Out-String | Invoke-Expression
 ```
 
-Supported shells: `bash`, `zsh`, `fish`, `powershell`. Exit code `2` if
+Supported shells: `bash`, `zsh`, `fish`, `powershell`. Exit 2 if
 the shell name is missing or unknown.
+
+---
+
+## See also
+
+- [`docs/roadmap.md`](./roadmap.md) — what shipped and what's deferred
+- [`docs/architecture-review.md`](./architecture-review.md) — why the
+  CLI is shaped this way
+- [`docs/ai-integration.md`](./ai-integration.md) — agent workflow
+- [`docs/ai-cookbook.md`](./ai-cookbook.md) — five-loop agent pattern
