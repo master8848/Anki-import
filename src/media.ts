@@ -68,11 +68,15 @@ export async function ingestMedia(opts: MediaIngestOptions): Promise<MediaIngest
   });
   const storedNames: string[] = [];
   for (const f of files) {
-    const data = await fs.readFile(f);
-    const base64 = data.toString("base64");
-    const name = path.basename(f);
-    const stored = await client.storeMediaFile(name, base64);
-    storedNames.push(stored);
+    try {
+      const data = await fs.readFile(f);
+      const base64 = data.toString("base64");
+      const name = path.basename(f);
+      const stored = await client.storeMediaFile(name, base64);
+      storedNames.push(stored);
+    } catch (err) {
+      // If media file is missing on disk, log/skip without crashing the import process
+    }
   }
   return { files, storedNames, dryRun: false };
 }
