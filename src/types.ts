@@ -20,21 +20,11 @@
  *   - "Tag" refers to user-applied labels visible in the Anki browser.
  */
 
-/** The five supported Anki note types. */
-export type SupportedModel =
-  | "Basic"
-  | "Basic (and reversed card)"
-  | "Basic (optional reversed card)"
-  | "Basic (type in the answer)"
-  | "Cloze";
+/** Supported Anki note types (built-in five + custom user note types). */
+export type SupportedModel = string;
 
-/** Names of the XML field tags allowed inside `<note>`. */
-export type XmlFieldName =
-  | "front"
-  | "back"
-  | "text"
-  | "extra"
-  | "addReverse";
+/** Names of XML field tags allowed inside `<note>`. */
+export type XmlFieldName = string;
 
 /** A single note parsed from the XML document, before validation. */
 export interface ParsedNote {
@@ -81,6 +71,7 @@ export interface ParsedNote {
 /** A field inside a `<note>`. */
 export interface ParsedField {
   name: XmlFieldName;
+  displayName?: string;
   /**
    * Raw HTML string to be embedded into the Anki field. For CDATA sections
    * the inner text has been lightly escaped so HTML special characters are

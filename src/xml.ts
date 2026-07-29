@@ -586,31 +586,32 @@ function parseNotesInner(source: string): ParsedDocument {
       const gNode = grandchild as Record<string, unknown>;
       const gTag = nodeTagName(gNode);
       if (!gTag) continue;
-      if (!FIELD_NAMES.has(gTag as XmlFieldName)) {
-        // Not a known field. Surface as a warning so the AI author
-        // can fix typos (e.g. `<frobt>` instead of `<front>`)
-        // without silently dropping data.
+
+      const gAttrs = (gNode[":@"] as Record<string, string> | undefined) ?? {};
+      const isBuiltinModel = note.type === "" || SUPPORTED_MODELS.has(note.type);
+      const isKnownFieldTag = FIELD_NAMES.has(gTag as XmlFieldName) || gTag === "field";
+
+      if (isBuiltinModel && !isKnownFieldTag) {
+        // Not a known field for a built-in model. Surface as warning.
         note.unknownElements?.push(gTag);
         continue;
       }
-      const fieldName = gTag as XmlFieldName;
-      // Duplicate field tags are intentionally NOT silently skipped
-      // here — we push every occurrence so the validator can flag
-      // repeats via <field>.push + length-based dedup detection.
 
+      const fieldName = (gAttrs["@_name"] || gTag) as XmlFieldName;
+      const displayName = gAttrs["@_name"];
 
       const startIdx = nodeStart(gNode);
       if (startIdx === undefined) {
-        throw new XmlParseError(`Cannot locate source for <${fieldName}> in note ${noteCounter}`);
+        throw new XmlParseError(`Cannot locate source for <${gTag}> in note ${noteCounter}`);
       }
       const tokenIdx = tokens.findIndex(
-        (t) => t.kind === "start" && t.tagStart === startIdx && t.name === fieldName,
+        (t) => t.kind === "start" && t.tagStart === startIdx && t.name === gTag,
       );
       if (tokenIdx === -1) {
-        throw new XmlParseError(`Cannot locate token for <${fieldName}> in note ${noteCounter}`);
+        throw new XmlParseError(`Cannot locate token for <${gTag}> in note ${noteCounter}`);
       }
       const { html } = extractFieldContent(source, tokens, tokenIdx);
-      note.fields.push({ name: fieldName, html });
+      note.fields.push({ name: fieldName, displayName, html });
       if (note.fieldSourceOffsets) note.fieldSourceOffsets.push(startIdx);
     }
 
@@ -655,10 +656,6 @@ export function validateNotes(
 
     if (!note.type.trim()) {
       noteErrors.push({ msg: "missing or empty `type` attribute on <note>" });
-    } else if (!SUPPORTED_MODELS.has(note.type)) {
-      noteErrors.push({
-        msg: `unsupported note type "${note.type}"; v1 supports: ${[...SUPPORTED_MODELS].join(", ")}`,
-      });
     }
 
     const deck = note.deck.trim() || defaultDeck.trim();
@@ -699,43 +696,58 @@ export function validateNotes(
       // Suppress unused linter warning.
       void fieldIndices;
 
-      // Fields used in this note that the model doesn't accept.
-      note.fields.forEach((field, i) => {
-        if (!model.accepts.has(field.name)) {
-          noteErrors.push({
-            msg: `<${field.name}> is not accepted by ${model.name}; expected one of: ${[...model.accepts].join(", ")}`,
-            fieldIndex: i,
-          });
-        }
-      });
-
-      // Required fields that are missing.
-      for (const req of model.required) {
-        const i = note.fields.findIndex((f) => f.name === req);
-        if (i === -1) {
-          noteErrors.push({ msg: `${model.name} requires <${req}>` });
-        } else {
-          const present = note.fields[i]!;
-          if (model.checkContent && !hasMeaningfulContent(present.html)) {
-            noteErrors.push({
-              msg: `<${req}> is empty or contains only whitespace/HTML tags`,
-              fieldIndex: i,
-            });
-          }
-        }
-      }
-
-      // Optional fields with empty content get flagged when content
-      // checks are on (catches `<extra>   </extra>` accidents).
-      if (model.checkContent) {
+      if (model.accepts.size > 0) {
+        // Built-in note types with explicit field rules
         note.fields.forEach((field, i) => {
-          if (model.optional.has(field.name) && !hasMeaningfulContent(field.html)) {
+          if (!model.accepts.has(field.name)) {
             noteErrors.push({
-              msg: `<${field.name}> is empty or contains only whitespace/HTML tags`,
+              msg: `<${field.name}> is not accepted by ${model.name}; expected one of: ${[...model.accepts].join(", ")}`,
               fieldIndex: i,
             });
           }
         });
+
+        // Required fields that are missing.
+        for (const req of model.required) {
+          const i = note.fields.findIndex((f) => f.name === req);
+          if (i === -1) {
+            noteErrors.push({ msg: `${model.name} requires <${req}>` });
+          } else {
+            const present = note.fields[i]!;
+            if (model.checkContent && !hasMeaningfulContent(present.html)) {
+              noteErrors.push({
+                msg: `<${req}> is empty or contains only whitespace/HTML tags`,
+                fieldIndex: i,
+              });
+            }
+          }
+        }
+
+        // Optional fields with empty content get flagged when content checks are on
+        if (model.checkContent) {
+          note.fields.forEach((field, i) => {
+            if (model.optional.has(field.name) && !hasMeaningfulContent(field.html)) {
+              noteErrors.push({
+                msg: `<${field.name}> is empty or contains only whitespace/HTML tags`,
+                fieldIndex: i,
+              });
+            }
+          });
+        }
+      } else {
+        // Custom note types: require at least one field and check content
+        if (note.fields.length === 0) {
+          noteErrors.push({ msg: `custom note type "${model.name}" requires at least one field` });
+        } else if (model.checkContent) {
+          note.fields.forEach((field, i) => {
+            if (!hasMeaningfulContent(field.html)) {
+              noteErrors.push({
+                msg: `<${field.name}> is empty or contains only whitespace/HTML tags`,
+                fieldIndex: i,
+              });
+            }
+          });
+        }
       }
 
       // Model-specific extra rules.

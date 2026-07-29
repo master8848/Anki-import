@@ -133,7 +133,7 @@ const CLOZE: NoteModel = {
   },
 };
 
-export const MODELS: ReadonlyMap<string, NoteModel> = new Map<string, NoteModel>([
+const modelRegistry = new Map<string, NoteModel>([
   [BASIC.name, BASIC],
   [BASIC_REVERSED.name, BASIC_REVERSED],
   [BASIC_OPTIONAL_REVERSED.name, BASIC_OPTIONAL_REVERSED],
@@ -141,17 +141,53 @@ export const MODELS: ReadonlyMap<string, NoteModel> = new Map<string, NoteModel>
   [CLOZE.name, CLOZE],
 ]);
 
-export function getModel(name: string): NoteModel | undefined {
-  return MODELS.get(name);
+export const MODELS: ReadonlyMap<string, NoteModel> = modelRegistry;
+
+export function registerModel(model: NoteModel): void {
+  modelRegistry.set(model.name, model);
 }
 
-/** All supported model names, in registry order. */
-export const SUPPORTED_MODEL_NAMES: string[] = [...MODELS.keys()];
+export function createCustomModel(name: string): NoteModel {
+  return {
+    name,
+    accepts: new Set<string>(),
+    required: new Set<string>(),
+    optional: new Set<string>(),
+    fieldNames: {},
+    checkContent: true,
+    buildFields(fields: ParsedField[]) {
+      const res: Record<string, string> = {};
+      for (const f of fields) {
+        const key = f.displayName || (f.name.charAt(0).toUpperCase() + f.name.slice(1));
+        res[key] = f.html.trim();
+      }
+      return res;
+    },
+  };
+}
+
+export function getModel(name: string): NoteModel | undefined {
+  if (modelRegistry.has(name)) return modelRegistry.get(name);
+  if (!name.trim()) return undefined;
+  return createCustomModel(name);
+}
+
+/** All pre-registered model names. */
+export function getSupportedModelNames(): string[] {
+  return [...modelRegistry.keys()];
+}
+
+export const SUPPORTED_MODEL_NAMES: string[] = [...modelRegistry.keys()];
 
 /**
  * Look up the Anki display name for a given XML tag in a given model.
  * Returns `null` if the field is not accepted by this model.
  */
 export function ankiFieldName(model: NoteModel, xmlTag: XmlFieldName): string | null {
-  return model.fieldNames[xmlTag] ?? null;
+  if (model.fieldNames[xmlTag] !== undefined) return model.fieldNames[xmlTag]!;
+  if (model.accepts.size === 0) {
+    // Dynamic custom model accepts any tag
+    return xmlTag.charAt(0).toUpperCase() + xmlTag.slice(1);
+  }
+  return null;
 }
