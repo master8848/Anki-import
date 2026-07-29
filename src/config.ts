@@ -25,6 +25,7 @@
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
+import TOML from "@iarna/toml";
 
 export interface Config {
   url?: string;
@@ -45,20 +46,11 @@ export function projectConfigPath(): string {
   return path.join(process.cwd(), ".anki-xmlrc");
 }
 
-const CONFIG_KEYS: Record<keyof Config, RegExp> = {
-  url: /^url\s*=\s*"([^"]+)"/m,
-  profile: /^profile\s*=\s*"([^"]+)"/m,
-  format: /^format\s*=\s*"([^"]+)"/m,
-  dryRun: /^dry_run\s*=\s*(true|false)/m,
-  noColor: /^no_color\s*=\s*(true|false)/m,
-  quiet: /^quiet\s*=\s*(true|false)/m,
-};
-
 const FORMAT_VALUES = new Set(["default", "ndjson"]);
 
 /**
- * Parse a tiny TOML subset. Throws on malformed input; missing
- * file is not an error (returns {}).
+ * Parse TOML configuration file using @iarna/toml parser.
+ * Throws on malformed input; missing file is not an error (returns {}).
  */
 export async function loadConfig(filePath: string): Promise<Config> {
   let text: string;
@@ -68,19 +60,18 @@ export async function loadConfig(filePath: string): Promise<Config> {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return {};
     throw err;
   }
+  const parsed = TOML.parse(text) as Record<string, unknown>;
   const cfg: Config = {};
-  for (const [key, re] of Object.entries(CONFIG_KEYS) as [keyof Config, RegExp][]) {
-    const m = text.match(re);
-    if (!m) continue;
-    if (key === "url" || key === "profile") {
-      cfg[key] = m[1]!;
-    } else if (key === "format") {
-      const v = m[1]!;
-      if (FORMAT_VALUES.has(v)) cfg.format = v as "default" | "ndjson";
-    } else {
-      cfg[key] = m[1] === "true";
-    }
+  if (typeof parsed.url === "string") cfg.url = parsed.url;
+  if (typeof parsed.profile === "string") cfg.profile = parsed.profile;
+  if (typeof parsed.format === "string" && FORMAT_VALUES.has(parsed.format)) {
+    cfg.format = parsed.format as "default" | "ndjson";
   }
+  if (typeof parsed.dry_run === "boolean") cfg.dryRun = parsed.dry_run;
+  if (typeof parsed.dryRun === "boolean") cfg.dryRun = parsed.dryRun;
+  if (typeof parsed.no_color === "boolean") cfg.noColor = parsed.no_color;
+  if (typeof parsed.noColor === "boolean") cfg.noColor = parsed.noColor;
+  if (typeof parsed.quiet === "boolean") cfg.quiet = parsed.quiet;
   return cfg;
 }
 
