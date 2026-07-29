@@ -99,7 +99,7 @@ export async function loadUpdatesFromXml(path: string): Promise<UpdateEntry[]> {
 
   const entries: UpdateEntry[] = [];
   for (const note of parsed.notes) {
-    const id = extractNoteIdFromSource(source, note.number);
+    const id = note.id ?? null;
     if (id === null) {
       throw new XmlParseError(
         `Note ${note.number} in ${path} is missing a required id="..." attribute`,
@@ -118,27 +118,6 @@ export async function loadUpdatesFromXml(path: string): Promise<UpdateEntry[]> {
     entries.push({ noteId: id, fields: fieldUpdates });
   }
   return entries;
-}
-
-/**
- * Extract the `id` attribute of the Nth (1-based) `<note>` element from
- * the raw XML source. Used because parseNotes doesn't preserve it.
- */
-function extractNoteIdFromSource(source: string, oneBased: number): number | null {
-  let count = 0;
-  const re = /<note\b([^>]*)>/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(source)) !== null) {
-    count++;
-    if (count === oneBased) {
-      const attrs = m[1] ?? "";
-      const idMatch = /\bid\s*=\s*"([^"]+)"/.exec(attrs);
-      if (!idMatch) return null;
-      const n = Number(idMatch[1]);
-      return Number.isFinite(n) && Number.isInteger(n) ? n : null;
-    }
-  }
-  return null;
 }
 
 /**
