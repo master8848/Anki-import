@@ -57,26 +57,13 @@ export async function withBatch<T>(
   const checkpointName = `${checkpointPrefix}-${sanitize(opts.batchId)}`;
 
   // Capture a pre-batch snapshot of the notes we'll touch. For
-  // create-only batches (preSnapshotIds=[]) there are no live notes to
-  // capture; the rollback is a no-op in that case but we still record
-  // a marker so the agent has a complete audit trail.
-  if (opts.preSnapshotIds.length > 0) {
-    await createCheckpoint(checkpointName, opts.preSnapshotIds, {
-      ankiConnectUrl: opts.ankiConnectUrl,
-      fetchImpl: opts.fetchImpl,
-      note: `auto: batch '${opts.batchId}' (rollbackOnPartial=${opts.rollbackOnPartial})`,
-    });
-  } else {
-    // Touch the audit log via appendAudit to mark the batch start.
-    const { appendAudit } = await import("./checkpoints.ts");
-    await appendAudit({
-      ts: new Date().toISOString(),
-      command: "batch",
-      outcome: "pending",
-      checkpoint: checkpointName,
-      details: `auto: batch '${opts.batchId}' (rollbackOnPartial=${opts.rollbackOnPartial})`,
-    });
-  }
+  // create-only batches (preSnapshotIds=[]), createCheckpoint saves an
+  // empty snapshot marker so the audit trail is complete and rollback operates consistently.
+  await createCheckpoint(checkpointName, opts.preSnapshotIds, {
+    ankiConnectUrl: opts.ankiConnectUrl,
+    fetchImpl: opts.fetchImpl,
+    note: `auto: batch '${opts.batchId}' (rollbackOnPartial=${opts.rollbackOnPartial})`,
+  });
 
   const innerResult = await inner(client);
   const ok = innerResult.failureCount === 0;

@@ -72,26 +72,25 @@ export async function createCheckpoint(
   noteIds: number[],
   opts: { ankiConnectUrl?: string; fetchImpl?: typeof fetch; note?: string },
 ): Promise<CheckpointSnapshot> {
-  if (noteIds.length === 0) {
-    throw new Error("cannot create empty checkpoint: no note ids supplied");
-  }
-  const client = new AnkiConnectClient({
-    url: opts.ankiConnectUrl ?? "http://127.0.0.1:8765",
-    fetchImpl: opts.fetchImpl,
-  });
-  const infos = await client.notesInfo(noteIds);
   const notes: Record<number, SnapshotNote> = {};
-  for (const info of infos) {
-    if (!info) continue;
-    const fields: Record<string, string> = {};
-    for (const [name, f] of Object.entries(info.fields)) fields[name] = f.value;
-    notes[info.noteId] = {
-      noteId: info.noteId,
-      deckName: info.deckName,
-      modelName: info.modelName,
-      fields,
-      tags: info.tags ?? [],
-    };
+  if (noteIds.length > 0) {
+    const client = new AnkiConnectClient({
+      url: opts.ankiConnectUrl ?? "http://127.0.0.1:8765",
+      fetchImpl: opts.fetchImpl,
+    });
+    const infos = await client.notesInfo(noteIds);
+    for (const info of infos) {
+      if (!info) continue;
+      const fields: Record<string, string> = {};
+      for (const [name, f] of Object.entries(info.fields)) fields[name] = f.value;
+      notes[info.noteId] = {
+        noteId: info.noteId,
+        deckName: info.deckName,
+        modelName: info.modelName,
+        fields,
+        tags: info.tags ?? [],
+      };
+    }
   }
   const snap: CheckpointSnapshot = {
     name,
