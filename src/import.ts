@@ -181,6 +181,8 @@ export async function importFromFile(opts: ImportOptions): Promise<ImportOutcome
       if (!name) continue; // belt-and-braces; validation already errors on empty deck
       await client.createDeck(name);
     }
+  }
+
   // 2b) Ingest media files referenced in note fields (<img src="...">, [sound:...])
   const allFieldHtmls = createNotes.flatMap((n) => Object.values(n.fields));
   await ingestMedia({

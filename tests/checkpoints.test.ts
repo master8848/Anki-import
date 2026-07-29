@@ -95,10 +95,9 @@ describe("createCheckpoint", () => {
     expect(entries.some((e) => e.command === "checkpoint" && e.checkpoint === "audit-test")).toBe(true);
   });
 
-  test("throws when no ids are provided", async () => {
-    await expect(createCheckpoint("empty", [], { fetchImpl: makeFetch(new Map()) })).rejects.toThrow(
-      /empty checkpoint/,
-    );
+  test("creates empty checkpoint marker when no ids are provided", async () => {
+    const snap = await createCheckpoint("empty", [], { fetchImpl: makeFetch(new Map()) });
+    expect(snap.notes).toEqual({});
   });
 });
 

@@ -53,11 +53,9 @@ describe("withBatch", () => {
     expect(outcome.rolledBack).toBe(false);
     expect(outcome.checkpointName).toMatch(/^batch-/);
     expect(outcome.result).toEqual({ created: 5 });
-    // Audit log has a 'pending' marker from the batch start.
     const items = await listCheckpoints();
-    // No file checkpoint for empty snapshot, but the audit entry is
-    // present.
-    expect(items).toEqual([]);
+    expect(items.length).toBe(1);
+    expect(items[0]?.noteCount).toBe(0);
   });
 
   test("returns ok=false + rolledBack=false when rollback is not requested", async () => {

@@ -167,9 +167,7 @@ export function createCustomModel(name: string): NoteModel {
 }
 
 export function getModel(name: string): NoteModel | undefined {
-  if (modelRegistry.has(name)) return modelRegistry.get(name);
-  if (!name.trim()) return undefined;
-  return createCustomModel(name);
+  return modelRegistry.get(name);
 }
 
 /** All pre-registered model names. */

@@ -32,7 +32,7 @@ import { XMLParser, XMLValidator } from "fast-xml-parser";
 // The symbol is created internally by fast-xml-parser; the supported way to
 // retrieve it is XMLParser.getMetaDataSymbol().
 const META = XMLParser.getMetaDataSymbol() as unknown as symbol;
-import { getModel, SUPPORTED_MODEL_NAMES } from "./models.ts";
+import { createCustomModel, getModel, SUPPORTED_MODEL_NAMES } from "./models.ts";
 import type {
   NoteValidationError,
   ParsedField,
@@ -654,8 +654,13 @@ export function validateNotes(
   for (const note of notes) {
     const noteErrors: { msg: string; fieldIndex?: number }[] = [];
 
+    const model = getModel(note.type);
     if (!note.type.trim()) {
       noteErrors.push({ msg: "missing or empty `type` attribute on <note>" });
+    } else if (!model) {
+      noteErrors.push({
+        msg: `unsupported note type "${note.type}"; v1 supports: ${SUPPORTED_MODEL_NAMES.join(", ")}`,
+      });
     }
 
     const deck = note.deck.trim() || defaultDeck.trim();
@@ -679,7 +684,6 @@ export function validateNotes(
       }
     }
 
-    const model = getModel(note.type);
     if (model) {
       // Detect duplicate field tags.
       const fieldNames = note.fields.map((f) => f.name);
