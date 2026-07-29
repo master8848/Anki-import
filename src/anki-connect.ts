@@ -34,6 +34,12 @@ export interface AnkiConnectOptions {
   url: string;
   /** Override for tests. Defaults to the global `fetch`. */
   fetchImpl?: typeof fetch;
+  /** Timeout per request in milliseconds. Default 10000ms. */
+  timeoutMs?: number;
+  /** Max retry attempts for transient network errors. Default 3. */
+  maxRetries?: number;
+  /** Initial delay in ms for exponential backoff. Default 100ms. */
+  backoffMs?: number;
 }
 
 export class AnkiConnectError extends Error {
@@ -46,10 +52,16 @@ export class AnkiConnectError extends Error {
 export class AnkiConnectClient {
   private readonly url: string;
   private readonly fetchImpl: typeof fetch;
+  private readonly timeoutMs: number;
+  private readonly maxRetries: number;
+  private readonly backoffMs: number;
 
   constructor(options: AnkiConnectOptions) {
     this.url = options.url.replace(/\/+$/, "");
     this.fetchImpl = options.fetchImpl ?? fetch;
+    this.timeoutMs = options.timeoutMs ?? 10000;
+    this.maxRetries = options.maxRetries ?? 3;
+    this.backoffMs = options.backoffMs ?? 100;
   }
 
   /** Verify AnkiConnect is reachable and responsive. Returns its reported version (e.g. "6"). */
@@ -382,34 +394,54 @@ export class AnkiConnectClient {
    */
   private async invoke<T>(action: string, params?: Record<string, unknown>): Promise<T> {
     const body = JSON.stringify({ action, version: 6, params: params ?? {} });
+    let lastError: Error | null = null;
 
-    let response: Response;
-    try {
-      response = await this.fetchImpl(`${this.url}/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body,
-      });
-    } catch (err) {
-      throw new AnkiConnectError(
-        `Failed to reach AnkiConnect at ${this.url}: ${(err as Error).message}`,
-      );
+    for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
+
+        let response: Response;
+        try {
+          response = await this.fetchImpl(`${this.url}/`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body,
+            signal: controller.signal,
+          });
+        } finally {
+          clearTimeout(timeoutId);
+        }
+
+        if (!response.ok) {
+          throw new AnkiConnectError(`AnkiConnect returned HTTP ${response.status} ${response.statusText}`);
+        }
+
+        let envelope: AnkiConnectResponse<T>;
+        try {
+          envelope = (await response.json()) as AnkiConnectResponse<T>;
+        } catch (err) {
+          throw new AnkiConnectError(`Invalid JSON from AnkiConnect: ${(err as Error).message}`);
+        }
+
+        if (envelope.error) {
+          throw new AnkiConnectError(`AnkiConnect error: ${envelope.error}`);
+        }
+        return envelope.result as T;
+      } catch (err) {
+        lastError = err as Error;
+        if (lastError.message.startsWith("AnkiConnect error:")) {
+          throw lastError;
+        }
+        if (attempt < this.maxRetries) {
+          const delay = this.backoffMs * Math.pow(2, attempt - 1);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+      }
     }
 
-    if (!response.ok) {
-      throw new AnkiConnectError(`AnkiConnect returned HTTP ${response.status} ${response.statusText}`);
-    }
-
-    let envelope: AnkiConnectResponse<T>;
-    try {
-      envelope = (await response.json()) as AnkiConnectResponse<T>;
-    } catch (err) {
-      throw new AnkiConnectError(`Invalid JSON from AnkiConnect: ${(err as Error).message}`);
-    }
-
-    if (envelope.error) {
-      throw new AnkiConnectError(`AnkiConnect error: ${envelope.error}`);
-    }
-    return envelope.result as T;
+    throw new AnkiConnectError(
+      `Failed to reach AnkiConnect at ${this.url}: ${lastError?.message ?? "Unknown error"}`,
+    );
   }
 }
