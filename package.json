@@ -1,71 +1,69 @@
 {
   "name": "anki-xml",
-  "version": "0.0.2",
-  "description": "AI-agent-friendly CLI for importing, querying, and updating Anki flashcards via AnkiConnect. Built for autonomous loops: deterministic, idempotent, recoverable, composable.",
+  "version": "0.0.3",
+  "description": "XML-first CLI for importing Anki flashcards via AnkiConnect. Streaming, validated, recoverable.",
   "keywords": [
     "anki",
     "anki-connect",
     "flashcards",
-    "spaced-repetition",
     "xml",
     "cli",
-    "ai-agent",
-    "llm-tool",
-    "tanstack-intent"
+    "ai-agent"
   ],
   "homepage": "https://github.com/master8848/Anki-import#readme",
   "bugs": "https://github.com/master8848/Anki-import/issues",
   "author": "master8848",
   "license": "MIT",
-  "main": "src/index.ts",
+  "type": "module",
+  "main": "./dist/cli.js",
   "bin": {
+    "anki-import": "./dist/cli.js",
     "anki-xml": "./dist/cli.js"
   },
   "exports": {
-    ".": "./src/index.ts",
+    ".": "./dist/cli.js",
     "./package.json": "./package.json"
   },
   "files": [
     "dist",
+    "schema",
     "docs",
     "examples",
     "README.md",
     "CHANGELOG.md",
     "LICENSE",
-    "CONTRIBUTING.md",
-    "SECURITY.md",
-    "skills",
-    "!skills/_artifacts"
+    "skills"
   ],
-  "directories": {
-    "bin": "./dist",
-    "doc": "./docs"
-  },
   "scripts": {
-    "start": "bun run src/index.ts",
-    "import": "bun run src/index.ts import",
-    "test": "bun test",
-    "build": "bun run scripts/build.ts",
-    "build:npm": "bun run scripts/build-npm.ts",
+    "build": "node scripts/build.mjs",
+    "start": "tsx src/index.ts",
+    "import": "tsx src/index.ts import",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "prepublishOnly": "bun run build:npm && bun run publish:check",
-    "publish:check": "bun run scripts/publish-check.ts"
+    "doctor": "node dist/cli.js doctor"
   },
   "dependencies": {
-    "@iarna/toml": "^2.2.5",
-    "fast-xml-parser": "^5.10.0"
+    "fast-xml-parser": "^5.10.0",
+    "valibot": "^1.1.0"
   },
   "devDependencies": {
-    "@types/bun": "latest",
-    "@types/iarna__toml": "^2.0.5",
-    "typescript": "^5"
+    "@types/node": "^22.15.0",
+    "esbuild": "^0.25.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.8.0",
+    "vitest": "^3.1.0"
   },
+  "packageManager": "pnpm@10.33.0",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.0.0",
+    "pnpm": ">=10.0.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/master8848/Anki-import.git",
-    "directory": "."
+    "url": "https://github.com/master8848/Anki-import.git"
   }
 }

@@ -1,103 +1,99 @@
-/**
- * `import` command — read an XML file, validate, and send to AnkiConnect.
- */
+import { importFromFile, fileExistsSync, XmlParseError, AnkiConnectError } from "../../core/importer/import.ts";
+import { formatValidationError } from "../../core/validator/validate.ts";
+import {
+  flagBool,
+  flagNumber,
+  flagString,
+  type ParsedArgs,
+} from "../args.ts";
+import type { Logger } from "../../utils/logger.ts";
 
-import { importFromFile } from "../../import.ts";
-import type { Command } from "../command.ts";
-import { formatOutput, withFatal } from "../output.ts";
+export async function runImportCommand(
+  file: string,
+  args: ParsedArgs,
+  log: Logger,
+): Promise<number> {
+  if (!fileExistsSync(file)) {
+    log.error(`File not found: ${file}`);
+    return 2;
+  }
 
-export interface ImportSubArgs {
-  file: string | null;
-  allowDuplicate: boolean;
-  resumeFrom: string | null;
-}
+  const flags = args.flags;
+  try {
+    const outcome = await importFromFile({
+      inputPath: file,
+      url: flags.url,
+      dryRun: flags.dryRun,
+      stream: flagBool(args.rest, "stream"),
+      batchSize: flagNumber(args.rest, "batch-size", 500),
+      autoCreateDeck: !flagBool(args.rest, "no-auto-create-deck"),
+      allowDuplicate: flagBool(args.rest, "allow-duplicate"),
+      checkpointId: flagString(args.rest, "checkpoint"),
+      logger: log,
+    });
 
-const command: Command<ImportSubArgs> = {
-  name: "import",
-  description: "Create Anki notes from an XML file (the only write-by-default command).",
-  flags: {
-    "--auto-create-deck": "Create decks referenced by notes (default: on)",
-    "--no-auto-create-deck": "Fail if a referenced deck does not exist",
-    "--allow-duplicate": "Allow duplicate notes (default: reject duplicates).",
-    "--resume-from <name>": "Skip notes already captured in this checkpoint.",
-    "--dry-run": "Validate and report; do not contact AnkiConnect",
-  },
-  parseSubArgs(positional, rest) {
-    let resumeFrom: string | null = null;
-    for (let i = 0; i < rest.length; i++) {
-      if (rest[i] === "--resume-from") {
-        resumeFrom = rest[i + 1] ?? null;
-        i++;
+    if (outcome.validationErrors.length > 0) {
+      if (flags.json) {
+        console.log(
+          JSON.stringify({
+            ok: false,
+            error: { code: "VALIDATION_ERROR", errors: outcome.validationErrors },
+            warnings: outcome.warnings,
+          }),
+        );
+      } else {
+        for (const e of outcome.validationErrors) log.error(formatValidationError(e));
       }
+      return 1;
     }
-    return {
-      file: positional[0] ?? null,
-      allowDuplicate: rest.includes("--allow-duplicate"),
-      resumeFrom,
-    };
-  },
-  async run(args, sub) {
-    if (!sub.file) {
-      console.error("error: missing <file> argument");
-      console.error("Run 'anki-xml import --help' for usage.");
+
+    if (flags.json) {
+      console.log(
+        JSON.stringify({
+          ok: true,
+          dryRun: flags.dryRun,
+          validCount: outcome.validCount,
+          created: outcome.result.created,
+          failed: outcome.result.failed,
+          noteIds: outcome.result.noteIds,
+          checkpointId: outcome.checkpointId,
+          warnings: outcome.warnings,
+        }),
+      );
+    } else if (flags.dryRun) {
+      log.info(`Dry run: ${outcome.validCount} notes would be imported.`);
+    } else if (outcome.result.failed.length > 0) {
+      for (const f of outcome.result.failed) {
+        log.warn(`Note ${f.noteNumber}: ${f.reason}`);
+      }
+      log.info(`Imported ${outcome.result.created} notes (${outcome.result.failed.length} failed).`);
+    }
+
+    return outcome.result.failed.length > 0 ? 1 : 0;
+  } catch (err) {
+    if (err instanceof XmlParseError) {
+      if (flags.json) {
+        console.log(
+          JSON.stringify({
+            ok: false,
+            error: { code: "XML_PARSE_ERROR", message: err.message, line: err.line },
+          }),
+        );
+      } else {
+        log.error(`XML parse error: ${err.message}`);
+      }
+      return 1;
+    }
+    if (err instanceof AnkiConnectError) {
+      if (flags.json) {
+        console.log(
+          JSON.stringify({ ok: false, error: { code: "ANKICONNECT_ERROR", message: err.message } }),
+        );
+      } else {
+        log.error(err.message);
+      }
       return 2;
     }
-    const file = sub.file;
-
-    return withFatal(async () => {
-      console.log(`Reading ${file} ...`);
-
-      const outcome = await importFromFile({
-        inputPath: file,
-        ankiConnectUrl: args.url,
-        dryRun: args.dryRun,
-        autoCreateDeck: args.autoCreateDeck ?? true,
-        allowDuplicate: sub.allowDuplicate,
-        resumeFromCheckpoint: sub.resumeFrom ?? undefined,
-      });
-
-      if (outcome.validationErrors.length > 0) {
-        console.error("");
-        console.error("Validation errors:");
-        for (const e of outcome.validationErrors) {
-          const where = e.noteNumber === 0 ? "<anki>" : `Note ${e.noteNumber}`;
-          const loc = e.line !== undefined ? ` (line ${e.line}, col ${e.column})` : "";
-          console.error(`  ${where}${loc}: ${e.message}`);
-        }
-        console.error("");
-        console.error("Aborting: no notes were sent to AnkiConnect.");
-        return 1;
-      }
-
-      if (args.dryRun) {
-        console.log("Dry run: validation passed, AnkiConnect was not contacted.");
-        console.log(`Would have created ${outcome.validCount} notes.`);
-        return 0;
-      }
-
-      const { created, failed } = outcome.result;
-      console.log("");
-      console.log(`Created: ${created}`);
-      if (failed.length > 0) {
-        console.log(`Failed:  ${failed.length}`);
-        for (const f of failed) {
-          console.log(`  Note ${f.noteNumber}: ${f.reason}`);
-        }
-        if (args.batchId && args.rollbackOnPartial) {
-          // For import, rollback is a no-op (we created notes that
-          // don't have pre-state to restore), but we still record the
-          // batch as failed so the agent knows the operation didn't
-          // fully succeed.
-          console.log(
-            `Batch '${args.batchId}' had ${failed.length} failure(s); created notes are NOT auto-rolled-back (delete them manually if needed).`,
-          );
-        }
-        return 1;
-      }
-      console.log("All notes created successfully.");
-      return 0;
-    });
-  },
-};
-
-export default command;
+    throw err;
+  }
+}

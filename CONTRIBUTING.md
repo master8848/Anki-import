@@ -28,29 +28,32 @@ If you're an AI agent writing code in this repo, see
 
 | Tool | Version | Notes |
 |---|---|---|
-| [Bun](https://bun.sh) | ≥ 1.3 | Used for tests, builds, and the source runner |
+| [Node.js](https://nodejs.org) | ≥ 20 | Runtime for CLI and Vitest |
+| [pnpm](https://pnpm.io) | ≥ 10 | Package manager (`packageManager` in `package.json`) |
 | Git | latest | PRs land via GitHub |
 | Anki + AnkiConnect | Anki 2.1.49+, AnkiConnect 5+ | Optional — only for manual smoke tests |
-| Node.js | ≥ 18 | Only for verifying the bundled npm distribution |
+
+Installs enforce a **14-day minimum release age** (see `.npmrc`).
 
 ### 1.2 First-time setup
 
 ```sh
 git clone https://github.com/master8848/Anki-import
-cd anki-xml
-bun install
+cd Anki-import
+pnpm install
 ```
 
 You're done. Verify with:
 
 ```sh
-bun --version      # ≥ 1.3
-bun test --version
-bun test           # 430 should pass
+node --version     # ≥ 20
+pnpm --version     # ≥ 10
+pnpm test          # all tests pass
+pnpm build && node dist/cli.js --version
 ```
 
-If `bun test` fails on first run, it's almost certainly a transitive
-dep issue in `bun.lock`. Run `bun install` again.
+If `pnpm install` refuses a package, it may be newer than 14 days —
+that is intentional (`minimum-release-age=20160` minutes).
 
 ---
 
@@ -75,9 +78,9 @@ dep issue in `bun.lock`. Run `bun install` again.
 Run **all** of these locally before you push:
 
 ```sh
-bun test                   # all tests pass
-bunx tsc --noEmit          # 0 type errors
-bun run publish:check      # publish-readiness
+pnpm test                  # all tests pass
+pnpm typecheck             # 0 type errors
+pnpm build                 # dist/cli.js
 ```
 
 If any fails, fix and re-run. Do not skip.
@@ -94,10 +97,9 @@ wastes cycles; run them locally first.
 ### 3.1 Standard commands
 
 ```sh
-bun test                      # all 430 tests across 28 files
-bun test tests/foo.test.ts    # one file
-bun test -t 'tag'             # filter by -t tag (Bun test option)
-bun test --watch              # re-run on change
+pnpm test                      # all tests
+pnpm test tests/foo.test.ts    # one file
+pnpm test:watch                # re-run on change
 ```
 
 ### 3.2 Single test focus
@@ -357,20 +359,12 @@ privately.
 
 | Script | Purpose |
 |---|---|
-| `bun test` | Run all tests |
-| `bunx tsc --noEmit` | Type-check only |
-| `bun run src/index.ts` | Run the CLI from source |
-| `bun run build` | Build the Bun standalone binary |
-| `bun run build:npm` | Build the Node npm bundle |
-| `bun run publish:check` | Run all 6 publish-readiness checks |
-| `bun run typecheck` | Alias for `tsc --noEmit` |
+| `pnpm test` | Run all tests (Vitest) |
+| `pnpm typecheck` | Type-check only |
+| `pnpm start` | Run the CLI from source (`tsx`) |
+| `pnpm build` | Build `dist/cli.js` (Node ≥ 20) |
 
-The build scripts produce:
-
-- `dist/cli.js` — npm package entry (CommonJS, Node ≥ 18).
-- `anki-xml` — standalone binary (Bun compiled in).
-
-Both are reproducible from source.
+The build produces `dist/cli.js` — a self-contained ESM bundle for Node 20+.
 
 ---
 

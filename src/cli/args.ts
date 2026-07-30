@@ -1,51 +1,3 @@
-/**
- * CLI argument parser.
- *
- * Recognizes the global flags (`--help`, `--version`, `--url`, `--dry-run`,
- * `--json`, `--auto-create-deck`, `--no-auto-create-deck`) up front so typos
- * fail fast. Anything that starts with `--` and is *not* in the subcommand-flag
- * whitelist is rejected as unknown.
- *
- * Subcommand-specific flags are passed through to `args.rest` for the
- * individual command to parse.
- */
-
-export interface ParsedArgs {
-  command: string | null;
-  positional: string[];
-  url: string;
-  dryRun: boolean;
-  json: boolean;
-  /**
-   * 0 = legacy shape (raw payload), 1 = envelope shape. Default 1.
-   * Set to 0 with `--json-legacy` for one release cycle to keep
-   * existing `jq` pipelines working.
-   */
-  jsonVersion: 0 | 1;
-  /** null = flag was not passed; true/false = explicit. */
-  autoCreateDeck: boolean | null;
-  showHelp: boolean;
-  showVersion: boolean;
-  /** Strip ANSI color codes from output. Defaults to false. */
-  noColor: boolean;
-  /** Emit summary-only output. Defaults to false. */
-  quiet: boolean;
-  /** Output format hint: "ndjson" streams one JSON record per line. */
-  format: "default" | "ndjson";
-  /** Multi-collection profile name. */
-  profile: string | null;
-  /** Idempotency key (M10). */
-  idempotencyKey: string | null;
-  /** Batch id (M9). Triggers an auto-checkpoint before the write. */
-  batchId: string | null;
-  /** Rollback automatically when a partial failure occurs (M9). */
-  rollbackOnPartial: boolean;
-  /** Explicit config file path (M14). */
-  configPath: string | null;
-  /** Loose bag of subcommand-specific flags. Parsed by each command. */
-  rest: string[];
-}
-
 export class CliError extends Error {
   constructor(message: string) {
     super(message);
@@ -53,180 +5,139 @@ export class CliError extends Error {
   }
 }
 
-/** Flags that can appear after the subcommand, parsed by each command. */
-export const SUBCOMMAND_FLAGS = new Set([
-  "--deck",
-  "--tag",
-  "--limit",
-  "--query",
-  "--id",
-  "--ids",
-  "--file",
-  "--field",
-  "--tags",
-  "--shell",
-  "--strict",
-  "--allow-duplicate",
-  "--no-preflight",
-  "--out",
-  "--with-ids",
-  "--cards-too",
-  "--yes",
+export interface GlobalFlags {
+  url: string;
+  json: boolean;
+  quiet: boolean;
+  verbose: boolean;
+  debug: boolean;
+  dryRun: boolean;
+  help: boolean;
+  version: boolean;
+}
+
+export interface ParsedArgs {
+  command: string | null;
+  positional: string[];
+  flags: GlobalFlags;
+  rest: Record<string, string | boolean>;
+}
+
+const GLOBAL_BOOL = new Set([
+  "json",
+  "quiet",
+  "verbose",
+  "debug",
+  "dry-run",
+  "help",
+  "version",
+  "stream",
+  "allow-duplicate",
+  "no-auto-create-deck",
+  "keep-checkpoint",
 ]);
 
-/** Flags that take no value (booleans). */
-export const BOOLEAN_FLAGS = new Set([
-  "--strict",
-  "--allow-duplicate",
-  "--no-preflight",
-  "--with-ids",
-  "--cards-too",
-  "--yes",
+const GLOBAL_VALUE = new Set([
+  "url",
+  "batch-size",
+  "checkpoint",
+  "note-ids",
+  "deck",
 ]);
 
 export function parseArgs(argv: string[]): ParsedArgs {
-  const args: ParsedArgs = {
-    command: null,
-    positional: [],
+  const flags: GlobalFlags = {
     url: "http://127.0.0.1:8765",
-    dryRun: false,
     json: false,
-    jsonVersion: 1,
-    autoCreateDeck: null,
-    showHelp: false,
-    showVersion: false,
-    noColor: false,
     quiet: false,
-    format: "default",
-    profile: null,
-    idempotencyKey: null,
-    batchId: null,
-    rollbackOnPartial: false,
-    configPath: null,
-    rest: [],
+    verbose: false,
+    debug: false,
+    dryRun: false,
+    help: false,
+    version: false,
   };
+  const rest: Record<string, string | boolean> = {};
+  const positional: string[] = [];
+  let command: string | null = null;
 
-  let i = 0;
-  while (i < argv.length) {
-    const a = argv[i]!;
-    if (a === "--help" || a === "-h") {
-      args.showHelp = true;
-      i++;
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i]!;
+
+    if (arg === "-h" || arg === "--help") {
+      flags.help = true;
       continue;
     }
-    if (a === "--version" || a === "-v") {
-      args.showVersion = true;
-      i++;
+    if (arg === "-V" || arg === "--version") {
+      flags.version = true;
       continue;
     }
-    if (a === "--dry-run") {
-      args.dryRun = true;
-      i++;
-      continue;
-    }
-    if (a === "--json") {
-      args.json = true;
-      i++;
-      continue;
-    }
-    if (a === "--json-legacy") {
-      args.json = true;
-      args.jsonVersion = 0;
-      i++;
-      continue;
-    }
-    if (a === "--auto-create-deck") {
-      args.autoCreateDeck = true;
-      i++;
-      continue;
-    }
-    if (a === "--no-auto-create-deck") {
-      args.autoCreateDeck = false;
-      i++;
-      continue;
-    }
-    if (a === "--no-color" || a === "--no-colour") {
-      args.noColor = true;
-      i++;
-      continue;
-    }
-    if (a === "--quiet") {
-      args.quiet = true;
-      i++;
-      continue;
-    }
-    if (a === "--format") {
-      const next = argv[i + 1];
-      if (!next) throw new CliError("--format requires a value");
-      if (next !== "ndjson" && next !== "default") {
-        throw new CliError(`--format must be 'ndjson' or 'default' (got '${next}')`);
+
+    if (arg.startsWith("--")) {
+      const eq = arg.indexOf("=");
+      let key: string;
+      let val: string | undefined;
+      if (eq !== -1) {
+        key = arg.slice(2, eq);
+        val = arg.slice(eq + 1);
+      } else {
+        key = arg.slice(2);
       }
-      args.format = next;
-      i += 2;
-      continue;
-    }
-    if (a === "--profile") {
-      const next = argv[i + 1];
-      if (!next) throw new CliError("--profile requires a value");
-      args.profile = next;
-      i += 2;
-      continue;
-    }
-    if (a === "--idempotency-key") {
-      const next = argv[i + 1];
-      if (!next) throw new CliError("--idempotency-key requires a value");
-      args.idempotencyKey = next;
-      i += 2;
-      continue;
-    }
-    if (a === "--batch-id") {
-      const next = argv[i + 1];
-      if (!next) throw new CliError("--batch-id requires a value");
-      args.batchId = next;
-      i += 2;
-      continue;
-    }
-    if (a === "--rollback-on-partial") {
-      args.rollbackOnPartial = true;
-      continue;
-    }
-    if (a === "--config") {
-      const next = argv[i + 1];
-      if (!next) throw new CliError("--config requires a value");
-      args.configPath = next;
-      i += 2;
-      continue;
-    }
-    if (a === "--url") {
-      const next = argv[i + 1];
-      if (!next) throw new CliError("--url requires a value");
-      args.url = next;
-      i += 2;
-      continue;
-    }
-    if (a.startsWith("--")) {
-      if (!SUBCOMMAND_FLAGS.has(a)) {
-        throw new CliError(`Unknown option: ${a}`);
+
+      if (key === "dry-run") {
+        flags.dryRun = true;
+        continue;
       }
-      args.rest.push(a);
-      i++;
-      if (BOOLEAN_FLAGS.has(a)) continue;
-      // Only consume the next arg as a value if it doesn't look like a flag.
-      // This lets `--tag a --tag b` work correctly (the second `--tag` is
-      // not swallowed as the value of the first).
-      const next = argv[i];
-      if (next !== undefined && !next.startsWith("--")) {
-        args.rest.push(next);
-        i += 1;
+      if (GLOBAL_BOOL.has(key) && val === undefined) {
+        if (key === "json") flags.json = true;
+        else if (key === "quiet") flags.quiet = true;
+        else if (key === "verbose") flags.verbose = true;
+        else if (key === "debug") flags.debug = true;
+        else rest[key] = true;
+        continue;
       }
+
+      if (val === undefined) {
+        const next = argv[i + 1];
+        if (!next || next.startsWith("-")) {
+          throw new CliError(`Flag --${key} requires a value`);
+        }
+        val = next;
+        i++;
+      }
+
+      if (key === "url") flags.url = val;
+      else if (GLOBAL_VALUE.has(key) || GLOBAL_BOOL.has(key)) rest[key] = val;
+      else throw new CliError(`Unknown flag --${key}`);
       continue;
     }
-    if (args.command === null) {
-      args.command = a;
+
+    if (command === null) {
+      command = arg;
     } else {
-      args.positional.push(a);
+      positional.push(arg);
     }
-    i++;
   }
-  return args;
+
+  return { command, positional, flags, rest };
+}
+
+export function flagString(rest: Record<string, string | boolean>, key: string): string | undefined {
+  const v = rest[key];
+  return typeof v === "string" ? v : undefined;
+}
+
+export function flagBool(rest: Record<string, string | boolean>, key: string): boolean {
+  return rest[key] === true || rest[key] === "true";
+}
+
+export function flagNumber(
+  rest: Record<string, string | boolean>,
+  key: string,
+  fallback: number,
+): number {
+  const v = rest[key];
+  if (typeof v !== "string") return fallback;
+  const n = Number(v);
+  if (!Number.isFinite(n) || n <= 0) throw new CliError(`--${key} must be a positive number`);
+  return n;
 }

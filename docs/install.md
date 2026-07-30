@@ -80,10 +80,10 @@ attached as release artifacts. See the
 
 ```sh
 git clone https://github.com/master8848/Anki-import
-cd anki-xml
-bun install
-bun run build:npm       # dist/cli.js (for npm publish)
-bun run build           # anki-xml (standalone binary)
+cd Anki-import
+pnpm install
+pnpm build              # dist/cli.js
+node dist/cli.js --version
 ```
 
 Useful when:
@@ -95,10 +95,9 @@ Useful when:
 ## Choosing between methods
 
 - **Just want to use it now?** `npx anki-xml --help`. No install.
-- **CI / agents / scripting?** `npm install -g anki-xml`. Then
-  call it from anywhere.
+- **CI / agents / scripting?** `npm install -g anki-xml` (published registry package). Then call it from anywhere.
 - **Air-gapped?** Download the binary from Releases.
-- **Developing?** Clone + `bun install` + `bun run start`.
+- **Developing?** Clone + `pnpm install` + `pnpm start`.
 
 ## Updating
 
@@ -116,7 +115,7 @@ anki-xml doctor
 npm uninstall -g anki-xml
 ```
 
-Local checkpoints and the audit log live in
+Local checkpoints live in
 `$XDG_DATA_HOME/anki-xml/` and are **not removed** by uninstall.
 To wipe them:
 

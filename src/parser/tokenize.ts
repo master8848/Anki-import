@@ -1,0 +1,225 @@
+/**
+ * Source-byte XML tokenizer.
+ * Never decodes entities. CDATA / comments / PIs are distinct token kinds.
+ */
+
+export class XmlParseError extends Error {
+  line?: number;
+  column?: number;
+
+  constructor(message: string, loc?: { line?: number; column?: number }) {
+    super(message);
+    this.name = "XmlParseError";
+    if (loc?.line !== undefined) this.line = loc.line;
+    if (loc?.column !== undefined) this.column = loc.column;
+  }
+}
+
+export type XmlToken =
+  | { kind: "start"; name: string; tagStart: number; tagEnd: number; contentStart: number; attrs: Record<string, string> }
+  | { kind: "selfClose"; name: string; tagStart: number; tagEnd: number; attrs: Record<string, string> }
+  | { kind: "end"; name: string; tagStart: number; tagEnd: number }
+  | { kind: "cdata"; tagStart: number; contentStart: number; contentEnd: number; tagEnd: number }
+  | { kind: "comment"; tagStart: number; tagEnd: number }
+  | { kind: "pi"; tagStart: number; tagEnd: number }
+  | { kind: "markupDecl"; tagStart: number; tagEnd: number }
+  | { kind: "text"; start: number; end: number };
+
+function isNameChar(code: number): boolean {
+  return (
+    (code >= 65 && code <= 90) ||
+    (code >= 97 && code <= 122) ||
+    (code >= 48 && code <= 57) ||
+    code === 95 ||
+    code === 45 ||
+    code === 46 ||
+    code === 58
+  );
+}
+
+function isSpace(code: number): boolean {
+  return code === 32 || code === 9 || code === 10 || code === 13;
+}
+
+function parseAttrs(source: string, from: number, to: number): Record<string, string> {
+  const attrs: Record<string, string> = {};
+  let i = from;
+  while (i < to) {
+    while (i < to && isSpace(source.charCodeAt(i))) i++;
+    if (i >= to) break;
+    const nameStart = i;
+    while (i < to && isNameChar(source.charCodeAt(i))) i++;
+    if (i === nameStart) break;
+    const name = source.slice(nameStart, i);
+    while (i < to && isSpace(source.charCodeAt(i))) i++;
+    if (source.charCodeAt(i) !== 61 /* = */) continue;
+    i++;
+    while (i < to && isSpace(source.charCodeAt(i))) i++;
+    const quote = source.charCodeAt(i);
+    if (quote !== 34 && quote !== 39) continue;
+    i++;
+    const valStart = i;
+    while (i < to && source.charCodeAt(i) !== quote) i++;
+    attrs[name] = source.slice(valStart, i);
+    if (i < to) i++;
+  }
+  return attrs;
+}
+
+export function tokenizeXml(source: string): XmlToken[] {
+  const tokens: XmlToken[] = [];
+  const len = source.length;
+  let i = 0;
+  let textStart = 0;
+
+  while (i < len) {
+    const ch = source.charCodeAt(i);
+    if (ch !== 60 /* < */) {
+      i++;
+      continue;
+    }
+
+    if (i > textStart) {
+      tokens.push({ kind: "text", start: textStart, end: i });
+      textStart = i;
+    }
+
+    if (source.startsWith("<![CDATA[", i)) {
+      const tagStart = i;
+      const contentStart = i + 9;
+      const end = source.indexOf("]]>", contentStart);
+      if (end === -1) throw new XmlParseError("Unterminated CDATA section in source");
+      tokens.push({
+        kind: "cdata",
+        tagStart,
+        contentStart,
+        contentEnd: end,
+        tagEnd: end + 3,
+      });
+      i = end + 3;
+      textStart = i;
+      continue;
+    }
+
+    if (source.startsWith("<!--", i)) {
+      const tagStart = i;
+      const end = source.indexOf("-->", i + 4);
+      if (end === -1) throw new XmlParseError("Unterminated comment in source");
+      tokens.push({ kind: "comment", tagStart, tagEnd: end + 3 });
+      i = end + 3;
+      textStart = i;
+      continue;
+    }
+
+    if (source.startsWith("<!", i)) {
+      const tagStart = i;
+      const end = source.indexOf(">", i + 2);
+      if (end === -1) throw new XmlParseError("Unterminated markup declaration");
+      tokens.push({ kind: "markupDecl", tagStart, tagEnd: end + 1 });
+      i = end + 1;
+      textStart = i;
+      continue;
+    }
+
+    if (source.startsWith("<?", i)) {
+      const tagStart = i;
+      const end = source.indexOf("?>", i + 2);
+      if (end === -1) throw new XmlParseError("Unterminated processing instruction");
+      tokens.push({ kind: "pi", tagStart, tagEnd: end + 2 });
+      i = end + 2;
+      textStart = i;
+      continue;
+    }
+
+    if (source.charCodeAt(i + 1) === 47 /* / */) {
+      const tagStart = i;
+      let j = i + 2;
+      const nameStart = j;
+      while (j < len && isNameChar(source.charCodeAt(j))) j++;
+      const name = source.slice(nameStart, j);
+      if (!name) throw new XmlParseError(`Empty end tag at offset ${tagStart}`);
+      while (j < len && isSpace(source.charCodeAt(j))) j++;
+      if (source.charCodeAt(j) !== 62) {
+        throw new XmlParseError(`Expected '>' to close </${name}> at offset ${tagStart}`);
+      }
+      j++;
+      tokens.push({ kind: "end", name, tagStart, tagEnd: j });
+      i = j;
+      textStart = i;
+      continue;
+    }
+
+    const tagStart = i;
+    let j = i + 1;
+    const nameStart = j;
+    while (j < len && isNameChar(source.charCodeAt(j))) j++;
+    const name = source.slice(nameStart, j);
+    if (!name) {
+      i++;
+      continue;
+    }
+    const attrStart = j;
+    let terminated = false;
+    while (j < len) {
+      const c = source.charCodeAt(j);
+      if (c === 62) {
+        j++;
+        const attrs = parseAttrs(source, attrStart, j - 1);
+        tokens.push({ kind: "start", name, tagStart, tagEnd: j, contentStart: j, attrs });
+        terminated = true;
+        break;
+      }
+      if (c === 47 && source.charCodeAt(j + 1) === 62) {
+        const attrs = parseAttrs(source, attrStart, j);
+        j += 2;
+        tokens.push({ kind: "selfClose", name, tagStart, tagEnd: j, attrs });
+        terminated = true;
+        break;
+      }
+      if (c === 34 || c === 39) {
+        const quote = c;
+        j++;
+        while (j < len && source.charCodeAt(j) !== quote) j++;
+        if (j >= len) throw new XmlParseError(`Unterminated attribute value in <${name}>`);
+        j++;
+        continue;
+      }
+      j++;
+    }
+    if (!terminated) throw new XmlParseError(`Unterminated start tag <${name}>`);
+    i = j;
+    textStart = i;
+  }
+
+  if (textStart < len) {
+    tokens.push({ kind: "text", start: textStart, end: len });
+  }
+
+  return tokens;
+}
+
+export function sourceLocation(source: string, offset: number): { line: number; column: number } {
+  let line = 1;
+  let column = 1;
+  for (let i = 0; i < offset && i < source.length; i++) {
+    if (source.charCodeAt(i) === 10) {
+      line++;
+      column = 1;
+    } else {
+      column++;
+    }
+  }
+  return { line, column };
+}
+
+export function offsetOfLine(source: string, line: number): number {
+  if (line <= 1) return 0;
+  let current = 1;
+  for (let i = 0; i < source.length; i++) {
+    if (source.charCodeAt(i) === 10) {
+      current++;
+      if (current === line) return i + 1;
+    }
+  }
+  return source.length;
+}

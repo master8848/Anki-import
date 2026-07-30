@@ -1,15 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-  Minimal "hello world" example: a single <anki> root with two <note>s.
-  Use this to verify the full loop before scaling up.
--->
-<anki deck="AI Import::Spanish">
-  <note type="Basic" tags="greetings">
-    <front>Hola</front>
-    <back>Hello</back>
-  </note>
-  <note type="Basic" tags="greetings">
-    <front>Adiós</front>
-    <back>Goodbye</back>
-  </note>
+<anki version="1">
+  <deck name="Spanish">
+    <note type="Basic">
+      <field name="Front">
+        <![CDATA[
+          <h1>Hola</h1>
+        ]]>
+      </field>
+      <field name="Back">
+        <![CDATA[
+          Hello
+        ]]>
+      </field>
+      <tag>language</tag>
+      <tag>spanish</tag>
+    </note>
+    <note type="Basic">
+      <front>Adiós</front>
+      <back>Goodbye</back>
+      <tag>greetings</tag>
+    </note>
+  </deck>
 </anki>

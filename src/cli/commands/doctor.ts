@@ -1,35 +1,19 @@
-/**
- * `doctor` command — verify the environment is ready.
- */
+import { runDoctor } from "../../core/doctor.ts";
+import type { GlobalFlags } from "../args.ts";
+import type { Logger } from "../../utils/logger.ts";
 
-import { runDoctor } from "../../doctor.ts";
-import type { Command } from "../command.ts";
-import { formatOutput, withFatal } from "../output.ts";
+export async function runDoctorCommand(flags: GlobalFlags, log: Logger): Promise<number> {
+  const result = await runDoctor({ url: flags.url });
 
-const command: Command = {
-  name: "doctor",
-  description: "Verify AnkiConnect is reachable and the collection is usable.",
-  flags: {},
-  parseSubArgs() {
-    return {};
-  },
-  async run(args) {
-    return withFatal(async () => {
-      const startMs = Date.now();
-      const result = await runDoctor({ ankiConnectUrl: args.url });
-      const data = {
-        url: result.url,
-        ok: result.ok,
-        checks: result.checks,
-      };
-      const human = [
-        `URL: ${result.url}`,
-        ...result.checks.map((c) => `  ${c.ok ? "✓" : "✗"} ${c.name}: ${c.detail}`),
-      ].join("\n");
-      console.log(formatOutput(data, { args, startMs, command: "doctor" }, human));
-      return result.ok ? 0 : 1;
-    });
-  },
-};
+  if (flags.json) {
+    console.log(JSON.stringify(result));
+  } else {
+    for (const check of result.checks) {
+      const mark = check.ok ? "ok" : "FAIL";
+      log.info(`[${mark}] ${check.name}: ${check.detail}`);
+    }
+    log.info(result.ok ? "Doctor: all checks passed." : "Doctor: one or more checks failed.");
+  }
 
-export default command;
+  return result.ok ? 0 : 1;
+}

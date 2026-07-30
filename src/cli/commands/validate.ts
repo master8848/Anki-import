@@ -1,84 +1,65 @@
-/**
- * `validate` command — parse and structurally validate an XML file without
- * contacting AnkiConnect.
- */
+import * as fsp from "node:fs/promises";
+import { parseDocument, XmlParseError } from "../../parser/xml-parser.ts";
+import { validateNotes, formatValidationError } from "../../core/validator/validate.ts";
+import type { GlobalFlags } from "../args.ts";
+import type { Logger } from "../../utils/logger.ts";
 
-import { runValidate } from "../../validate.ts";
-import type { Command } from "../command.ts";
-import { formatOutput, withFatal } from "../output.ts";
-
-export interface ValidateSubArgs {
-  file: string | null;
-  strict: boolean;
-}
-
-function parseSubArgs(positional: string[], rest: string[]): ValidateSubArgs {
-  return {
-    file: positional[0] ?? null,
-    strict: rest.includes("--strict"),
-  };
-}
-
-const command: Command<ValidateSubArgs> = {
-  name: "validate",
-  description: "Parse and validate an XML file without contacting AnkiConnect.",
-  flags: {
-    "--strict": "Treat warnings as failures.",
-  },
-  parseSubArgs(positional, rest) {
-    return parseSubArgs(positional, rest);
-  },
-  async run(args, sub) {
-    if (!sub.file) {
-      console.error("error: missing <file> argument");
-      console.error("Usage: anki-xml validate <file.xml> [--strict] [--json]");
+export async function runValidate(
+  file: string,
+  flags: GlobalFlags,
+  log: Logger,
+): Promise<number> {
+  let source: string;
+  try {
+    source = await fsp.readFile(file, "utf8");
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+      log.error(`File not found: ${file}`);
       return 2;
     }
-    const file = sub.file;
+    throw err;
+  }
 
-    return withFatal(async () => {
-      const startMs = Date.now();
-      const report = await runValidate({ filePath: file, strict: sub.strict });
-
-      if (args.json) {
-        console.log(formatOutput(report, { args, startMs, command: "validate" }, ""));
-        return report.valid ? 0 : 1;
+  let parsed;
+  try {
+    parsed = parseDocument(source);
+  } catch (err) {
+    if (err instanceof XmlParseError) {
+      const loc =
+        err.line !== undefined ? ` (line ${err.line}${err.column !== undefined ? `, column ${err.column}` : ""})` : "";
+      if (flags.json) {
+        console.log(
+          JSON.stringify({
+            ok: false,
+            error: { code: "XML_PARSE_ERROR", message: err.message, line: err.line, column: err.column },
+          }),
+        );
+      } else {
+        log.error(`XML parse error${loc}: ${err.message}`);
       }
+      return 1;
+    }
+    throw err;
+  }
 
-      if (report.valid && report.warnings.length === 0) {
-        console.log(`Reading ${file} ...`);
-        console.log(`Valid: ${report.noteCount} notes, 0 errors, 0 warnings.`);
-        return 0;
-      }
+  const result = validateNotes(parsed.notes, parsed.defaultDeck, source);
 
-      console.log(`Reading ${file} ...`);
-      console.log(`Valid: ${report.valid ? "yes" : "no"}; ${report.noteCount} notes.`);
-      if (report.decks.length > 0) {
-        console.log(`Decks: ${report.decks.join(", ")}`);
-      }
+  if (flags.json) {
+    console.log(
+      JSON.stringify({
+        ok: result.errors.length === 0,
+        noteCount: result.notes.length,
+        errors: result.errors,
+        warnings: result.warnings,
+      }),
+    );
+  } else if (result.errors.length === 0) {
+    log.info(`Validated ${result.notes.length} notes.`);
+    for (const w of result.warnings) log.warn(formatValidationError(w));
+  } else {
+    for (const e of result.errors) log.error(formatValidationError(e));
+    log.error(`Validation failed: ${result.errors.length} error(s).`);
+  }
 
-      if (report.errors.length > 0) {
-        console.log("");
-        console.log(`Errors (${report.errors.length}):`);
-        for (const e of report.errors) {
-          const where = e.noteNumber === 0 ? "<anki>" : `Note ${e.noteNumber}`;
-          const loc = e.line !== undefined ? ` (line ${e.line}, col ${e.column})` : "";
-          console.log(`  ${where}${loc}: ${e.message}`);
-        }
-      }
-      if (report.warnings.length > 0) {
-        console.log("");
-        console.log(`Warnings (${report.warnings.length}):`);
-        for (const w of report.warnings) {
-          const where = w.noteNumber === 0 ? "<anki>" : `Note ${w.noteNumber}`;
-          const loc = w.line !== undefined ? ` (line ${w.line}, col ${w.column})` : "";
-          console.log(`  ${where}${loc}: ${w.message}`);
-        }
-      }
-
-      return report.valid ? 0 : 1;
-    });
-  },
-};
-
-export default command;
+  return result.errors.length === 0 ? 0 : 1;
+}

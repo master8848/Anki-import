@@ -1,8 +1,35 @@
 # Changelog
 
-All notable changes to `anki-xml` are documented here. The format is
-based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
-this project adheres to [Semantic Versioning](https://semver.org/).
+All notable changes to `anki-xml` / `anki-import` are documented here.
+
+## [0.0.3] — 2026-07-30
+
+**XML-first architecture rewrite.** Breaking CLI surface change:
+commands reduced to `doctor`, `validate`, `import`, `checkpoint`,
+`rollback`, `benchmark`. XML interchange format is preserved (legacy
+short tags + `<field name>` / nested `<deck>` / `<tag>`).
+
+### Added
+- Streaming import (`--stream`) and configurable `--batch-size`
+- Valibot validation schemas with line-aware errors
+- `schema/anki.xsd`
+- `benchmark` command
+- `ImportPlugin` interface (XML built-in)
+- Node 20+ native build via esbuild (`pnpm build` → `dist/cli.js`)
+- Vitest test suite (`parser`, `validator`, `stream`, `cli`)
+- Bin aliases: `anki-import` and `anki-xml`
+- pnpm as the package manager; `minimum-release-age=20160` (14 days)
+
+### Changed
+- Layered layout: `cli/` · `core/` · `parser/` · `anki/` · `validation/`
+- Simplified checkpoints: `{ id, deck, created, noteIds }`
+- Logging levels: error / warn / info / debug
+- Skill rewritten for agents (no internals)
+
+### Removed
+- Duplicate “safe-import” entry points and shell wrappers
+- Bun-only APIs and Bun-only build scripts
+- Large optional command surface (search/update/migrate/… deferred)
 
 ## [0.0.2] — 2026-07-30
 

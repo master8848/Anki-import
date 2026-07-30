@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+
+  <xs:element name="anki">
+    <xs:complexType>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element name="deck" type="DeckType"/>
+        <xs:element name="note" type="NoteType"/>
+      </xs:choice>
+      <xs:attribute name="version" type="xs:string" default="1"/>
+      <xs:attribute name="deck" type="xs:string"/>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="DeckType">
+    <xs:sequence>
+      <xs:element name="note" type="NoteType" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:attribute name="name" type="xs:string" use="required"/>
+  </xs:complexType>
+
+  <xs:complexType name="NoteType" mixed="true">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="field" type="FieldType"/>
+      <xs:element name="tag" type="xs:string"/>
+      <xs:element name="front" type="xs:string"/>
+      <xs:element name="back" type="xs:string"/>
+      <xs:element name="text" type="xs:string"/>
+      <xs:element name="extra" type="xs:string"/>
+      <xs:element name="addReverse" type="xs:string"/>
+    </xs:choice>
+    <xs:attribute name="type" type="xs:string" use="required"/>
+    <xs:attribute name="deck" type="xs:string"/>
+    <xs:attribute name="tags" type="xs:string"/>
+    <xs:attribute name="id" type="xs:positiveInteger"/>
+  </xs:complexType>
+
+  <xs:complexType name="FieldType" mixed="true">
+    <xs:attribute name="name" type="xs:string" use="required"/>
+  </xs:complexType>
+
+</xs:schema>
