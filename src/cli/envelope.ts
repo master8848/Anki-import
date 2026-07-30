@@ -22,7 +22,7 @@
  *     "meta": {
  *       "duration_ms": 142,
  *       "timestamp": "2024-...Z",
- *       "version": "0.0.1"
+ *       "version": "<cli version>"
  *     }
  *   }
  *
@@ -43,6 +43,7 @@
  */
 
 import type { NoteValidationError, ParsedArgs } from "./args.ts";
+import { VERSION } from "./help.ts";
 
 /** Versions are integers; bump on breaking shape changes. */
 export type EnvelopeVersion = 1;
@@ -149,7 +150,7 @@ function meta(startMs: number): EnvelopeMeta {
   return {
     duration_ms: Date.now() - startMs,
     timestamp: new Date().toISOString(),
-    version: "0.0.1",
+    version: VERSION,
   };
 }
 

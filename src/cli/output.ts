@@ -14,6 +14,7 @@
 
 import type { NoteValidationError, ParsedArgs } from "./args.ts";
 import { envelope, errorEnvelope, ErrorCode, type ErrorCodeValue } from "./envelope.ts";
+import { VERSION } from "./help.ts";
 
 export interface OutputContext {
   args: ParsedArgs;
@@ -81,7 +82,7 @@ export function formatNdjsonRecord<T>(
       _meta: {
         duration_ms: Date.now() - ctx.startMs,
         timestamp: new Date().toISOString(),
-        version: "0.0.1",
+        version: VERSION,
         command: ctx.command,
       },
     });

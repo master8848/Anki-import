@@ -7,7 +7,7 @@
 
 import { COMMANDS } from "./registry.ts";
 
-export const VERSION = "0.0.1";
+export const VERSION = "0.0.2";
 
 const COMMON_OPTIONS = `Common options:
   --url <url>               AnkiConnect endpoint (default http://127.0.0.1:8765)

@@ -1,6 +1,6 @@
 {
   "name": "anki-xml",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "AI-agent-friendly CLI for importing, querying, and updating Anki flashcards via AnkiConnect. Built for autonomous loops: deterministic, idempotent, recoverable, composable.",
   "keywords": [
     "anki",

@@ -4,6 +4,61 @@ All notable changes to `anki-xml` are documented here. The format is
 based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.0.2] — 2026-07-30
+
+**Resilience + extensibility release.** 34 commands ship, 426 tests
+pass. No breaking changes to `--json` envelope (`version: 1`); all
+additions are opt-in.
+
+---
+
+## Highlights
+
+- **AnkiConnect resilience**: configurable `timeoutMs`, automatic
+  retry with exponential backoff (`maxRetries`, `backoffMs`) for
+  transient network errors. Uses `AbortController` for proper
+  cancellation.
+- **Dynamic custom model registry**: `registerModel()` and
+  `createCustomModel()` let consumers add new note types at runtime.
+  XML parser integrates model-aware field validation and surfaces
+  warnings on unknown element tags for built-in models.
+- **Media ingestion in `import`**: `<img src="…">` and `[sound:…]`
+  references in note fields are now uploaded via `storeMediaFile` as
+  part of the same import workflow. Missing files are skipped, not
+  fatal.
+- **`id` is a first-class attribute** during XML parsing — promotes
+  it to a regular field for cleaner downstream handling.
+
+## Reliability
+
+- **`checkpoints`**: empty checkpoints are now valid markers (used as
+  the create-only snapshot path) and the `withBatch` flow is unified.
+  Full note info (`deckName`, `modelName`, fields, tags) is captured
+  via `notesInfo` for accurate rollback.
+- **`config`**: switched to the `@iarna/toml` parser (was hand-rolled)
+  for stricter handling of malformed TOML.
+
+## Tests
+
+- 426 passing (was 430 → reorganised into new files, see
+  `tests/batch.test.ts`, `tests/checkpoints.test.ts`).
+
+## Documentation & ecosystem
+
+- **`AGENTS.md`** — new top-level project guide for AI coding tools
+  and human reviewers (architecture, constraints, quality gates,
+  anti-patterns).
+- **`CONTRIBUTING.md`** — expanded with the developer workflow.
+- **`skills/anki-import/`** — new skill for
+  [skills.sh](https://skills.sh): `SKILL.md`, two example XML
+  decks, `commands.md` / `xml-schema.md` references, and a
+  `safe-import.sh` wrapper script.
+
+## Breaking changes
+
+None. The `--json` envelope (`version: 1`) and every existing CLI
+flag are unchanged.
+
 ## [0.0.1] — 2026-07-28
 
 **First public release.** 34 commands ship, 430 tests pass, every
