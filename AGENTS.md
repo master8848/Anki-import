@@ -47,4 +47,5 @@ pnpm test && pnpm typecheck && pnpm build && node dist/cli.js --version
 
 ## Skill
 
-Agent-facing docs: `skills/anki-import/SKILL.md` (keep concise; no internals).
+Agent-facing docs: `skills/anki-import/SKILL.md` — self-contained for
+npm users. Contributor skill rules: `CONTRIBUTING.md` §13.

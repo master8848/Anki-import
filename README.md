@@ -1,10 +1,10 @@
 # anki-import (`anki-xml`)
 
-XML-first CLI for importing Anki flashcards via [AnkiConnect](https://foosoft.net/projects/anki-connect/).
+Import Anki notes from XML using AnkiConnect.
 
 **Current release: `0.0.3`**
 
-XML is the source of truth. JSON is used only for logs, diagnostics, and checkpoints.
+XML is the canonical card format. JSON is used only for output and checkpoints.
 
 ## Install
 
@@ -14,57 +14,33 @@ npm install -g anki-xml@0.0.3
 npx anki-xml@0.0.3 doctor
 ```
 
-Bins: `anki-import` and `anki-xml`.
+Bins: `anki-import` and `anki-xml`. Requires **Node 20+**.
 
-### From source (contributors)
-
-```bash
-pnpm install
-pnpm build
-node dist/cli.js doctor
-```
-
-Requires **Node 20+** and **pnpm 10+**. Package installs enforce a 14-day minimum release age.
+Contributor setup (from source): see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Quick start
+
+Workflow: doctor → validate → import → rollback.
 
 ```bash
 anki-import doctor
 anki-import validate cards.xml
 anki-import import cards.xml --dry-run
-anki-import import cards.xml --stream --batch-size 500
+anki-import import cards.xml --stream
 ```
 
-## XML example
-
 ```xml
-<anki version="1">
-  <deck name="Spanish">
-    <note type="Basic">
-      <field name="Front"><![CDATA[<h1>Hola</h1>]]></field>
-      <field name="Back"><![CDATA[Hello]]></field>
-      <tag>language</tag>
-    </note>
-  </deck>
+<anki deck="Spanish">
+  <note type="Basic">
+    <field name="Front">Hola</field>
+    <field name="Back">Hello</field>
+  </note>
 </anki>
 ```
 
-Legacy short tags (`<front>`, `<back>`) still work.
+Run `anki-import --help` for commands and flags.
 
-## Commands
-
-| Command | Purpose |
-|---|---|
-| `doctor` | Environment check |
-| `validate <file>` | Local XML validation |
-| `import <file>` | Import to Anki |
-| `checkpoint list` | List checkpoints |
-| `rollback <id>` | Undo an import |
-| `benchmark <file>` | Throughput report |
-
-## Changelog
-
-See [CHANGELOG.md](CHANGELOG.md) for `0.0.3` release notes.
+See [CHANGELOG.md](CHANGELOG.md) for release notes.
 
 ## License
 

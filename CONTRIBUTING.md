@@ -368,4 +368,26 @@ The build produces `dist/cli.js` — a self-contained ESM bundle for Node 20+.
 
 ---
 
+## 13. Agent skill (`skills/anki-import/`)
+
+The skill ships in the npm package for agents that only have
+`npm install -g anki-xml` — not this repository.
+
+Rules when editing it:
+
+1. Keep `SKILL.md` self-contained (≈150–250 lines). No links to
+   `schema/anki.xsd`, `CHANGELOG.md`, `../SKILL.md`, or repo paths.
+2. One command table lives in `SKILL.md` only. Do not reintroduce
+   `references/commands.md` or `references/xml-schema.md`.
+3. All examples live under `skills/anki-import/examples/`
+   (`commands.md`, XML fixtures, `update-and-delete.md`). Do not
+   keep a sibling `examples.md` next to `SKILL.md`.
+4. Do not duplicate fixture content into `SKILL.md` — list filenames
+   only.
+5. Contributor / from-source docs belong here, not in the skill.
+   There is no `update` CLI in the current release; document
+   delete/replace via `checkpoint` + `rollback` + re-`import`.
+
+---
+
 Welcome aboard!

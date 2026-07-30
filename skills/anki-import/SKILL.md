@@ -8,108 +8,80 @@ metadata:
 
 # anki-import
 
-XML-first CLI for creating Anki notes through AnkiConnect.
+Import Anki notes from XML using AnkiConnect.
 
-## 1. Overview
+## Overview
 
-Write notes as XML. Validate. Import. Roll back if needed.
+XML is the canonical card format. JSON is used only for output and checkpoints.
 
-Always run `anki-import doctor` before the first write in a session.
+Install: `npm install -g anki-xml`. Bins: `anki-import` and `anki-xml`. Anki must be running with AnkiConnect.
 
-## 2. XML specification
+## Workflow
 
-Root element is `<anki>`. Schema file: `schema/anki.xsd`.
+Workflow: doctor → validate → import → rollback.
 
-### Required
+Run doctor once before importing.
 
-- `<anki>` root (optional `version="1"`, optional `deck="..."`)
-- `<note type="...">` — built-in types: `Basic`, `Basic (and reversed card)`, `Basic (optional reversed card)`, `Basic (type in the answer)`, `Cloze`
-- Required fields per type (see Validation rules)
-
-### Field styles (both supported)
-
-Short tags (legacy):
-
-```xml
-<note type="Basic">
-  <front>Hola</front>
-  <back>Hello</back>
-</note>
+```bash
+anki-import doctor
+anki-import validate cards.xml
+anki-import import cards.xml --dry-run
+anki-import import cards.xml --stream
+anki-import rollback <id>
 ```
 
-Explicit fields + CDATA (preferred for HTML):
+## Commands
+
+| Command | Purpose |
+| --- | --- |
+| doctor | Check AnkiConnect |
+| validate | Validate XML |
+| import | Import notes |
+| checkpoint list | List checkpoints |
+| checkpoint create | Snapshot note ids |
+| rollback | Undo import / delete notes |
+| benchmark | Measure throughput |
+
+| Flag | Purpose |
+| --- | --- |
+| --dry-run | Validate only |
+| --stream | Stream large files |
+| --batch-size N | Batch size |
+| --json | JSON output |
+| --verbose | Verbose logs |
+
+## XML schema
 
 ```xml
-<note type="Basic">
-  <field name="Front">
-    <![CDATA[
-      <h1>Hola</h1>
-    ]]>
-  </field>
-  <field name="Back">
-    <![CDATA[Hello]]>
-  </field>
-</note>
-```
-
-### Optional
-
-- Nested deck: `<deck name="Spanish">...</deck>`
-- Tags attribute: `tags="a b"`
-- Tag children: `<tag>language</tag>`
-- Media in fields: `<img src="cat.png">`
-- Void HTML: `<br>`, `<hr>`, `<img ...>`
-
-### Full example
-
-```xml
-<anki version="1">
-  <deck name="Spanish">
-    <note type="Basic">
-      <field name="Front"><![CDATA[<h1>Hola</h1>]]></field>
-      <field name="Back"><![CDATA[Hello]]></field>
-      <tag>language</tag>
-      <tag>spanish</tag>
-    </note>
-  </deck>
+<anki deck="Spanish">
+  <note type="Basic">
+    <field name="Front">Hola</field>
+    <field name="Back">Hello</field>
+  </note>
 </anki>
 ```
 
-## 3. Commands
+- root: `<anki>`
+- note: `<note type="...">`
+- fields: short tags (`<front>`, `<back>`) or `<field name="...">`
+- optional decks (`<deck name>`) and tags (`tags="a b"` or `<tag>`)
+- CDATA supported
 
-| Command | Purpose |
-|---|---|
-| `anki-import doctor` | Check AnkiConnect + collection |
-| `anki-import validate cards.xml` | Validate XML locally |
-| `anki-import import cards.xml` | Import notes |
-| `anki-import checkpoint list` | List checkpoints |
-| `anki-import rollback <id>` | Delete notes from a checkpoint |
-| `anki-import benchmark cards.xml` | Throughput report |
+Note types: `Basic`, `Basic (and reversed card)`, `Basic (optional reversed card)`, `Basic (type in the answer)`, `Cloze`.
 
-### Import flags
-
-| Flag | Meaning |
-|---|---|
-| `--dry-run` | Validate only; no writes |
-| `--stream` | Stream-parse large files |
-| `--batch-size N` | Notes per HTTP batch (default 500) |
-| `--quiet` / `--verbose` | Log level |
-| `--json` | Machine-readable output |
-| `--url <url>` | AnkiConnect URL |
-
-## 4. Validation rules
+## Validation
 
 | Type | Required fields |
-|---|---|
+| --- | --- |
 | Basic (and variants) | Front, Back |
 | Basic (optional reversed card) | Front, Back, Add Reverse (`yes`\|`no`) |
 | Cloze | Text with at least one `{{cN::...}}` |
 
-Every note needs a deck (on `<anki>`, `<deck name>`, or `<note deck>`).
+Every note needs a deck (on `<anki>`, `<deck name>`, or `<note deck>`). Empty fields fail.
 
-Empty / whitespace-only fields fail validation.
+Branch on exit codes and `--json` `error.code`, never on message text: `XML_PARSE_ERROR`, `VALIDATION_ERROR`, `ANKICONNECT_ERROR`, `FILE_NOT_FOUND`.
 
-## 5. Rollback
+## Rollback
 
 Successful imports create a checkpoint with created note ids.
 
@@ -119,54 +91,19 @@ anki-import rollback <checkpoint-id>
 anki-import rollback <checkpoint-id> --dry-run
 ```
 
-Checkpoint shape:
+## Example
 
-```json
-{ "id": "...", "deck": "Spanish", "created": "2026-07-30", "noteIds": [1, 2, 3] }
-```
+Fixtures in `examples/`:
 
-## 6. Examples
+| File | Covers |
+| --- | --- |
+| `commands.md` | Runnable CLI |
+| `spanish-greetings.xml` | Basic + CDATA |
+| `all-note-types.xml` | Every note type |
+| `latex.xml` | `[latex]`, MathJax, HTML math |
+| `code-and-escapes.xml` | `<pre><code>`, entities, CDATA |
+| `update-and-delete.md` | Delete / replace notes |
 
 ```bash
-anki-import doctor
-anki-import validate cards.xml
-anki-import import cards.xml --dry-run
-anki-import import cards.xml --stream --batch-size 500
-anki-import benchmark cards.xml --stream
+anki-import import examples/spanish-greetings.xml --stream
 ```
-
-Expected import output:
-
-```
-Parsing XML...
-Validated 850 notes...
-Imported 850 notes.
-```
-
-## 7. Error handling
-
-Branch on exit codes and `--json` `error.code`, never on message text.
-
-| Code | Meaning |
-|---|---|
-| `XML_PARSE_ERROR` | Malformed XML |
-| `VALIDATION_ERROR` | Structural / field errors |
-| `ANKICONNECT_ERROR` | AnkiConnect failure |
-| `FILE_NOT_FOUND` | Missing input |
-
-Line-aware validation example:
-
-```
-Line 45:
-Missing field:
-Front
-```
-
-## 8. Constraints
-
-- XML is the source of truth — do not convert cards to JSON for interchange
-- One command does one thing — no `safe-import` wrappers
-- Validate before import
-- Prefer `--stream` for 10k+ notes
-- Do not print stack traces unless `--debug`
-- Anki must be running with AnkiConnect installed

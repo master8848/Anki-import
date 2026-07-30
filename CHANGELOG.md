@@ -2,6 +2,27 @@
 
 All notable changes to `anki-xml` / `anki-import` are documented here.
 
+## [Unreleased]
+
+### Changed
+- Refactored `skills/anki-import/` for npm-only users: self-contained
+  `SKILL.md` (workflow → commands → schema → validation → rollback),
+  no repo-path references (`schema/anki.xsd`, `CHANGELOG.md`, etc.)
+- Slimmed root `README.md`; contributor/from-source and skill
+  maintenance rules live in `CONTRIBUTING.md` §13
+
+### Added
+- `skills/anki-import/examples/commands.md` — runnable CLI examples
+- `skills/anki-import/examples/latex.xml` — `[latex]`, MathJax, HTML math
+- `skills/anki-import/examples/code-and-escapes.xml` — code, entities, CDATA
+- `skills/anki-import/examples/update-and-delete.md` — delete/replace via
+  `checkpoint` + `rollback` (+ re-import; no `update` command yet)
+
+### Removed
+- `skills/anki-import/references/commands.md`
+- `skills/anki-import/references/xml-schema.md`
+- Sibling `skills/anki-import/examples.md` (examples live under `examples/`)
+
 ## [0.0.3] — 2026-07-30
 
 **XML-first architecture rewrite.** Breaking CLI surface change:
