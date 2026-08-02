@@ -1,16 +1,8 @@
 import { AnkiClient } from "@anki-xml/anki";
 import { addTags, listTags, removeTags } from "@anki-xml/tags";
-import { flagString, type GlobalFlags } from "../args.ts";
+import { flagString, parseNoteIds, type GlobalFlags } from "../args.ts";
 import type { Logger } from "@anki-xml/logger";
 import { CliError } from "../args.ts";
-
-function parseNoteIds(raw: string | undefined): number[] {
-  if (!raw) return [];
-  return raw
-    .split(",")
-    .map((s) => Number(s.trim()))
-    .filter((n) => Number.isFinite(n) && n > 0);
-}
 
 async function selectNoteIds(
   client: AnkiClient,

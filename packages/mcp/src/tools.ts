@@ -8,7 +8,7 @@ import { AnkiClient, AnkiConnectError } from "@anki-xml/anki";
 import { runDoctor } from "@anki-xml/core";
 import { diffFile, importFromFile, planFile, syncFile, syncStatus } from "@anki-xml/core";
 import { listModels } from "@anki-xml/models";
-import { addTags, listTags, removeTags } from "@anki-xml/tags";
+import { addTags, listTags, parseTagList, removeTags } from "@anki-xml/tags";
 import { collectionStats } from "@anki-xml/stats";
 import { retrieveMedia, storeMedia } from "@anki-xml/media";
 import { parseDocument } from "@anki-xml/parser";
@@ -207,7 +207,7 @@ export const TOOLS: McpTool[] = [
           deckName: p["deck"] as string,
           modelName: p["model"] as string,
           fields: p["fields"] as Record<string, string>,
-          tags: ((p["tags"] as string | undefined) ?? "").split(/\s+/).filter(Boolean),
+          tags: parseTagList((p["tags"] as string | undefined) ?? ""),
           options: { allowDuplicate: (p["allow_duplicate"] as boolean | undefined) ?? false },
         },
       ]);
@@ -243,7 +243,7 @@ export const TOOLS: McpTool[] = [
             deckName: n.deck,
             modelName: n.model,
             fields: n.fields,
-            tags: (n.tags ?? "").split(/\s+/).filter(Boolean),
+            tags: parseTagList(n.tags ?? ""),
             options: { allowDuplicate: false },
           }),
         ),
@@ -377,15 +377,31 @@ export const TOOLS: McpTool[] = [
   ),
 ];
 
-/** Serialize a thrown error into JSON-RPC error data (agent-friendly). */
-export function toolErrorData(err: unknown): { code: string; message: string; hints?: string[]; suggestion?: string } {
+/** Stable error data shared by MCP and the CLI (--json) for AI agents. */
+export interface AnkiConnectErrorData {
+  code: string;
+  message: string;
+  hints?: string[];
+  suggestion?: string;
+  cause?: string;
+}
+
+/**
+ * Canonical AnkiConnect error envelope: one shape used by MCP error data,
+ * the CLI `--json` output, and any other agent-facing surface.
+ */
+export function ankiConnectErrorData(err: unknown): AnkiConnectErrorData {
   if (err instanceof AnkiConnectError) {
     return {
       code: "ANKICONNECT_ERROR",
       message: err.message,
-      hints: err.hints,
+      hints: err.hints ?? [],
       suggestion: err.suggestion,
+      cause: err.cause,
     };
   }
   return { code: "INTERNAL_ERROR", message: err instanceof Error ? err.message : String(err) };
 }
+
+/** Alias kept for backwards compatibility. */
+export const toolErrorData = ankiConnectErrorData;

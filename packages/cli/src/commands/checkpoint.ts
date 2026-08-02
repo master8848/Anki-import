@@ -1,5 +1,5 @@
 import { createCheckpoint, listCheckpoints } from "@anki-xml/checkpoint";
-import { flagString, type GlobalFlags } from "../args.ts";
+import { flagString, parseNoteIds, type GlobalFlags } from "../args.ts";
 import type { Logger } from "@anki-xml/logger";
 import { CliError } from "../args.ts";
 
@@ -29,10 +29,7 @@ export async function runCheckpointCommand(
     if (!id) throw new CliError("checkpoint create requires an id");
     const idsRaw = flagString(rest, "note-ids");
     if (!idsRaw) throw new CliError("checkpoint create requires --note-ids 1,2,3");
-    const noteIds = idsRaw
-      .split(",")
-      .map((s) => Number(s.trim()))
-      .filter((n) => Number.isFinite(n) && n > 0);
+    const noteIds = parseNoteIds(idsRaw);
     const deck = flagString(rest, "deck") ?? "";
     const snap = await createCheckpoint({ id, deck, noteIds });
     if (flags.json) console.log(JSON.stringify(snap));

@@ -14,8 +14,9 @@ import {
   success,
   type JsonRpcResponse,
 } from "./protocol.ts";
-import { McpToolError, TOOLS, toolErrorData } from "./tools.ts";
+import { ankiConnectErrorData, McpToolError, TOOLS, type McpTool } from "./tools.ts";
 import { MCP_VERSION } from "./version.ts";
+import { DEFAULT_URL } from "@anki-xml/anki";
 
 export interface McpServerOptions {
   url?: string;
@@ -23,7 +24,7 @@ export interface McpServerOptions {
 }
 
 export async function startMcpServer(opts: McpServerOptions = {}): Promise<void> {
-  const ctx = { url: opts.url ?? "http://127.0.0.1:8765", fetchImpl: opts.fetchImpl };
+  const ctx = { url: opts.url ?? DEFAULT_URL, fetchImpl: opts.fetchImpl };
   const toolsByName = new Map(TOOLS.map((t) => [t.name, t]));
 
   const rl = readline.createInterface({ input: process.stdin });
@@ -34,13 +35,14 @@ export async function startMcpServer(opts: McpServerOptions = {}): Promise<void>
   }
 }
 
-async function handleMessage(
+export async function handleMessage(
   line: string,
-  toolsByName: Map<string, (typeof TOOLS)[number]>,
+  toolsByName: ReadonlyMap<string, McpTool>,
   ctx: { url: string; fetchImpl?: typeof fetch },
 ): Promise<JsonRpcResponse | null> {
   const req = parseRequest(line);
-  if (!req) return failure(null, PARSE_ERROR, "Invalid JSON-RPC request");
+  if (req === undefined) return null; // notification — JSON-RPC forbids replying
+  if (req === null) return failure(null, PARSE_ERROR, "Invalid JSON-RPC request");
 
   if (req.method === "initialize") {
     return success(req.id, {
@@ -80,7 +82,7 @@ async function handleMessage(
       if (err instanceof McpToolError) {
         return failure(req.id, INVALID_PARAMS, err.message);
       }
-      return failure(req.id, INTERNAL_ERROR, (err as Error).message, toolErrorData(err));
+      return failure(req.id, INTERNAL_ERROR, (err as Error).message, ankiConnectErrorData(err));
     }
   }
 

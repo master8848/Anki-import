@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-import { main } from "@anki-xml/cli";
+import { main, parseNoteIds } from "@anki-xml/cli";
 import {
   createCheckpoint,
   listCheckpoints,
@@ -47,6 +47,15 @@ describe("cli", () => {
   it("rejects unknown commands", async () => {
     const code = await main(["safe-import"]);
     expect(code).toBe(2);
+  });
+});
+
+describe("parseNoteIds", () => {
+  it("parses comma-separated positive ids and drops junk", () => {
+    expect(parseNoteIds("1,2, 3")).toEqual([1, 2, 3]);
+    expect(parseNoteIds("1,abc,-2,0,3.5,4")).toEqual([1, 3.5, 4]);
+    expect(parseNoteIds("")).toEqual([]);
+    expect(parseNoteIds(undefined)).toEqual([]);
   });
 });
 

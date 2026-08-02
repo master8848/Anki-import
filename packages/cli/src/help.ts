@@ -1,3 +1,5 @@
+import { DEFAULT_URL } from "@anki-xml/anki";
+
 export const VERSION = "0.0.4";
 export const BIN_NAME = "anki-import";
 
@@ -27,7 +29,7 @@ Commands:
   mcp                            Run the MCP server (stdio)
 
 Global options:
-  --url <url>          AnkiConnect URL (default http://127.0.0.1:8765)
+  --url <url>          AnkiConnect URL (default ${DEFAULT_URL})
   --json               Machine-readable JSON output
   --quiet              Errors only
   --verbose            Debug-level logging

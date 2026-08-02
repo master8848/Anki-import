@@ -1,3 +1,5 @@
+import { DEFAULT_URL } from "@anki-xml/anki";
+
 export class CliError extends Error {
   constructor(message: string) {
     super(message);
@@ -52,7 +54,7 @@ const GLOBAL_VALUE = new Set([
 
 export function parseArgs(argv: string[]): ParsedArgs {
   const flags: GlobalFlags = {
-    url: "http://127.0.0.1:8765",
+    url: DEFAULT_URL,
     json: false,
     quiet: false,
     verbose: false,
@@ -129,6 +131,15 @@ export function parseArgs(argv: string[]): ParsedArgs {
 export function flagString(rest: Record<string, string | boolean>, key: string): string | undefined {
   const v = rest[key];
   return typeof v === "string" ? v : undefined;
+}
+
+/** Parse a comma-separated list of note ids (e.g. --note-ids 1,2,3). */
+export function parseNoteIds(raw: string | undefined): number[] {
+  if (!raw) return [];
+  return raw
+    .split(",")
+    .map((s) => Number(s.trim()))
+    .filter((n) => Number.isFinite(n) && n > 0);
 }
 
 export function flagBool(rest: Record<string, string | boolean>, key: string): boolean {

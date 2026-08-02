@@ -33,17 +33,22 @@ export function failure(
   message: string,
   data?: unknown,
 ): JsonRpcResponse {
-  const resp: JsonRpcResponse = { jsonrpc: "2.0", id, error: { code, message } };
-  if (data !== undefined) resp.error!.data = data;
-  return resp;
+  const error: NonNullable<JsonRpcResponse["error"]> = { code, message };
+  if (data !== undefined) error.data = data;
+  return { jsonrpc: "2.0", id, error };
 }
 
-/** Parse one message from a line. Returns null for notifications/batches. */
+/**
+ * Parse one message from a line.
+ * Returns `undefined` for id-less notifications (no reply is allowed),
+ * `null` for invalid JSON / malformed requests (PARSE_ERROR), and the
+ * parsed request otherwise.
+ */
 export function parseRequest(raw: string): {
   id: number | string | null;
   method: string;
   params: unknown;
-} | null {
+} | null | undefined {
   let msg: unknown;
   try {
     msg = JSON.parse(raw);
@@ -54,7 +59,7 @@ export function parseRequest(raw: string): {
   const m = msg as Record<string, unknown>;
   if (m["jsonrpc"] !== "2.0" || typeof m["method"] !== "string") return null;
   const id = m["id"] ?? null;
-  if (id === null) return null; // notification — no response needed
+  if (id === null) return undefined; // notification — no response needed
   if (typeof id !== "number" && typeof id !== "string") return null;
   return { id, method: m["method"], params: m["params"] };
 }

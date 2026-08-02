@@ -7,7 +7,7 @@ import { pathToFileURL } from "node:url";
 import { main } from "./run.ts";
 
 export { main };
-export { parseArgs, CliError } from "./args.ts";
+export { parseArgs, parseNoteIds, CliError } from "./args.ts";
 
 function isMainModule(): boolean {
   const entry = process.argv[1];
@@ -20,14 +20,16 @@ function isMainModule(): boolean {
   }
 }
 
-const shouldRun =
-  typeof (import.meta as { main?: boolean }).main === "boolean"
-    ? (import.meta as { main?: boolean }).main === true
-    : isMainModule();
+const metaMain = (import.meta as { main?: boolean }).main;
+const shouldRun = typeof metaMain === "boolean" ? metaMain : isMainModule();
 
 if (shouldRun) {
+  let interrupted = false;
+  process.on("SIGINT", () => {
+    interrupted = true;
+  });
   main().then(
-    (code) => process.exit(code),
+    (code) => process.exit(interrupted ? 130 : code),
     (err) => {
       console.error(err);
       process.exit(2);

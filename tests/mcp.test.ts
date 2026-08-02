@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-import { parseRequest } from "@anki-xml/mcp";
-import { TOOLS, McpToolError, toolErrorData } from "@anki-xml/mcp";
+import { handleMessage, parseRequest } from "@anki-xml/mcp";
+import { TOOLS, McpToolError, toolErrorData, ankiConnectErrorData } from "@anki-xml/mcp";
 import { AnkiConnectError } from "@anki-xml/anki";
 
 function jsonResponse(result: unknown, error: string | null = null) {
@@ -45,8 +45,36 @@ describe("mcp protocol", () => {
     expect(parseRequest("not json")).toBeNull();
   });
 
-  it("ignores notifications (no id)", () => {
-    expect(parseRequest('{"jsonrpc":"2.0","method":"notifications/initialized"}')).toBeNull();
+  it("returns undefined for notifications (no id)", () => {
+    expect(parseRequest('{"jsonrpc":"2.0","method":"notifications/initialized"}')).toBeUndefined();
+  });
+});
+
+describe("mcp server", () => {
+  const toolsByName = new Map(TOOLS.map((t) => [t.name, t]));
+
+  it("produces NO response for a notification", async () => {
+    const resp = await handleMessage(
+      '{"jsonrpc":"2.0","method":"notifications/initialized"}',
+      toolsByName,
+      ctx,
+    );
+    expect(resp).toBeNull();
+  });
+
+  it("produces PARSE_ERROR for invalid JSON", async () => {
+    const resp = await handleMessage("not json", toolsByName, ctx);
+    expect(resp).toEqual({
+      jsonrpc: "2.0",
+      id: null,
+      error: { code: -32700, message: "Invalid JSON-RPC request" },
+    });
+  });
+
+  it("replies to requests that carry an id (ping)", async () => {
+    const resp = await handleMessage('{"jsonrpc":"2.0","id":7,"method":"ping"}', toolsByName, ctx);
+    expect(resp).toMatchObject({ id: 7, result: {} });
+    expect(resp?.error).toBeUndefined();
   });
 });
 
@@ -150,7 +178,7 @@ notes:
     expect(result).toMatchObject({ filename: "a.bin", bytes: 4 });
   });
 
-  it("toolErrorData exposes hints for AI agents", () => {
+  it("toolErrorData/ankiConnectErrorData exposes hints + cause for AI agents", () => {
     const err = new AnkiConnectError("Failed to reach", {
       reachable: false,
       cause: "refused",
@@ -159,10 +187,13 @@ notes:
       hints: ["Start Anki"],
       suggestion: "anki-import doctor",
     });
-    expect(toolErrorData(err)).toMatchObject({
+    expect(ankiConnectErrorData(err)).toEqual({
       code: "ANKICONNECT_ERROR",
+      message: "Failed to reach",
       hints: ["Start Anki"],
       suggestion: "anki-import doctor",
+      cause: "refused",
     });
+    expect(toolErrorData).toBe(ankiConnectErrorData);
   });
 });

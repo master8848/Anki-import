@@ -3,6 +3,7 @@
  * AI agents get stable codes + hints in JSON.
  */
 
+import { ankiConnectErrorData } from "@anki-xml/mcp";
 import { AnkiConnectError } from "@anki-xml/anki";
 import type { Logger } from "@anki-xml/logger";
 import type { GlobalFlags } from "./args.ts";
@@ -13,18 +14,7 @@ export function printAnkiConnectError(
   log: Logger,
 ): number {
   if (flags.json) {
-    console.log(
-      JSON.stringify({
-        ok: false,
-        error: {
-          code: "ANKICONNECT_ERROR",
-          message: err.message,
-          cause: err.cause,
-          hints: err.hints ?? [],
-          suggestion: err.suggestion,
-        },
-      }),
-    );
+    console.log(JSON.stringify({ ok: false, error: ankiConnectErrorData(err) }));
   } else {
     log.error(err.message);
     if (err.hints && err.hints.length > 0) {

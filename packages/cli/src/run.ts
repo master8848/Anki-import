@@ -1,4 +1,4 @@
-import { CliError, parseArgs } from "./args.ts";
+import { CliError, parseArgs, type ParsedArgs } from "./args.ts";
 import { printHelp, printCommandHelp, VERSION, BIN_NAME } from "./help.ts";
 import { createLogger } from "@anki-xml/logger";
 import { AnkiConnectError } from "@anki-xml/anki";
@@ -57,26 +57,14 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
     switch (args.command) {
       case "doctor":
         return await runDoctorCommand(args.flags, log);
-      case "validate": {
-        const file = args.positional[0];
-        if (!file) throw new CliError("validate requires a file path");
-        return await runValidate(file, args, log);
-      }
-      case "import": {
-        const file = args.positional[0];
-        if (!file) throw new CliError("import requires a file path");
-        return await runImportCommand(file, args, log);
-      }
-      case "plan": {
-        const file = args.positional[0];
-        if (!file) throw new CliError("plan requires a file path");
-        return await runPlanCommand(file, args, log);
-      }
-      case "diff": {
-        const file = args.positional[0];
-        if (!file) throw new CliError("diff requires a file path");
-        return await runDiffCommand(file, args, log);
-      }
+      case "validate":
+        return await runValidate(requireFile("validate", args), args, log);
+      case "import":
+        return await runImportCommand(requireFile("import", args), args, log);
+      case "plan":
+        return await runPlanCommand(requireFile("plan", args), args, log);
+      case "diff":
+        return await runDiffCommand(requireFile("diff", args), args, log);
       case "sync":
         return await runSyncCommand(args.positional[0], args, log);
       case "checkpoint": {
@@ -94,11 +82,8 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
         if (!id) throw new CliError("rollback requires a checkpoint id");
         return await runRollbackCommand(id, args.rest, args.flags, log);
       }
-      case "benchmark": {
-        const file = args.positional[0];
-        if (!file) throw new CliError("benchmark requires a file path");
-        return await runBenchmarkCommand(file, args.rest, args.flags, log);
-      }
+      case "benchmark":
+        return await runBenchmarkCommand(requireFile("benchmark", args), args.rest, args.flags, log);
       case "tags":
         return await runTagsCommand(
           args.positional[0],
@@ -119,11 +104,8 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
           args.flags,
           log,
         );
-      case "watch": {
-        const file = args.positional[0];
-        if (!file) throw new CliError("watch requires a file path");
-        return await runWatchCommand(file, args, log);
-      }
+      case "watch":
+        return await runWatchCommand(requireFile("watch", args), args, log);
       case "mcp":
         return await runMcpCommand();
       default:
@@ -143,6 +125,22 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
     if (err instanceof AnkiConnectError) {
       return printAnkiConnectError(err, args.flags, log);
     }
+    const parseCode = parseErrorCode(err);
+    if (parseCode) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (args.flags.json) {
+        const error: Record<string, unknown> = { code: parseCode, message: msg };
+        const loc = err as { line?: unknown; column?: unknown };
+        if (typeof loc.line === "number") error["line"] = loc.line;
+        if (typeof loc.column === "number") error["column"] = loc.column;
+        console.log(JSON.stringify({ ok: false, error }));
+      } else if (args.flags.debug) {
+        console.error(err);
+      } else {
+        console.error(`parse error: ${msg}`);
+      }
+      return 1;
+    }
     if (args.flags.json) {
       console.log(
         JSON.stringify({
@@ -157,4 +155,24 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
     }
     return 2;
   }
+}
+
+/** Stable parse-error codes surfaced in --json like XML_PARSE_ERROR. */
+const PARSE_ERROR_CODES = new Set([
+  "XML_PARSE_ERROR",
+  "JSON_PARSE_ERROR",
+  "CSV_PARSE_ERROR",
+  "YAML_PARSE_ERROR",
+  "MD_PARSE_ERROR",
+]);
+
+function parseErrorCode(err: unknown): string | undefined {
+  const code = (err as { code?: unknown }).code;
+  return typeof code === "string" && PARSE_ERROR_CODES.has(code) ? code : undefined;
+}
+
+function requireFile(command: string, args: ParsedArgs): string {
+  const file = args.positional[0];
+  if (!file) throw new CliError(`${command} requires a file path`);
+  return file;
 }

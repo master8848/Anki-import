@@ -1,6 +1,7 @@
 import * as fsp from "node:fs/promises";
 import { parseDocument, XmlParseError } from "@anki-xml/parser";
 import { validateNotes, formatValidationError } from "@anki-xml/validation";
+import { applyOverrides } from "@anki-xml/core";
 import { flagString, type ParsedArgs } from "../args.ts";
 import type { Logger } from "@anki-xml/logger";
 
@@ -44,13 +45,8 @@ export async function runValidate(
   }
 
   const deckOverride = flagString(args.rest, "deck");
-  if (deckOverride) {
-    for (const n of parsed.notes) if (!n.deck) n.deck = deckOverride;
-  }
   const modelOverride = flagString(args.rest, "model");
-  if (modelOverride) {
-    for (const n of parsed.notes) if (!n.type) n.type = modelOverride;
-  }
+  applyOverrides(parsed.notes, { deck: deckOverride, model: modelOverride });
 
   const result = validateNotes(parsed.notes, parsed.defaultDeck, source);
 
