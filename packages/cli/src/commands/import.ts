@@ -9,6 +9,7 @@ import {
   flagString,
   type ParsedArgs,
 } from "../args.ts";
+import { printAnkiConnectError } from "../errors.ts";
 import type { Logger } from "@anki-xml/logger";
 
 export async function runImportCommand(
@@ -88,14 +89,7 @@ export async function runImportCommand(
       return 1;
     }
     if (err instanceof AnkiConnectError) {
-      if (flags.json) {
-        console.log(
-          JSON.stringify({ ok: false, error: { code: "ANKICONNECT_ERROR", message: err.message } }),
-        );
-      } else {
-        log.error(err.message);
-      }
-      return 2;
+      return printAnkiConnectError(err, flags, log);
     }
     throw err;
   }

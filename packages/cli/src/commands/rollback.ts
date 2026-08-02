@@ -1,6 +1,7 @@
 import { rollback } from "@anki-xml/rollback";
 import { AnkiConnectError } from "@anki-xml/anki";
 import { flagBool, type GlobalFlags } from "../args.ts";
+import { printAnkiConnectError } from "../errors.ts";
 import type { Logger } from "@anki-xml/logger";
 
 export async function runRollbackCommand(
@@ -27,8 +28,7 @@ export async function runRollbackCommand(
     return 0;
   } catch (err) {
     if (err instanceof AnkiConnectError) {
-      log.error(err.message);
-      return 2;
+      return printAnkiConnectError(err, flags, log);
     }
     log.error((err as Error).message);
     return 1;

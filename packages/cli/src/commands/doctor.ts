@@ -11,6 +11,10 @@ export async function runDoctorCommand(flags: GlobalFlags, log: Logger): Promise
     for (const check of result.checks) {
       const mark = check.ok ? "ok" : "FAIL";
       log.info(`[${mark}] ${check.name}: ${check.detail}`);
+      if (!check.ok && check.hints.length > 0) {
+        log.info("Fix:");
+        for (const hint of check.hints) log.info(`  ${hint}`);
+      }
     }
     log.info(result.ok ? "Doctor: all checks passed." : "Doctor: one or more checks failed.");
   }
