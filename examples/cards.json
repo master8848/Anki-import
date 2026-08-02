@@ -1,0 +1,9 @@
+{
+  "deck": "Japanese",
+  "model": "Basic",
+  "tags": "greetings",
+  "notes": [
+    { "front": "こんにちは", "back": "Hello" },
+    { "front": "さようなら", "back": "Goodbye", "tags": "farewells" }
+  ]
+}

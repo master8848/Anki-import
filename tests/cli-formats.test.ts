@@ -83,16 +83,22 @@ Answer two
 });
 
 async function captureJson(run: () => Promise<number>): Promise<Record<string, unknown>> {
-  const original = console.log;
+  const originalLog = console.log;
+  const originalWrite = process.stdout.write;
   let captured = "";
   console.log = (msg: string) => {
     captured += String(msg) + "\n";
+  };
+  process.stdout.write = (chunk: string | Uint8Array) => {
+    captured += String(chunk);
+    return true;
   };
   try {
     const code = await run();
     expect(code).toBeGreaterThanOrEqual(0);
     return JSON.parse(captured) as Record<string, unknown>;
   } finally {
-    console.log = original;
+    console.log = originalLog;
+    process.stdout.write = originalWrite;
   }
 }

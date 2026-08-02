@@ -16,8 +16,7 @@
   },
   "dependencies": {
     "@anki-xml/anki": "workspace:*",
-    "@anki-xml/models": "workspace:*",
-    "@anki-xml/utils": "workspace:*",
-    "@anki-xml/logger": "workspace:*"
+    "@anki-xml/logger": "workspace:*",
+    "@anki-xml/utils": "workspace:*"
   }
 }

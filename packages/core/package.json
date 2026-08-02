@@ -15,14 +15,14 @@
     "node": ">=20"
   },
   "dependencies": {
-    "@anki-xml/parser": "workspace:*",
-    "@anki-xml/validation": "workspace:*",
-    "@anki-xml/planner": "workspace:*",
-    "@anki-xml/checkpoint": "workspace:*",
     "@anki-xml/anki": "workspace:*",
-    "@anki-xml/models": "workspace:*",
-    "@anki-xml/config": "workspace:*",
+    "@anki-xml/checkpoint": "workspace:*",
+    "@anki-xml/diff": "workspace:*",
+    "@anki-xml/logger": "workspace:*",
+    "@anki-xml/parser": "workspace:*",
+    "@anki-xml/planner": "workspace:*",
+    "@anki-xml/sync": "workspace:*",
     "@anki-xml/utils": "workspace:*",
-    "@anki-xml/logger": "workspace:*"
+    "@anki-xml/validation": "workspace:*"
   }
 }

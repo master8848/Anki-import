@@ -94,20 +94,27 @@ importers:
         specifier: ^3.1.0
         version: 3.2.7(@types/node@22.20.1)(tsx@4.23.1)(yaml@2.9.0)
 
+  apps/playground:
+    dependencies:
+      '@anki-xml/cli':
+        specifier: workspace:*
+        version: link:../../packages/cli
+      '@anki-xml/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+    devDependencies:
+      tsx:
+        specifier: ^4.19.0
+        version: 4.23.1
+
   packages/anki:
     dependencies:
-      '@anki-xml/logger':
-        specifier: workspace:*
-        version: link:../logger
       '@anki-xml/utils':
         specifier: workspace:*
         version: link:../utils
 
   packages/checkpoint:
     dependencies:
-      '@anki-xml/logger':
-        specifier: workspace:*
-        version: link:../logger
       '@anki-xml/utils':
         specifier: workspace:*
         version: link:../utils
@@ -120,18 +127,15 @@ importers:
       '@anki-xml/checkpoint':
         specifier: workspace:*
         version: link:../checkpoint
-      '@anki-xml/config':
-        specifier: workspace:*
-        version: link:../config
       '@anki-xml/core':
         specifier: workspace:*
         version: link:../core
-      '@anki-xml/diff':
-        specifier: workspace:*
-        version: link:../diff
       '@anki-xml/logger':
         specifier: workspace:*
         version: link:../logger
+      '@anki-xml/mcp':
+        specifier: workspace:*
+        version: link:../mcp
       '@anki-xml/media':
         specifier: workspace:*
         version: link:../media
@@ -141,18 +145,12 @@ importers:
       '@anki-xml/parser':
         specifier: workspace:*
         version: link:../parser
-      '@anki-xml/planner':
-        specifier: workspace:*
-        version: link:../planner
       '@anki-xml/rollback':
         specifier: workspace:*
         version: link:../rollback
       '@anki-xml/stats':
         specifier: workspace:*
         version: link:../stats
-      '@anki-xml/sync':
-        specifier: workspace:*
-        version: link:../sync
       '@anki-xml/tags':
         specifier: workspace:*
         version: link:../tags
@@ -165,15 +163,9 @@ importers:
 
   packages/config:
     dependencies:
-      '@anki-xml/logger':
-        specifier: workspace:*
-        version: link:../logger
-      '@anki-xml/parser':
-        specifier: workspace:*
-        version: link:../parser
-      '@anki-xml/utils':
-        specifier: workspace:*
-        version: link:../utils
+      yaml:
+        specifier: ^2.7.0
+        version: 2.9.0
 
   packages/core:
     dependencies:
@@ -183,21 +175,21 @@ importers:
       '@anki-xml/checkpoint':
         specifier: workspace:*
         version: link:../checkpoint
-      '@anki-xml/config':
+      '@anki-xml/diff':
         specifier: workspace:*
-        version: link:../config
+        version: link:../diff
       '@anki-xml/logger':
         specifier: workspace:*
         version: link:../logger
-      '@anki-xml/models':
-        specifier: workspace:*
-        version: link:../models
       '@anki-xml/parser':
         specifier: workspace:*
         version: link:../parser
       '@anki-xml/planner':
         specifier: workspace:*
         version: link:../planner
+      '@anki-xml/sync':
+        specifier: workspace:*
+        version: link:../sync
       '@anki-xml/utils':
         specifier: workspace:*
         version: link:../utils
@@ -207,15 +199,6 @@ importers:
 
   packages/diff:
     dependencies:
-      '@anki-xml/anki':
-        specifier: workspace:*
-        version: link:../anki
-      '@anki-xml/logger':
-        specifier: workspace:*
-        version: link:../logger
-      '@anki-xml/planner':
-        specifier: workspace:*
-        version: link:../planner
       '@anki-xml/utils':
         specifier: workspace:*
         version: link:../utils
@@ -231,18 +214,9 @@ importers:
       '@anki-xml/anki':
         specifier: workspace:*
         version: link:../anki
-      '@anki-xml/checkpoint':
-        specifier: workspace:*
-        version: link:../checkpoint
-      '@anki-xml/config':
-        specifier: workspace:*
-        version: link:../config
       '@anki-xml/core':
         specifier: workspace:*
         version: link:../core
-      '@anki-xml/logger':
-        specifier: workspace:*
-        version: link:../logger
       '@anki-xml/media':
         specifier: workspace:*
         version: link:../media
@@ -252,36 +226,24 @@ importers:
       '@anki-xml/parser':
         specifier: workspace:*
         version: link:../parser
-      '@anki-xml/planner':
-        specifier: workspace:*
-        version: link:../planner
       '@anki-xml/stats':
         specifier: workspace:*
         version: link:../stats
-      '@anki-xml/sync':
-        specifier: workspace:*
-        version: link:../sync
       '@anki-xml/tags':
         specifier: workspace:*
         version: link:../tags
-      '@anki-xml/utils':
-        specifier: workspace:*
-        version: link:../utils
       '@anki-xml/validation':
         specifier: workspace:*
         version: link:../validation
+      valibot:
+        specifier: ^1.1.0
+        version: 1.4.2(typescript@5.9.3)
 
   packages/media:
     dependencies:
       '@anki-xml/anki':
         specifier: workspace:*
         version: link:../anki
-      '@anki-xml/logger':
-        specifier: workspace:*
-        version: link:../logger
-      '@anki-xml/utils':
-        specifier: workspace:*
-        version: link:../utils
 
   packages/models:
     dependencies:
@@ -300,6 +262,15 @@ importers:
       '@anki-xml/utils':
         specifier: workspace:*
         version: link:../utils
+      csv-parse:
+        specifier: ^5.6.0
+        version: 5.6.0
+      fast-xml-parser:
+        specifier: ^5.10.0
+        version: 5.10.0
+      yaml:
+        specifier: ^2.7.0
+        version: 2.9.0
 
   packages/planner:
     dependencies:
@@ -309,9 +280,6 @@ importers:
       '@anki-xml/logger':
         specifier: workspace:*
         version: link:../logger
-      '@anki-xml/models':
-        specifier: workspace:*
-        version: link:../models
       '@anki-xml/utils':
         specifier: workspace:*
         version: link:../utils
@@ -324,9 +292,6 @@ importers:
       '@anki-xml/checkpoint':
         specifier: workspace:*
         version: link:../checkpoint
-      '@anki-xml/logger':
-        specifier: workspace:*
-        version: link:../logger
       '@anki-xml/utils':
         specifier: workspace:*
         version: link:../utils
@@ -336,12 +301,6 @@ importers:
       '@anki-xml/anki':
         specifier: workspace:*
         version: link:../anki
-      '@anki-xml/logger':
-        specifier: workspace:*
-        version: link:../logger
-      '@anki-xml/utils':
-        specifier: workspace:*
-        version: link:../utils
 
   packages/sync:
     dependencies:
@@ -351,27 +310,18 @@ importers:
       '@anki-xml/checkpoint':
         specifier: workspace:*
         version: link:../checkpoint
-      '@anki-xml/diff':
-        specifier: workspace:*
-        version: link:../diff
       '@anki-xml/logger':
         specifier: workspace:*
         version: link:../logger
       '@anki-xml/planner':
         specifier: workspace:*
         version: link:../planner
-      '@anki-xml/utils':
-        specifier: workspace:*
-        version: link:../utils
 
   packages/tags:
     dependencies:
       '@anki-xml/anki':
         specifier: workspace:*
         version: link:../anki
-      '@anki-xml/logger':
-        specifier: workspace:*
-        version: link:../logger
       '@anki-xml/utils':
         specifier: workspace:*
         version: link:../utils
@@ -389,6 +339,9 @@ importers:
       '@anki-xml/utils':
         specifier: workspace:*
         version: link:../utils
+      valibot:
+        specifier: ^1.1.0
+        version: 1.4.2(typescript@5.9.3)
 
 packages:
 

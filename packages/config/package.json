@@ -15,8 +15,6 @@
     "node": ">=20"
   },
   "dependencies": {
-    "@anki-xml/parser": "workspace:*",
-    "@anki-xml/utils": "workspace:*",
-    "@anki-xml/logger": "workspace:*"
+    "yaml": "^2.7.0"
   }
 }

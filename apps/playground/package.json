@@ -1,0 +1,17 @@
+{
+  "name": "@anki-xml/playground",
+  "version": "0.0.4",
+  "private": true,
+  "description": "Interactive dev harness for anki-xml (not published)",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/dev.ts"
+  },
+  "dependencies": {
+    "@anki-xml/cli": "workspace:*",
+    "@anki-xml/core": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0"
+  }
+}

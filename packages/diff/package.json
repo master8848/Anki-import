@@ -15,9 +15,6 @@
     "node": ">=20"
   },
   "dependencies": {
-    "@anki-xml/anki": "workspace:*",
-    "@anki-xml/planner": "workspace:*",
-    "@anki-xml/utils": "workspace:*",
-    "@anki-xml/logger": "workspace:*"
+    "@anki-xml/utils": "workspace:*"
   }
 }

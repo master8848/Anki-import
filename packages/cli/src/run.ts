@@ -32,7 +32,7 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
   }
 
   const log = createLogger({
-    quiet: args.flags.quiet,
+    quiet: args.flags.quiet || args.flags.json,
     verbose: args.flags.verbose,
     debug: args.flags.debug,
   });
