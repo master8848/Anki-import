@@ -333,7 +333,6 @@ export function parseDocument(source: string): ParsedDocument;
 // validates well-formedness (fast-xml-parser, unpairedTags = HTML_VOID_TAGS),
 // tokenizes, enforces <anki version="1"> root, handles nested <deck>,
 // <tag> children, <field name=...> and legacy short tags (front/back/text/extra/addreverse)
-export function parseNotes(source: string): ParsedNote[];
 export function extractFieldContent(source: string, tokens: XmlToken[], openIdx: number): { html: string };
 export function parseDocument as parseXml(source: string): ParsedDocument;  // alias
 ```

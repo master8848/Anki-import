@@ -21,7 +21,7 @@ lines below.
 | `sync` | `sync [<file>] [--dry-run] [--checkpoint <id>]` | With a file: plan then apply — creates AND updates, writes a checkpoint. Without a file: drift report comparing the most recent checkpoint (or `--checkpoint <id>`) against the collection. |
 | `rollback` | `rollback <checkpoint-id> [--dry-run]` | Deletes the notes recorded in a checkpoint, then deletes the checkpoint file (unless `--keep-checkpoint`). |
 | `checkpoint` | `checkpoint list` · `checkpoint create <id> --note-ids 1,2,3 [--deck NAME]` | Lists checkpoints (sorted by created date) or creates one from explicit note ids. |
-| `watch` | `watch <file> [--yes] [--stream]` | Watches a file (chokidar, 300 ms debounce); on change: plan → show summary → confirm (`[y/N]`, auto-apply with `--yes` or `--json`) → apply via `applyPlan`. Ctrl+C stops. |
+| `watch` | `watch <file> [--yes] [--stream]` | Watches a file (fs.watch, 300 ms debounce); on change: plan → show summary → confirm (`[y/N]`, auto-apply with `--yes` or `--json`) → apply via `applyPlan`. Ctrl+C stops. |
 | `tags` | `tags list` · `tags add <tag> --note-ids 1,2,3 \| --query "deck:X"` · `tags remove <tag> ...` | Lists collection tags; adds/removes a tag from notes selected by `--note-ids` or a `--query` search. |
 | `models` | `models` | Lists note types with their field names. |
 | `stats` | `stats [--deck <name>]` | Collection totals (decks, models, notes, cards, per-deck counts) or one deck's card counts. |

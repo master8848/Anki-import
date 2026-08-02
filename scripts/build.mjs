@@ -16,7 +16,7 @@ await build({
   format: "esm",
   banner: { js: SHEBANG.trimEnd() },
   packages: "bundle",
-  external: ["chokidar", "yaml", "csv-parse"],
+  external: ["yaml", "csv-parse"],
   sourcemap: false,
   minify: false,
   logLevel: "info",

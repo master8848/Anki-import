@@ -193,7 +193,7 @@ External (npm) dependencies — bundled unless marked *external*:
 
 | Dep | Used by | Bundled? |
 |---|---|---|
-| `chokidar` | core (`watch`) | external (lazy-imported) |
+| `fs.watch` (builtin) | core (`watch`) | — |
 | `yaml` | parser, config | external |
 | `csv-parse` | parser | external |
 | `fast-xml-parser` | parser (`XMLValidator`) | bundled |
@@ -234,7 +234,7 @@ it, and it depends on nothing.
 
 | Target | How it is met |
 |---|---|
-| Fast startup (≈25 ms) | One esbuild bundle (`dist/cli.js`, ≈153 KB); heavy deps (`chokidar`, `yaml`, `csv-parse`) are `external` and lazy-imported inside the functions that need them |
+| Fast startup (≈25 ms) | One esbuild bundle (`dist/cli.js`, ≈153 KB); heavy deps (`yaml`, `csv-parse`) are `external` and lazy-imported inside the functions that need them |
 | Constant-memory large imports | `--stream` uses `parseXmlStream`: a CDATA-aware scanner finds `<note>` spans in a rolling buffer (bounded to ~2 MB), each fragment parsed with the same tokenizer, notes batched (default 500) and flushed to AnkiConnect |
 | No double parsing | The stream path validates per note without ever building the full document AST |
 | Measurable | `benchmark <file>` measures parse+validate throughput (`cards`, `memoryMb`, `timeSec`, `rate`); `pnpm build` prints the bundle size |

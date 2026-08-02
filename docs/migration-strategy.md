@@ -65,8 +65,8 @@ only `packages/anki` may contact AnkiConnect.
   anki-import/checkpoints` (`~/.local/share/...` default) — existing
   checkpoints from v0.0.3 keep working, and `rollback` remains
   byte-compatible with their shape (`{id, deck, created, noteIds}`).
-- **Build**: esbuild single bundle, external `chokidar`/`yaml`/
-  `csv-parse`; startup ≈ 25 ms, ≈ 150 KB.
+- **Build**: esbuild single bundle, external `yaml`/`csv-parse`;
+  startup ≈ 25 ms, ≈ 150 KB.
 - **Removed**: the v0.0.3-era `src/` layout, Bun-only scripts, and the
   duplicate "safe-import" entry points (already gone in v0.0.3).
 
