@@ -1,6 +1,5 @@
 import { importFromFile } from "@anki-xml/core";
 import { AnkiConnectError } from "@anki-xml/anki";
-import { XmlParseError } from "@anki-xml/parser";
 import { fileExistsSync } from "@anki-xml/utils";
 import { formatValidationError } from "@anki-xml/validation";
 import {
@@ -77,19 +76,8 @@ export async function runImportCommand(
 
     return outcome.result.failed.length > 0 ? 1 : 0;
   } catch (err) {
-    if (err instanceof XmlParseError) {
-      if (flags.json) {
-        console.log(
-          JSON.stringify({
-            ok: false,
-            error: { code: "XML_PARSE_ERROR", message: err.message, line: err.line },
-          }),
-        );
-      } else {
-        log.error(`XML parse error: ${err.message}`);
-      }
-      return 1;
-    }
+    // Parse errors fall through to run.ts, which surfaces the stable
+    // parse codes (XML_PARSE_ERROR etc.) with line + column in --json.
     if (err instanceof AnkiConnectError) {
       return printAnkiConnectError(err, flags, log);
     }

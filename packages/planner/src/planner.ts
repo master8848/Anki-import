@@ -88,7 +88,11 @@ export async function buildPlan(
       const changedFields = d.changes
         .filter((c) => note.fields[c.field] !== undefined)
         .map((c) => c.field);
-      if (changedFields.length === 0 && !d.deckChanged && !d.modelChanged && !d.tagsChanged) {
+      // Tag diffs only count when the source explicitly specified tags.
+      // Without a `tags="..."` attribute the parsed tag list is a parser
+      // default, not an instruction to change (and wiping would be wrong).
+      const tagsChanged = d.tagsChanged !== undefined && note.tagsSpecified === true;
+      if (changedFields.length === 0 && !d.deckChanged && !d.modelChanged && !tagsChanged) {
         plan.unchanged++;
         return;
       }

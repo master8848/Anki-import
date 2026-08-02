@@ -65,14 +65,23 @@ export async function applyPlan(plan: ImportPlan, opts: SyncApplyOptions = {}): 
 
   // `updateNote` (not `updateNoteFields`) so tags are applied too —
   // AnkiConnect's updateNoteFields ignores the tags field entirely,
-  // which would leave cleared tags stale on the note.
+  // which would leave cleared tags stale on the note. `tags` is only
+  // included when the source explicitly specified it: updateNote
+  // REPLACES tags, so an omitted source attribute must not wipe
+  // collection-side tags the user added in Anki.
   for (let i = 0; i < plan.update.length; i += batchSize) {
     const batch = plan.update.slice(i, i + batchSize);
     opts.logger?.debug(`sync: multi(updateNote x${batch.length})`);
     await client.multi(
       batch.map((u) => ({
         action: "updateNote",
-        params: { note: { id: u.id, fields: { ...u.note.fields }, tags: [...u.note.tags] } },
+        params: {
+          note: {
+            id: u.id,
+            fields: { ...u.note.fields },
+            ...(u.note.tagsSpecified === true && { tags: [...u.note.tags] }),
+          },
+        },
       })),
     );
     result.updated += batch.length;
@@ -82,7 +91,7 @@ export async function applyPlan(plan: ImportPlan, opts: SyncApplyOptions = {}): 
     plan.add.map((n) => n.deckName),
     noteIds,
     "sync",
-    { id: opts.checkpointId },
+    { id: opts.checkpointId, force: opts.checkpointId !== undefined },
   );
   result.checkpointId = checkpoint?.id;
 

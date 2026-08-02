@@ -22,6 +22,20 @@ class AnkiClientMock {
   };
 }
 
+function collectionInfo(id: number, tags: string[], fields?: Record<string, string>) {
+  return {
+    noteId: id,
+    modelName: "Basic",
+    tags,
+    deckName: "Deck",
+    fields: {
+      Front: { value: fields?.["Front"] ?? "front", order: 0 },
+      Back: { value: fields?.["Back"] ?? "back", order: 1 },
+    },
+    cards: [id],
+  };
+}
+
 function note(partial: Partial<ValidatedNote> & { number: number }): ValidatedNote {
   return {
     deckName: "Deck",
@@ -137,5 +151,40 @@ describe("buildPlan", () => {
     const notes = Array.from({ length: 5 }, (_, i) => note({ number: i + 1, id: 100 + i }));
     await buildPlan(notes, { url: "http://127.0.0.1:8765", fetchImpl: client.fetchImpl, batchSize: 2 });
     expect(seen).toEqual([[100, 101], [102, 103], [104]]);
+  });
+
+  it("does not treat a tag diff as an edit when the source omitted tags", async () => {
+    const handler = async (action: string) => {
+      if (action === "notesInfo") return [collectionInfo(11, ["collection-tag"])];
+      return [];
+    };
+    const client = makeClient(handler);
+
+    // source note carries no tags attribute -> tagsSpecified undefined,
+    // and its parsed (default) tags differ from the collection's
+    const plan = await buildPlan([note({ number: 1, id: 11 })], {
+      url: "http://127.0.0.1:8765",
+      fetchImpl: client.fetchImpl,
+    });
+
+    expect(plan.unchanged).toBe(1);
+    expect(plan.update).toHaveLength(0);
+  });
+
+  it("treats explicitly-specified tags as an edit when they differ", async () => {
+    const handler = async (action: string) => {
+      if (action === "notesInfo") return [collectionInfo(11, ["collection-tag"])];
+      return [];
+    };
+    const client = makeClient(handler);
+
+    const plan = await buildPlan(
+      [note({ number: 1, id: 11, tags: ["source-tag"], tagsSpecified: true })],
+      { url: "http://127.0.0.1:8765", fetchImpl: client.fetchImpl },
+    );
+
+    expect(plan.unchanged).toBe(0);
+    expect(plan.update).toHaveLength(1);
+    expect(plan.update[0]).toMatchObject({ id: 11 });
   });
 });

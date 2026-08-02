@@ -48,6 +48,14 @@ describe("mcp protocol", () => {
   it("returns undefined for notifications (no id)", () => {
     expect(parseRequest('{"jsonrpc":"2.0","method":"notifications/initialized"}')).toBeUndefined();
   });
+
+  it("parses requests with an explicit null id (JSON-RPC 2.0 allows it)", () => {
+    expect(parseRequest('{"jsonrpc":"2.0","id":null,"method":"ping"}')).toEqual({
+      id: null,
+      method: "ping",
+      params: undefined,
+    });
+  });
 });
 
 describe("mcp server", () => {
@@ -75,6 +83,16 @@ describe("mcp server", () => {
     const resp = await handleMessage('{"jsonrpc":"2.0","id":7,"method":"ping"}', toolsByName, ctx);
     expect(resp).toMatchObject({ id: 7, result: {} });
     expect(resp?.error).toBeUndefined();
+  });
+
+  it("replies to requests whose id is explicitly null", async () => {
+    const resp = await handleMessage('{"jsonrpc":"2.0","id":null,"method":"ping"}', toolsByName, ctx);
+    expect(resp).toEqual({ jsonrpc: "2.0", id: null, result: {} });
+  });
+
+  it("treats a missing id key as a notification even for ping", async () => {
+    const resp = await handleMessage('{"jsonrpc":"2.0","method":"ping"}', toolsByName, ctx);
+    expect(resp).toBeNull();
   });
 });
 

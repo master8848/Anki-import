@@ -4,13 +4,13 @@
  */
 
 import type { AnkiConnectNote, AnkiConnectResponse } from "@anki-xml/utils";
-import { withRetries } from "@anki-xml/utils";
 import {
   classifyConnectError,
   connectDiagnosis,
   DEFAULT_URL,
   type ConnectDiagnosis,
 } from "./errors.ts";
+import { ankiConnectAbortSignal, isAnkiConnectAborted } from "./abort.ts";
 
 export interface AnkiConnectNoteInfo {
   noteId: number;
@@ -39,8 +39,14 @@ export interface AnkiClientOptions {
   url?: string;
   fetchImpl?: typeof fetch;
   timeout?: number;
+  /** Retry budget for network errors (connection refused, DNS, ...). */
   retries?: number;
+  /** Exponential backoff base for network-error retries. */
   backoffMs?: number;
+  /** Retry budget for transient HTTP 5xx responses from AnkiConnect. */
+  httpRetries?: number;
+  /** Exponential backoff base for HTTP 5xx retries. */
+  httpBackoffMs?: number;
 }
 
 export class AnkiConnectError extends Error {
@@ -52,8 +58,10 @@ export class AnkiConnectError extends Error {
   suggestion?: string;
   /** Full diagnosis when the failure was a connection problem. */
   diagnosis?: ConnectDiagnosis;
+  /** HTTP status when AnkiConnect answered with a non-2xx response. */
+  status?: number;
 
-  constructor(message: string, diagnosis?: ConnectDiagnosis) {
+  constructor(message: string, diagnosis?: ConnectDiagnosis, status?: number) {
     super(message);
     this.name = "AnkiConnectError";
     if (diagnosis) {
@@ -62,6 +70,7 @@ export class AnkiConnectError extends Error {
       this.hints = diagnosis.hints;
       this.suggestion = diagnosis.suggestion;
     }
+    if (status !== undefined) this.status = status;
   }
 }
 
@@ -71,6 +80,8 @@ export class AnkiClient {
   private readonly timeoutMs: number;
   private readonly maxRetries: number;
   private readonly backoffMs: number;
+  private readonly httpRetries: number;
+  private readonly httpBackoffMs: number;
 
   constructor(options: AnkiClientOptions = {}) {
     this.url = (options.url ?? DEFAULT_URL).replace(/\/+$/, "");
@@ -78,6 +89,8 @@ export class AnkiClient {
     this.timeoutMs = options.timeout ?? 10_000;
     this.maxRetries = options.retries ?? 3;
     this.backoffMs = options.backoffMs ?? 100;
+    this.httpRetries = options.httpRetries ?? 3;
+    this.httpBackoffMs = options.httpBackoffMs ?? 300;
   }
 
   async version(): Promise<number> {
@@ -178,13 +191,23 @@ export class AnkiClient {
     requests: Array<{ action: string; params?: Record<string, unknown> }>,
   ): Promise<unknown[]> {
     if (requests.length === 0) return [];
-    const results = await this.invoke<unknown[]>("multi", {
-      actions: requests.map((r) => ({
-        action: r.action,
-        version: 6,
-        params: r.params ?? {},
-      })),
-    });
+    // NEVER retry: `multi` runs a non-idempotent batch (addNotes,
+    // updateNote, ...). A retry would re-run the whole batch and
+    // double-apply every action in it, so even network errors surface
+    // after exactly one attempt.
+    let results: unknown;
+    try {
+      results = await this.invokeOnce<unknown[]>("multi", {
+        actions: requests.map((r) => ({
+          action: r.action,
+          version: 6,
+          params: r.params ?? {},
+        })),
+      });
+    } catch (err) {
+      if (err instanceof AnkiConnectError) throw err;
+      throw this.wrapNetworkError(err);
+    }
     if (!Array.isArray(results)) {
       throw new AnkiConnectError(`Unexpected response from 'multi': ${JSON.stringify(results)}`);
     }
@@ -302,56 +325,92 @@ export class AnkiClient {
     }
   }
 
+  /**
+   * Invoke an action with retries:
+   * - network errors (refused/timeout/DNS): retried with exponential
+   *   backoff — AnkiConnect may simply have been busy or restarting;
+   * - HTTP 5xx: retried a few times with a short backoff (transient
+   *   server errors recover quickly; the old long-backoff retries were
+   *   the bug);
+   * - HTTP 4xx, bad JSON, and envelope errors: permanent, no retry.
+   */
   private async invoke<T>(action: string, params?: Record<string, unknown>): Promise<T> {
-    const body = JSON.stringify({ action, version: 6, params: params ?? {} });
-    const run = async (): Promise<T> => {
-      let response: Response;
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
+    let networkAttempts = 0;
+    let httpAttempts = 0;
+    for (;;) {
       try {
-        response = await this.fetchImpl(`${this.url}/`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body,
-          signal: controller.signal,
-        });
-      } finally {
-        clearTimeout(timeoutId);
+        return await this.invokeOnce<T>(action, params);
+      } catch (err) {
+        if (err instanceof AnkiConnectError) {
+          if (typeof err.status === "number" && err.status >= 500) {
+            if (httpAttempts + 1 >= this.httpRetries) throw err;
+            httpAttempts++;
+            await sleep(this.httpBackoffMs * 2 ** (httpAttempts - 1));
+            continue;
+          }
+          throw err;
+        }
+        if (isAnkiConnectAborted() || networkAttempts + 1 >= this.maxRetries) {
+          throw this.wrapNetworkError(err);
+        }
+        networkAttempts++;
+        await sleep(this.backoffMs * 2 ** (networkAttempts - 1));
       }
+    }
+  }
 
-      if (!response.ok) {
-        throw new AnkiConnectError(
-          `AnkiConnect returned HTTP ${response.status} ${response.statusText}`,
-          connectDiagnosis(
-            "http",
-            this.url,
-            `AnkiConnect returned HTTP ${response.status} ${response.statusText}`,
-          ),
-        );
-      }
-
-      const envelope = await this.parseEnvelope(response, action);
-      if (envelope.error) {
-        throw new AnkiConnectError(`AnkiConnect error: ${envelope.error}`);
-      }
-      return envelope.result as T;
-    };
+  /**
+   * One HTTP round-trip: POST the action, enforce the timeout, and
+   * parse the envelope. AnkiConnectError is thrown for HTTP status /
+   * bad JSON / envelope failures; raw fetch errors propagate unchanged
+   * so callers decide whether to retry them.
+   */
+  private async invokeOnce<T>(action: string, params?: Record<string, unknown>): Promise<T> {
+    const body = JSON.stringify({ action, version: 6, params: params ?? {} });
+    let response: Response;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
+    const abortFromGlobal = () => controller.abort();
+    const globalSignal = ankiConnectAbortSignal();
+    if (globalSignal.aborted) controller.abort();
+    else globalSignal.addEventListener("abort", abortFromGlobal);
     try {
-      // AnkiConnectError is only thrown for permanent failures (HTTP
-      // status, bad JSON, envelope error); raw fetch/network errors are
-      // retried with backoff by withRetries.
-      return await withRetries(run, {
-        retries: this.maxRetries,
-        backoffMs: this.backoffMs,
-        shouldAbort: (err) => err instanceof AnkiConnectError,
+      response = await this.fetchImpl(`${this.url}/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+        signal: controller.signal,
       });
-    } catch (err) {
-      if (err instanceof AnkiConnectError) throw err;
+    } finally {
+      clearTimeout(timeoutId);
+      globalSignal.removeEventListener("abort", abortFromGlobal);
+    }
+
+    if (!response.ok) {
       throw new AnkiConnectError(
-        `Failed to reach AnkiConnect at ${this.url}: ${err instanceof Error ? err.message : String(err)}`,
-        classifyConnectError(err, this.url),
+        `AnkiConnect returned HTTP ${response.status} ${response.statusText}`,
+        connectDiagnosis(
+          "http",
+          this.url,
+          `AnkiConnect returned HTTP ${response.status} ${response.statusText}`,
+        ),
+        response.status,
       );
     }
+
+    const envelope = await this.parseEnvelope(response, action);
+    if (envelope.error) {
+      throw new AnkiConnectError(`AnkiConnect error: ${envelope.error}`);
+    }
+    return envelope.result as T;
+  }
+
+  /** Wrap a raw fetch failure in a classified AnkiConnectError. */
+  private wrapNetworkError(err: unknown): AnkiConnectError {
+    return new AnkiConnectError(
+      `Failed to reach AnkiConnect at ${this.url}: ${err instanceof Error ? err.message : String(err)}`,
+      classifyConnectError(err, this.url),
+    );
   }
 
   /** Parse and shape-check an AnkiConnect envelope; bad shapes get the stable `bad-json` cause. */
@@ -405,4 +464,8 @@ export class AnkiClient {
     }
     return { result: env["result"] ?? null, error: env["error"] as string | null };
   }
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

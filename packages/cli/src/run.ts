@@ -1,7 +1,7 @@
 import { CliError, parseArgs, type ParsedArgs } from "./args.ts";
 import { printHelp, printCommandHelp, VERSION, BIN_NAME } from "./help.ts";
 import { createLogger } from "@anki-xml/logger";
-import { AnkiConnectError } from "@anki-xml/anki";
+import { AnkiConnectError, isAnkiConnectAborted } from "@anki-xml/anki";
 import { printAnkiConnectError } from "./errors.ts";
 import { runDoctorCommand } from "./commands/doctor.ts";
 import { runValidate } from "./commands/validate.ts";
@@ -123,6 +123,9 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
       return 2;
     }
     if (err instanceof AnkiConnectError) {
+      // Ctrl+C aborted the in-flight request — exit quietly with 130;
+      // printing a fake "failure" would just add noise.
+      if (isAnkiConnectAborted()) return 130;
       return printAnkiConnectError(err, args.flags, log);
     }
     const parseCode = parseErrorCode(err);

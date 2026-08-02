@@ -31,13 +31,28 @@ export async function syncFile(file: string, opts: SyncFileOptions = {}): Promis
       warnings: planned.warnings,
     };
   }
-  if (planned.errors.length > 0 || planned.plan.add.length + planned.plan.update.length === 0) {
+  if (planned.errors.length > 0) {
     return {
       plan: planned.plan,
       applied: emptySyncApplyResult(),
       errors: planned.errors,
       warnings: planned.warnings,
     };
+  }
+  if (planned.plan.add.length + planned.plan.update.length === 0) {
+    // An explicit --checkpoint id must still record a (possibly empty)
+    // checkpoint so a later `rollback <id>` finds the file; auto-generated
+    // ids skip empty runs.
+    let applied = emptySyncApplyResult();
+    if (opts.checkpointId !== undefined) {
+      applied = await applyPlan(planned.plan, {
+        url: opts.url,
+        fetchImpl: opts.fetchImpl,
+        checkpointId: opts.checkpointId,
+        logger: opts.logger,
+      });
+    }
+    return { plan: planned.plan, applied, errors: planned.errors, warnings: planned.warnings };
   }
   const applied = await applyPlan(planned.plan, {
     url: opts.url,

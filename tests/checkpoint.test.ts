@@ -52,6 +52,22 @@ describe("createCheckpointForNotes", () => {
     const snap = await createCheckpointForNotes(new Set(["D"]), [1], "sync");
     expect(snap?.id).toMatch(/^sync-\d+$/);
   });
+
+  it("writes an empty checkpoint when force is set with an explicit id", async () => {
+    const snap = await createCheckpointForNotes(new Set(["Deck"]), [], "import", {
+      id: "forced-empty",
+      force: true,
+    });
+    expect(snap).not.toBeNull();
+    expect(snap?.noteIds).toEqual([]);
+    expect(await loadCheckpoint("forced-empty")).toMatchObject({ id: "forced-empty", noteIds: [] });
+  });
+
+  it("still skips empty checkpoints for auto-generated ids", async () => {
+    const snap = await createCheckpointForNotes(new Set(["Deck"]), [], "sync");
+    expect(snap).toBeNull();
+    expect(await readdir(checkpointDir()).catch(() => [])).toHaveLength(0);
+  });
 });
 
 describe("checkpoint shape validation", () => {
@@ -86,5 +102,23 @@ describe("checkpoint id -> filename mapping", () => {
     const snap2 = await loadCheckpoint("import-1_2");
     expect(snap1.noteIds).toEqual([1]);
     expect(snap2.noteIds).toEqual([2]);
+  });
+
+  it("loads legacy checkpoints written with the unescaped filename", async () => {
+    await mkdir(checkpointDir(), { recursive: true });
+    await writeFile(
+      path.join(checkpointDir(), "my_import.json"),
+      JSON.stringify({ id: "my_import", deck: "D", created: "2026-01-01", noteIds: [1, 2] }),
+      "utf8",
+    );
+    const snap = await loadCheckpoint("my_import");
+    expect(snap).toMatchObject({ id: "my_import", noteIds: [1, 2] });
+  });
+
+  it("roundtrips ids with underscores through the escaped write mapping", async () => {
+    await createCheckpoint({ id: "my_import", deck: "D", noteIds: [3] });
+    const files = await readdir(checkpointDir());
+    expect(files).toEqual(["my_5fimport.json"]);
+    expect((await loadCheckpoint("my_import")).noteIds).toEqual([3]);
   });
 });

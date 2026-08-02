@@ -135,7 +135,27 @@ async function importValidatedNotes(
 
   log?.info(`Validated ${createList.length} notes...`);
 
-  if (opts.dryRun || createList.length === 0) {
+  if (opts.dryRun) {
+    return { result, validationErrors, warnings, validCount: createList.length };
+  }
+
+  if (createList.length === 0) {
+    // An explicit --checkpoint must still record an (empty) snapshot so
+    // a later `rollback <id>` finds the file; auto ids skip empty runs.
+    if (opts.checkpointId !== undefined) {
+      const checkpoint = await createCheckpointForNotes([], result.noteIds, "import", {
+        id: opts.checkpointId,
+        defaultDeck,
+        force: true,
+      });
+      return {
+        result,
+        validationErrors,
+        warnings,
+        validCount: 0,
+        checkpointId: checkpoint?.id,
+      };
+    }
     return { result, validationErrors, warnings, validCount: createList.length };
   }
 
@@ -155,6 +175,9 @@ async function importValidatedNotes(
   const checkpoint = await createCheckpointForNotes(createdDecks, result.noteIds, "import", {
     id: opts.checkpointId,
     defaultDeck,
+    // An explicit --checkpoint must still record a snapshot even when
+    // every note was rejected (zero adds); auto ids skip empty runs.
+    force: opts.checkpointId !== undefined,
   });
   checkpointId = checkpoint?.id;
 
@@ -241,6 +264,7 @@ export async function importFromFile(opts: ImportOptions): Promise<ImportOutcome
 
       const checkpoint = await createCheckpointForNotes(createdDecks, result.noteIds, "import", {
         id: opts.checkpointId,
+        force: opts.checkpointId !== undefined,
       });
 
       log?.info(`Imported ${result.created} notes.`);

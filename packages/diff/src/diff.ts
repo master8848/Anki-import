@@ -68,12 +68,14 @@ export function diffNote(a: ValidatedNote, b: ValidatedNote): NoteDiff {
 }
 
 /**
- * Diff two note lists, matching by id when both sides have one,
- * otherwise by `number`. Unmatched notes become "added" or "removed".
+ * Diff two note lists. Matching rules (restored old `.find` semantics):
+ * - an after-note WITH an id matches only by id;
+ * - an after-note WITHOUT an id matches by `number` (any before note);
+ * - earliest after-note wins; unmatched notes become "added"/"removed".
  *
- * Runs in O(n): notes are indexed into id/number buckets and each `before`
- * note scans only its candidate matches (the earliest unmatched `after`
- * note, mirroring the previous `.find` semantics).
+ * Runs in O(n): notes are indexed into id/number buckets (numbers only
+ * for id-less notes) and each `before` note scans its candidate matches
+ * with a single merge pass.
  */
 export function diffNoteLists(before: ValidatedNote[], after: ValidatedNote[]): NoteDiff[] {
   const idBuckets = new Map<number, number[]>();
@@ -84,10 +86,11 @@ export function diffNoteLists(before: ValidatedNote[], after: ValidatedNote[]): 
       const list = idBuckets.get(a.id);
       if (list) list.push(i);
       else idBuckets.set(a.id, [i]);
+    } else {
+      const list = numBuckets.get(a.number);
+      if (list) list.push(i);
+      else numBuckets.set(a.number, [i]);
     }
-    const list = numBuckets.get(a.number);
-    if (list) list.push(i);
-    else numBuckets.set(a.number, [i]);
   }
 
   const used = new Set<number>();

@@ -52,14 +52,17 @@ export async function createCheckpoint(opts: {
  * was touched it becomes the checkpoint deck, otherwise `defaultDeck`
  * (or ""). Returns null when nothing should be recorded — callers can
  * then report no checkpoint id instead of an empty snapshot.
+ * `force` writes the file even with zero notes: sync/import pass it
+ * when the user EXPLICITLY supplied a checkpoint id, so a later
+ * `rollback <id>` finds the file; auto-generated ids still skip empty.
  */
 export async function createCheckpointForNotes(
   decks: Iterable<string>,
   noteIds: number[],
   prefix: string,
-  opts: { id?: string; defaultDeck?: string } = {},
+  opts: { id?: string; defaultDeck?: string; force?: boolean } = {},
 ): Promise<Checkpoint | null> {
-  if (noteIds.length === 0) return null;
+  if (noteIds.length === 0 && opts.force !== true) return null;
   const uniqueDecks = [...new Set(decks)];
   let deck = opts.defaultDeck ?? "";
   if (uniqueDecks.length === 1 && uniqueDecks[0] !== undefined) deck = uniqueDecks[0];
@@ -100,10 +103,23 @@ export async function loadCheckpoint(id: string): Promise<Checkpoint> {
     return parseCheckpoint(raw, id);
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code;
-    if (code === "ENOENT") {
+    if (code !== "ENOENT") throw err;
+    // Legacy compat: pre-escape-mapping checkpoints used the raw id as
+    // the filename, so an id with `_` (or any other unsafe char) was
+    // written unescaped. Reads fall back to the legacy name; writes
+    // always use the injective mapping above.
+    const legacy = path.join(checkpointDir(), `${id}.json`);
+    if (legacy === target) {
       throw new Error(`Checkpoint not found: ${id}`);
     }
-    throw err;
+    try {
+      const raw = await fs.readFile(legacy, "utf8");
+      return parseCheckpoint(raw, id);
+    } catch (legacyErr) {
+      const legacyCode = (legacyErr as NodeJS.ErrnoException).code;
+      if (legacyCode === "ENOENT") throw new Error(`Checkpoint not found: ${id}`);
+      throw legacyErr;
+    }
   }
 }
 

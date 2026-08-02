@@ -80,6 +80,17 @@ Answer two
     const err = out.error as { message?: string };
     expect(err.message).toMatch(/Unsupported file format/);
   });
+
+  it("import --json surfaces XML parse errors with stable code, line, and column", async () => {
+    const file = await writeTemp("broken.xml", `<anki deck="T"><note type="Basic"><front>a</front></note>`);
+    const out = await captureJson(() => main(["import", file, "--json"]));
+    expect(out.ok).toBe(false);
+    const err = out.error as { code?: string; message?: string; line?: unknown; column?: unknown };
+    expect(err.code).toBe("XML_PARSE_ERROR");
+    expect(typeof err.message).toBe("string");
+    expect(typeof err.line).toBe("number");
+    expect(typeof err.column).toBe("number");
+  });
 });
 
 async function captureJson(run: () => Promise<number>): Promise<Record<string, unknown>> {

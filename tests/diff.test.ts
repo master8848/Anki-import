@@ -115,4 +115,14 @@ describe("diffNoteLists", () => {
       [2, "removed"],
     ]);
   });
+
+  it("does not fall back to number matching when both sides have differing ids", () => {
+    const before = [note({ number: 3, id: 5 })];
+    const after = [note({ number: 3, id: 7 })];
+    const diffs = diffNoteLists(before, after);
+    expect(diffs.map((d) => [d.noteNumber, d.id, d.kind])).toEqual([
+      [3, 5, "removed"],
+      [3, 7, "added"],
+    ]);
+  });
 });

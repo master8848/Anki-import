@@ -40,9 +40,10 @@ export function failure(
 
 /**
  * Parse one message from a line.
- * Returns `undefined` for id-less notifications (no reply is allowed),
- * `null` for invalid JSON / malformed requests (PARSE_ERROR), and the
- * parsed request otherwise.
+ * Returns `undefined` for notifications (no reply is allowed — an
+ * ABSENT `id` key, per JSON-RPC 2.0; `"id": null` on a request is valid
+ * and must be answered), `null` for invalid JSON / malformed requests
+ * (PARSE_ERROR), and the parsed request otherwise.
  */
 export function parseRequest(raw: string): {
   id: number | string | null;
@@ -58,8 +59,8 @@ export function parseRequest(raw: string): {
   if (msg === null || typeof msg !== "object") return null;
   const m = msg as Record<string, unknown>;
   if (m["jsonrpc"] !== "2.0" || typeof m["method"] !== "string") return null;
+  if (!("id" in m)) return undefined; // notification — no response needed
   const id = m["id"] ?? null;
-  if (id === null) return undefined; // notification — no response needed
-  if (typeof id !== "number" && typeof id !== "string") return null;
+  if (id !== null && typeof id !== "number" && typeof id !== "string") return null;
   return { id, method: m["method"], params: m["params"] };
 }

@@ -1,5 +1,13 @@
-import { describe, expect, it } from "vitest";
-import { AnkiClient, AnkiConnectError } from "@anki-xml/anki";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import {
+  AnkiClient,
+  AnkiConnectError,
+  abortAnkiConnect,
+  resetAnkiConnectAbort,
+} from "@anki-xml/anki";
+
+beforeEach(() => resetAnkiConnectAbort());
+afterEach(() => resetAnkiConnectAbort());
 
 function jsonResponse(result: unknown, error: string | null = null) {
   return {
@@ -104,15 +112,15 @@ describe("AnkiClient", () => {
     }
   });
 
-  it("treats HTTP errors as permanent (no retry) with cause http", async () => {
+  it("retries transient HTTP 5xx responses with a short backoff", async () => {
     let fetches = 0;
     const client = new AnkiClient({
       url: "http://127.0.0.1:8765",
-      retries: 3,
-      backoffMs: 1,
+      httpRetries: 3,
+      httpBackoffMs: 1,
       fetchImpl: async () => {
         fetches++;
-        return { ok: false, status: 500, statusText: "Internal Server Error" } as unknown as Response;
+        return { ok: false, status: 502, statusText: "Bad Gateway" } as unknown as Response;
       },
     });
     try {
@@ -121,8 +129,96 @@ describe("AnkiClient", () => {
     } catch (err) {
       const e = err as AnkiConnectError;
       expect(e.cause).toBe("http");
+      expect(e.status).toBe(502);
       expect(e.hints?.length).toBeGreaterThan(0);
     }
+    expect(fetches).toBe(3);
+  });
+
+  it("treats HTTP 4xx responses as permanent (no retry) with cause http", async () => {
+    let fetches = 0;
+    const client = new AnkiClient({
+      url: "http://127.0.0.1:8765",
+      retries: 3,
+      backoffMs: 1,
+      fetchImpl: async () => {
+        fetches++;
+        return { ok: false, status: 404, statusText: "Not Found" } as unknown as Response;
+      },
+    });
+    try {
+      await client.version();
+      expect.unreachable();
+    } catch (err) {
+      expect((err as AnkiConnectError).cause).toBe("http");
+    }
+    expect(fetches).toBe(1);
+  });
+
+  it("retries network errors (fetch rejection) with backoff and classifies the final failure", async () => {
+    let fetches = 0;
+    const client = new AnkiClient({
+      url: "http://127.0.0.1:8765",
+      retries: 3,
+      backoffMs: 1,
+      fetchImpl: async () => {
+        fetches++;
+        const err = new Error("connect ECONNREFUSED 127.0.0.1:8765");
+        (err as { cause?: unknown }).cause = { code: "ECONNREFUSED" };
+        throw err;
+      },
+    });
+    try {
+      await client.version();
+      expect.unreachable();
+    } catch (err) {
+      const e = err as AnkiConnectError;
+      expect(e.cause).toBe("refused");
+      expect(e.hints?.length).toBeGreaterThan(0);
+    }
+    expect(fetches).toBe(3);
+  });
+
+  it("multi never retries — even network errors surface after one attempt", async () => {
+    let fetches = 0;
+    const client = new AnkiClient({
+      url: "http://127.0.0.1:8765",
+      retries: 3,
+      backoffMs: 1,
+      fetchImpl: async () => {
+        fetches++;
+        throw new Error("fetch failed");
+      },
+    });
+    await expect(client.multi([{ action: "addNotes", params: { notes: [] } }])).rejects.toThrow(
+      /Failed to reach AnkiConnect/,
+    );
+    expect(fetches).toBe(1);
+  });
+
+  it("abortAnkiConnect() aborts an in-flight request via the fetch signal", async () => {
+    let fetches = 0;
+    let signal: AbortSignal | null | undefined;
+    const client = new AnkiClient({
+      url: "http://127.0.0.1:8765",
+      retries: 3,
+      backoffMs: 1,
+      fetchImpl: (_url, init) => {
+        fetches++;
+        signal = init?.signal;
+        return new Promise((_resolve, reject) => {
+          signal?.addEventListener("abort", () =>
+            reject(Object.assign(new Error("This operation was aborted"), { name: "AbortError" })),
+          );
+        });
+      },
+    });
+    const pending = client.version();
+    expect(signal).toBeDefined();
+    abortAnkiConnect();
+    expect(signal?.aborted).toBe(true);
+    await expect(pending).rejects.toBeInstanceOf(AnkiConnectError);
+    // the abort short-circuits the retry loop — no re-sends
     expect(fetches).toBe(1);
   });
 
