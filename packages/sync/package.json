@@ -1,0 +1,25 @@
+{
+  "name": "@anki-xml/sync",
+  "version": "0.0.4",
+  "description": "Reconcile files with collections",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json"
+  },
+  "main": "./src/index.ts",
+  "files": [
+    "src"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@anki-xml/anki": "workspace:*",
+    "@anki-xml/checkpoint": "workspace:*",
+    "@anki-xml/planner": "workspace:*",
+    "@anki-xml/diff": "workspace:*",
+    "@anki-xml/utils": "workspace:*",
+    "@anki-xml/logger": "workspace:*"
+  }
+}

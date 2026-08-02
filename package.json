@@ -1,14 +1,15 @@
 {
   "name": "anki-xml",
-  "version": "0.0.3",
-  "description": "XML-first CLI for importing Anki flashcards via AnkiConnect. Streaming, validated, recoverable.",
+  "version": "0.0.4",
+  "description": "Git + Terraform for Anki knowledge. XML-first infrastructure-as-code toolkit for Anki collections.",
   "keywords": [
     "anki",
     "anki-connect",
     "flashcards",
     "xml",
     "cli",
-    "ai-agent"
+    "ai-agent",
+    "infrastructure-as-code"
   ],
   "homepage": "https://github.com/master8848/Anki-import#readme",
   "bugs": "https://github.com/master8848/Anki-import/issues",
@@ -36,23 +37,45 @@
   ],
   "scripts": {
     "build": "node scripts/build.mjs",
-    "start": "tsx src/index.ts",
-    "import": "tsx src/index.ts import",
+    "start": "tsx packages/cli/src/index.ts",
+    "import": "tsx packages/cli/src/index.ts import",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "doctor": "node dist/cli.js doctor"
+    "doctor": "node dist/cli.js doctor",
+    "lint": "tsc --noEmit"
   },
   "dependencies": {
+    "chokidar": "^4.0.3",
+    "csv-parse": "^5.6.0",
     "fast-xml-parser": "^5.10.0",
-    "valibot": "^1.1.0"
+    "valibot": "^1.1.0",
+    "yaml": "^2.7.0"
   },
   "devDependencies": {
     "@types/node": "^22.15.0",
     "esbuild": "^0.25.0",
     "tsx": "^4.19.0",
     "typescript": "^5.8.0",
-    "vitest": "^3.1.0"
+    "vitest": "^3.1.0",
+    "@anki-xml/anki": "workspace:*",
+    "@anki-xml/checkpoint": "workspace:*",
+    "@anki-xml/cli": "workspace:*",
+    "@anki-xml/config": "workspace:*",
+    "@anki-xml/core": "workspace:*",
+    "@anki-xml/diff": "workspace:*",
+    "@anki-xml/logger": "workspace:*",
+    "@anki-xml/mcp": "workspace:*",
+    "@anki-xml/media": "workspace:*",
+    "@anki-xml/models": "workspace:*",
+    "@anki-xml/parser": "workspace:*",
+    "@anki-xml/planner": "workspace:*",
+    "@anki-xml/rollback": "workspace:*",
+    "@anki-xml/stats": "workspace:*",
+    "@anki-xml/sync": "workspace:*",
+    "@anki-xml/tags": "workspace:*",
+    "@anki-xml/utils": "workspace:*",
+    "@anki-xml/validation": "workspace:*"
   },
   "packageManager": "pnpm@10.33.0",
   "engines": {
@@ -60,7 +83,9 @@
     "pnpm": ">=10.0.0"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild"]
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   },
   "repository": {
     "type": "git",

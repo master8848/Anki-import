@@ -1,0 +1,21 @@
+{
+  "name": "@anki-xml/parser",
+  "version": "0.0.4",
+  "description": "XML, YAML, JSON, Markdown, CSV parsers",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json"
+  },
+  "main": "./src/index.ts",
+  "files": [
+    "src"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@anki-xml/models": "workspace:*",
+    "@anki-xml/utils": "workspace:*"
+  }
+}

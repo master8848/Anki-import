@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { parseDocument } from "../src/parser/xml-parser.ts";
-import { validateNotes, formatValidationError } from "../src/core/validator/validate.ts";
+import { parseDocument } from "@anki-xml/parser";
+import { validateNotes, formatValidationError } from "@anki-xml/validation";
 
 describe("validator", () => {
   it("accepts a valid Basic note", () => {

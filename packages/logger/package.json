@@ -1,0 +1,20 @@
+{
+  "name": "@anki-xml/logger",
+  "version": "0.0.4",
+  "description": "Level-aware logging",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json"
+  },
+  "main": "./src/index.ts",
+  "files": [
+    "src"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@anki-xml/utils": "workspace:*"
+  }
+}

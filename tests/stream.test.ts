@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Readable } from "node:stream";
-import { parseXmlStream } from "../src/parser/xml-stream.ts";
-import { validateNote } from "../src/core/validator/validate.ts";
+import { parseXmlStream } from "@anki-xml/parser";
+import { validateNote } from "@anki-xml/validation";
 
 function makeHugeXml(n: number): string {
   const parts = ['<anki deck="Huge">'];

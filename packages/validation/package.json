@@ -1,0 +1,22 @@
+{
+  "name": "@anki-xml/validation",
+  "version": "0.0.4",
+  "description": "Valibot schemas, note/deck/import validation",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json"
+  },
+  "main": "./src/index.ts",
+  "files": [
+    "src"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@anki-xml/models": "workspace:*",
+    "@anki-xml/parser": "workspace:*",
+    "@anki-xml/utils": "workspace:*"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "name": "@anki-xml/diff",
+  "version": "0.0.4",
+  "description": "Note, deck, and tag diffs",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json"
+  },
+  "main": "./src/index.ts",
+  "files": [
+    "src"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@anki-xml/anki": "workspace:*",
+    "@anki-xml/planner": "workspace:*",
+    "@anki-xml/utils": "workspace:*",
+    "@anki-xml/logger": "workspace:*"
+  }
+}

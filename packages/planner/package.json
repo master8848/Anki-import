@@ -1,0 +1,23 @@
+{
+  "name": "@anki-xml/planner",
+  "version": "0.0.4",
+  "description": "Dry-run planning: add/update/remove/duplicates",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json"
+  },
+  "main": "./src/index.ts",
+  "files": [
+    "src"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@anki-xml/anki": "workspace:*",
+    "@anki-xml/models": "workspace:*",
+    "@anki-xml/utils": "workspace:*",
+    "@anki-xml/logger": "workspace:*"
+  }
+}

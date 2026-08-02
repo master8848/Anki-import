@@ -1,0 +1,28 @@
+{
+  "name": "@anki-xml/core",
+  "version": "0.0.4",
+  "description": "Orchestration: import pipeline, doctor, plugins, watch",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json"
+  },
+  "main": "./src/index.ts",
+  "files": [
+    "src"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@anki-xml/parser": "workspace:*",
+    "@anki-xml/validation": "workspace:*",
+    "@anki-xml/planner": "workspace:*",
+    "@anki-xml/checkpoint": "workspace:*",
+    "@anki-xml/anki": "workspace:*",
+    "@anki-xml/models": "workspace:*",
+    "@anki-xml/config": "workspace:*",
+    "@anki-xml/utils": "workspace:*",
+    "@anki-xml/logger": "workspace:*"
+  }
+}

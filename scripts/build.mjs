@@ -8,7 +8,7 @@ const SHEBANG = "#!/usr/bin/env node\n";
 await fs.mkdir("dist", { recursive: true });
 
 await build({
-  entryPoints: ["src/index.ts"],
+  entryPoints: ["packages/cli/src/index.ts"],
   outfile: OUT,
   bundle: true,
   platform: "node",
@@ -16,6 +16,7 @@ await build({
   format: "esm",
   banner: { js: SHEBANG.trimEnd() },
   packages: "bundle",
+  external: ["chokidar", "yaml", "csv-parse"],
   sourcemap: false,
   minify: false,
   logLevel: "info",

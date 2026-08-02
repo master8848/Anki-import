@@ -1,0 +1,35 @@
+{
+  "name": "@anki-xml/cli",
+  "version": "0.0.4",
+  "description": "CLI entry point — argv parsing and command wrappers only",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json"
+  },
+  "main": "./src/index.ts",
+  "files": [
+    "src"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@anki-xml/core": "workspace:*",
+    "@anki-xml/planner": "workspace:*",
+    "@anki-xml/sync": "workspace:*",
+    "@anki-xml/diff": "workspace:*",
+    "@anki-xml/tags": "workspace:*",
+    "@anki-xml/media": "workspace:*",
+    "@anki-xml/stats": "workspace:*",
+    "@anki-xml/models": "workspace:*",
+    "@anki-xml/config": "workspace:*",
+    "@anki-xml/logger": "workspace:*",
+    "@anki-xml/utils": "workspace:*",
+    "@anki-xml/anki": "workspace:*",
+    "@anki-xml/parser": "workspace:*",
+    "@anki-xml/validation": "workspace:*",
+    "@anki-xml/checkpoint": "workspace:*",
+    "@anki-xml/rollback": "workspace:*"
+  }
+}

@@ -21,6 +21,6 @@
     "esModuleInterop": true,
     "resolveJsonModule": true
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts"],
-  "exclude": ["src_legacy", "dist", "node_modules"]
+  "include": ["packages/**/src/**/*.ts", "tests/**/*.ts", "apps/**/src/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
 }

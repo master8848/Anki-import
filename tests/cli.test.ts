@@ -2,14 +2,14 @@ import { describe, expect, it } from "vitest";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-import { main } from "../src/cli/run.ts";
+import { main } from "@anki-xml/cli";
 import {
   createCheckpoint,
   listCheckpoints,
   loadCheckpoint,
   checkpointDir,
-} from "../src/core/checkpoint/checkpoint.ts";
-import { rollback } from "../src/core/rollback/rollback.ts";
+} from "@anki-xml/checkpoint";
+import { rollback } from "@anki-xml/rollback";
 
 describe("cli", () => {
   it("prints version", async () => {

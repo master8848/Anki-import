@@ -1,0 +1,22 @@
+{
+  "name": "@anki-xml/config",
+  "version": "0.0.4",
+  "description": "Workspace config discovery and loading",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json"
+  },
+  "main": "./src/index.ts",
+  "files": [
+    "src"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@anki-xml/parser": "workspace:*",
+    "@anki-xml/utils": "workspace:*",
+    "@anki-xml/logger": "workspace:*"
+  }
+}

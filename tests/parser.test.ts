@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseDocument, XmlParseError } from "../src/parser/xml-parser.ts";
+import { parseDocument, XmlParseError } from "@anki-xml/parser";
 
 describe("xml parser", () => {
   it("parses legacy short field tags", () => {
