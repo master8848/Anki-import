@@ -77,9 +77,21 @@ export interface AnkiConnectResponse<T> {
   error: string | null;
 }
 
+/**
+ * A note AnkiConnect rejected during import/sync.
+ * Canonical shape for every "failed" item across packages.
+ */
+export interface ImportFailure {
+  /** 1-based note number from the source document. */
+  noteNumber: number;
+  /** Why the note was rejected (duplicate, invalid, ...). */
+  reason: string;
+}
+
 export interface ImportResult {
   created: number;
-  failed: { noteNumber: number; reason: string }[];
+  /** Notes AnkiConnect rejected; each entry carries `noteNumber` + `reason`. */
+  failed: ImportFailure[];
   noteIds: number[];
 }
 

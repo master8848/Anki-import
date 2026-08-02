@@ -282,9 +282,8 @@ export const MODELS: ReadonlyMap<string, NoteModel>;          // Basic, Basic (a
                                                               // Basic (optional reversed card),
                                                               // Basic (type in the answer), Cloze
 export const SUPPORTED_MODEL_NAMES: string[];
-export function createCustomModel(name: string): NoteModel;   // accepts any field; displayName or capitalized name
+export const DEFAULT_MODEL_NAME = "Basic";
 export function getModel(name: string): NoteModel | undefined;
-export function getSupportedModelNames(): string[];
 ```
 
 **Anki introspection** (`anki.ts`):
@@ -292,8 +291,6 @@ export function getSupportedModelNames(): string[];
 ```ts
 export interface ModelInfo { name: string; fields: string[]; }
 export async function listModels(client: AnkiClient): Promise<ModelInfo[]>;
-export async function fields(client: AnkiClient, modelName: string): Promise<string[]>;
-export async function templates(client: AnkiClient, modelName: string): Promise<Record<string, Record<string, string>>>;
 ```
 
 ---

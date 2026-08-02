@@ -70,17 +70,32 @@ export function diffNote(a: ValidatedNote, b: ValidatedNote): NoteDiff {
 /**
  * Diff two note lists, matching by id when both sides have one,
  * otherwise by `number`. Unmatched notes become "added" or "removed".
+ *
+ * Runs in O(n): notes are indexed into id/number buckets and each `before`
+ * note scans only its candidate matches (the earliest unmatched `after`
+ * note, mirroring the previous `.find` semantics).
  */
 export function diffNoteLists(before: ValidatedNote[], after: ValidatedNote[]): NoteDiff[] {
+  const idBuckets = new Map<number, number[]>();
+  const numBuckets = new Map<number, number[]>();
+  for (let i = 0; i < after.length; i++) {
+    const a = after[i]!;
+    if (a.id !== undefined) {
+      const list = idBuckets.get(a.id);
+      if (list) list.push(i);
+      else idBuckets.set(a.id, [i]);
+    }
+    const list = numBuckets.get(a.number);
+    if (list) list.push(i);
+    else numBuckets.set(a.number, [i]);
+  }
+
   const used = new Set<number>();
   const out: NoteDiff[] = [];
 
   for (const b of before) {
-    const match = after.find((a) => {
-      if (used.has(a.number)) return false;
-      if (b.id !== undefined && a.id !== undefined) return a.id === b.id;
-      return a.number === b.number;
-    });
+    const idCands = b.id !== undefined ? idBuckets.get(b.id) : undefined;
+    const match = firstUnusedMatch(after, idCands, numBuckets.get(b.number), used);
     if (!match) {
       out.push({ noteNumber: b.number, id: b.id, kind: "removed", changes: [] });
       continue;
@@ -94,4 +109,40 @@ export function diffNoteLists(before: ValidatedNote[], after: ValidatedNote[]): 
     out.push({ noteNumber: a.number, id: a.id, kind: "added", changes: [] });
   }
   return out;
+}
+
+/**
+ * First `after` note (by position) among the candidate buckets that has
+ * not been consumed. Both candidate lists are ascending, so a single
+ * merge pass reproduces the previous linear `.find` scan.
+ */
+function firstUnusedMatch(
+  after: ValidatedNote[],
+  idCands: readonly number[] | undefined,
+  numCands: readonly number[] | undefined,
+  used: Set<number>,
+): ValidatedNote | undefined {
+  const ids = idCands ?? [];
+  const nums = numCands ?? [];
+  let i = 0;
+  let j = 0;
+  while (i < ids.length || j < nums.length) {
+    const idIdx = i < ids.length ? ids[i]! : Infinity;
+    const numIdx = j < nums.length ? nums[j]! : Infinity;
+    let idx: number;
+    if (idIdx < numIdx) {
+      idx = idIdx;
+      i++;
+    } else if (numIdx < idIdx) {
+      idx = numIdx;
+      j++;
+    } else {
+      idx = idIdx;
+      i++;
+      j++;
+    }
+    const a = after[idx]!;
+    if (!used.has(a.number)) return a;
+  }
+  return undefined;
 }

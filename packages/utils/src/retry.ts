@@ -39,23 +39,3 @@ export function chunkArray<T>(arr: readonly T[], size: number): T[][] {
   }
   return out;
 }
-
-/** Run an async mapper over items with bounded concurrency. */
-export async function mapLimit<T, R>(
-  items: readonly T[],
-  limit: number,
-  fn: (item: T, index: number) => Promise<R>,
-): Promise<R[]> {
-  const results: R[] = new Array(items.length);
-  let next = 0;
-  async function worker(): Promise<void> {
-    while (true) {
-      const idx = next++;
-      if (idx >= items.length) return;
-      results[idx] = await fn(items[idx]!, idx);
-    }
-  }
-  const workers = Array.from({ length: Math.min(limit, items.length) }, () => worker());
-  await Promise.all(workers);
-  return results;
-}

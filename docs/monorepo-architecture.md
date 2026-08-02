@@ -58,8 +58,9 @@ ankiXML/
 
 - **utils** — shared in-memory types (`ParsedNote`, `ValidatedNote`,
   `AnkiConnectNote`, `Checkpoint`, `ImportResult`, …) plus zero-dep
-  helpers: `sha1Hex`/`shortId`, `withRetries`/`chunkArray`/`mapLimit`,
-  file I/O, and formatting. No dependencies; everything else depends on it.
+  helpers: `withRetries`/`chunkArray`, `parseTagList`,
+  `toAnkiConnectNote`, and file I/O. No dependencies; everything else
+  depends on it.
 - **logger** — leveled logger (`error|warn|info|debug`). Errors and
   warnings go to stderr, info/debug to stdout; `--json`/`--quiet` clamp
   the level so stdout stays protocol-clean.

@@ -27,6 +27,17 @@ function findField(fields: ParsedField[], name: XmlFieldName): ParsedField | und
   return fields.find((f) => f.name === name);
 }
 
+/** Required fields are guaranteed by validation; throw otherwise. */
+function requiredField(
+  fields: ParsedField[],
+  name: XmlFieldName,
+  modelName: string,
+): ParsedField {
+  const f = findField(fields, name);
+  if (!f) throw new Error(`model "${modelName}" is missing required field <${name}>`);
+  return f;
+}
+
 /** Normalize field keys: "Front" / "front" → "front". */
 export function normalizeFieldKey(name: string): string {
   const lower = name.trim().toLowerCase();
@@ -34,8 +45,11 @@ export function normalizeFieldKey(name: string): string {
   return lower;
 }
 
+/** Default note type when a document does not specify one. */
+export const DEFAULT_MODEL_NAME = "Basic";
+
 const BASIC: NoteModel = {
-  name: "Basic",
+  name: DEFAULT_MODEL_NAME,
   accepts: new Set<XmlFieldName>(["front", "back"]),
   required: new Set<XmlFieldName>(["front", "back"]),
   optional: new Set<XmlFieldName>(),
@@ -43,8 +57,8 @@ const BASIC: NoteModel = {
   checkContent: true,
   buildFields(fields) {
     return {
-      Front: findField(fields, "front")!.html.trim(),
-      Back: findField(fields, "back")!.html.trim(),
+      Front: requiredField(fields, "front", DEFAULT_MODEL_NAME).html.trim(),
+      Back: requiredField(fields, "back", DEFAULT_MODEL_NAME).html.trim(),
     };
   },
 };
@@ -127,31 +141,8 @@ const modelRegistry = new Map<string, NoteModel>([
 
 export const MODELS: ReadonlyMap<string, NoteModel> = modelRegistry;
 
-export function createCustomModel(name: string): NoteModel {
-  return {
-    name,
-    accepts: new Set<string>(),
-    required: new Set<string>(),
-    optional: new Set<string>(),
-    fieldNames: {},
-    checkContent: true,
-    buildFields(fields: ParsedField[]) {
-      const res: Record<string, string> = {};
-      for (const f of fields) {
-        const key = f.displayName || (f.name.charAt(0).toUpperCase() + f.name.slice(1));
-        res[key] = f.html.trim();
-      }
-      return res;
-    },
-  };
-}
-
 export function getModel(name: string): NoteModel | undefined {
   return modelRegistry.get(name);
-}
-
-export function getSupportedModelNames(): string[] {
-  return [...modelRegistry.keys()];
 }
 
 export const SUPPORTED_MODEL_NAMES: string[] = [...modelRegistry.keys()];

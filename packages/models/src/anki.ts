@@ -20,16 +20,3 @@ export async function listModels(client: AnkiClient): Promise<ModelInfo[]> {
   }
   return out;
 }
-
-/** Field names of a single model. */
-export async function fields(client: AnkiClient, modelName: string): Promise<string[]> {
-  return client.modelFieldNames(modelName);
-}
-
-/** Template (card) definitions of a single model. */
-export async function templates(
-  client: AnkiClient,
-  modelName: string,
-): Promise<Record<string, Record<string, string>>> {
-  return client.modelTemplates(modelName);
-}

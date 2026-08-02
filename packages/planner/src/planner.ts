@@ -5,18 +5,11 @@
 
 import { AnkiClient } from "@anki-xml/anki";
 import type { Logger } from "@anki-xml/logger";
-import type { AnkiConnectNote, ValidatedNote } from "@anki-xml/utils";
+import { chunkArray, toAnkiConnectNote } from "@anki-xml/utils";
+import type { ValidatedNote } from "@anki-xml/utils";
+import { diffNote } from "@anki-xml/diff";
 
-/** Convert a validated note into an AnkiConnect addNotes payload. */
-export function toAnkiConnectNote(note: ValidatedNote, allowDuplicate = false): AnkiConnectNote {
-  return {
-    deckName: note.deckName,
-    modelName: note.modelName,
-    fields: { ...note.fields },
-    tags: [...note.tags],
-    options: { allowDuplicate },
-  };
-}
+export { toAnkiConnectNote };
 
 export interface PlannedUpdate {
   id: number;
@@ -42,21 +35,12 @@ export interface PlannerOptions {
   logger?: Logger;
 }
 
-function sameTags(a: string[], b: string[]): boolean {
-  const sa = [...a].sort();
-  const sb = [...b].sort();
-  if (sa.length !== sb.length) return false;
-  return sa.every((t, i) => t === sb[i]);
-}
-
-function changedFieldKeys(
-  note: ValidatedNote,
+/** Flatten AnkiConnect notesInfo fields into a ValidatedNote-style record. */
+function collectionFields(
   fields: Record<string, { value: string; order: number }>,
-): string[] {
-  const out: string[] = [];
-  for (const [name, value] of Object.entries(note.fields)) {
-    if (fields[name]?.value !== value) out.push(name);
-  }
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [name, f] of Object.entries(fields)) out[name] = f.value;
   return out;
 }
 
@@ -79,22 +63,32 @@ export async function buildPlan(
   const plan: ImportPlan = { add: [], update: [], remove: [], duplicates: [], unchanged: 0 };
   const missingTargets: ValidatedNote[] = [];
 
-  for (let i = 0; i < targets.length; i += batchSize) {
-    const batch = targets.slice(i, i + batchSize);
+  for (const batch of chunkArray(targets, batchSize)) {
     opts.logger?.debug(`plan: notesInfo(${batch.length})`);
     const infos = await client.notesInfo(batch.map((n) => n.id));
     infos.forEach((info, j) => {
-      const note = batch[j]!;
+      const note = batch[j];
+      if (!note) return;
       if (info === null) {
         missingTargets.push({ ...note, id: undefined });
         opts.logger?.debug(`plan: note ${note.number} missing in collection -> add`);
         return;
       }
-      const changedFields = changedFieldKeys(note, info.fields);
-      const sameModel = note.modelName === info.modelName;
-      const sameDeck = info.deckName === undefined || info.deckName === note.deckName;
-      const sameTagsArr = sameTags(note.tags, info.tags);
-      if (sameModel && sameDeck && sameTagsArr && changedFields.length === 0) {
+      const collectionNote: ValidatedNote = {
+        number: note.number,
+        id: note.id,
+        deckName: info.deckName ?? note.deckName,
+        modelName: info.modelName,
+        fields: collectionFields(info.fields),
+        tags: info.tags,
+      };
+      const d = diffNote(collectionNote, note);
+      // Only field keys the source note actually carries count as edits;
+      // fields the collection has but the note omits are not user changes.
+      const changedFields = d.changes
+        .filter((c) => note.fields[c.field] !== undefined)
+        .map((c) => c.field);
+      if (changedFields.length === 0 && !d.deckChanged && !d.modelChanged && !d.tagsChanged) {
         plan.unchanged++;
         return;
       }
@@ -103,14 +97,14 @@ export async function buildPlan(
     });
   }
 
-  for (let i = 0; i < candidates.length; i += batchSize) {
-    const batch = candidates.slice(i, i + batchSize);
+  for (const batch of chunkArray(candidates, batchSize)) {
     opts.logger?.debug(`plan: canAddNotes(${batch.length})`);
     const results = await client.canAddNotes(
       batch.map((n) => toAnkiConnectNote(n, opts.allowDuplicate)),
     );
     results.forEach((ok, j) => {
-      const note = batch[j]!;
+      const note = batch[j];
+      if (!note) return;
       if (ok) plan.add.push(note);
       else plan.duplicates.push(note);
     });

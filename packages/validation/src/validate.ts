@@ -12,13 +12,7 @@ import type {
   ValidatedNote,
   ValidationResult,
 } from "@anki-xml/utils";
-
-function parseTags(raw: string): string[] {
-  return raw
-    .split(/\s+/)
-    .map((t) => t.trim())
-    .filter((t) => t.length > 0);
-}
+import { parseTagList } from "@anki-xml/utils";
 
 function validateTags(
   tags: string[],
@@ -139,8 +133,9 @@ export function validateNote(
   }
 
   if (errors.length > 0) return { errors, warnings };
+  if (!model) return { errors, warnings };
 
-  const tags = parseTags(note.tags);
+  const tags = parseTagList(note.tags);
   validateTags(tags, note.number, warnings);
 
   return {
@@ -149,7 +144,7 @@ export function validateNote(
       id: note.id,
       deckName: deck,
       modelName: note.type,
-      fields: model!.buildFields(note.fields),
+      fields: model.buildFields(note.fields),
       tags,
       line: note.line,
     },

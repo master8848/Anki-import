@@ -88,4 +88,31 @@ describe("diffNoteLists", () => {
       [3, "added"],
     ]);
   });
+
+  it("lets the earliest after-note win when number and id point elsewhere", () => {
+    const before = [note({ number: 5, id: 7 })];
+    const after = [note({ number: 5 }), note({ number: 99, id: 7, fields: { Front: "new" } })];
+    const diffs = diffNoteLists(before, after);
+    expect(diffs.map((d) => [d.noteNumber, d.kind])).toEqual([
+      [5, "unchanged"],
+      [99, "added"],
+    ]);
+  });
+
+  it("buckets duplicate numbers without matching a consumed note twice", () => {
+    const before = [note({ number: 5 })];
+    const after = [note({ number: 5 }), note({ number: 5, fields: { Front: "dup" } })];
+    const diffs = diffNoteLists(before, after);
+    expect(diffs.map((d) => [d.noteNumber, d.kind])).toEqual([[5, "unchanged"]]);
+  });
+
+  it("handles duplicate ids without matching one collection note twice", () => {
+    const before = [note({ number: 1, id: 7 }), note({ number: 2, id: 7 })];
+    const after = [note({ number: 1, id: 7 })];
+    const diffs = diffNoteLists(before, after);
+    expect(diffs.map((d) => [d.noteNumber, d.kind])).toEqual([
+      [1, "unchanged"],
+      [2, "removed"],
+    ]);
+  });
 });

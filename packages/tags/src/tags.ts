@@ -5,16 +5,10 @@
 import type { AnkiClient } from "@anki-xml/anki";
 import { chunkArray } from "@anki-xml/utils";
 
+export { parseTagList } from "@anki-xml/utils";
+
 /** Batch size for addTags/removeTags note ids. */
 const TAGS_CHUNK_SIZE = 500;
-
-/** Split a whitespace-separated tag string into trimmed, non-empty tags. */
-export function parseTagList(raw: string): string[] {
-  return raw
-    .split(/\s+/)
-    .map((t) => t.trim())
-    .filter((t) => t.length > 0);
-}
 
 /** List all tags in the collection, sorted. */
 export async function listTags(client: AnkiClient): Promise<string[]> {

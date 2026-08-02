@@ -13,11 +13,3 @@ export function fileExistsSync(p: string): boolean {
     return false;
   }
 }
-
-export async function readTextFile(p: string): Promise<string> {
-  return fs.promises.readFile(p, "utf8");
-}
-
-export async function writeTextFile(p: string, content: string): Promise<void> {
-  await fs.promises.writeFile(p, content, "utf8");
-}
