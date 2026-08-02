@@ -43,6 +43,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "doctor": "node dist/cli.js doctor",
+    "smoke:mcp": "node scripts/smoke-mcp.mjs",
+    "release:version": "node scripts/version-sync.mjs",
     "lint": "tsc --noEmit"
   },
   "dependencies": {
