@@ -15,6 +15,7 @@ import {
   type JsonRpcResponse,
 } from "./protocol.ts";
 import { McpToolError, TOOLS, toolErrorData } from "./tools.ts";
+import { MCP_VERSION } from "./version.ts";
 
 export interface McpServerOptions {
   url?: string;
@@ -45,7 +46,7 @@ async function handleMessage(
     return success(req.id, {
       protocolVersion: "2024-11-05",
       capabilities: { tools: { listChanged: false } },
-      serverInfo: { name: "anki-xml", version: "0.0.4" },
+      serverInfo: { name: "anki-xml", version: MCP_VERSION },
     });
   }
   if (req.method === "notifications/initialized" || req.method === "ping") {
@@ -55,6 +56,7 @@ async function handleMessage(
     return success(req.id, {
       tools: [...toolsByName.values()].map((t) => ({
         name: t.name,
+        tier: t.tier,
         description: t.description,
         inputSchema: t.inputSchema,
       })),

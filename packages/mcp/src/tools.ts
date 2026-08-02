@@ -19,8 +19,12 @@ export interface McpContext {
   fetchImpl?: typeof fetch;
 }
 
+/** Feature tiering from the project spec (P0 core, P1 common, P2 advanced). */
+export type McpToolTier = "P0" | "P1" | "P2";
+
 export interface McpTool {
   name: string;
+  tier: McpToolTier;
   description: string;
   inputSchema: Record<string, unknown>;
   handler: (params: Record<string, unknown>, ctx: McpContext) => Promise<unknown>;
@@ -33,6 +37,7 @@ const optStr = v.optional(v.string());
 
 function makeTool(
   name: string,
+  tier: McpToolTier,
   description: string,
   properties: Record<string, { type: string; description?: string }>,
   required: string[] | undefined,
@@ -41,6 +46,7 @@ function makeTool(
 ): McpTool {
   return {
     name,
+    tier,
     description,
     inputSchema: {
       type: "object",
@@ -68,6 +74,7 @@ export function clientFor(ctx: McpContext): AnkiClient {
 export const TOOLS: McpTool[] = [
   makeTool(
     "import_xml",
+    "P0",
     "Import a file (xml/yaml/json/csv/md) into Anki. Creates notes; rejects update targets (use sync).",
     {
       file: { type: "string", description: "Path to the file to import" },
@@ -103,6 +110,7 @@ export const TOOLS: McpTool[] = [
   ),
   makeTool(
     "validate_xml",
+    "P0",
     "Validate a file without contacting Anki. Returns note count, errors, warnings.",
     { file: { type: "string" } },
     ["file"],
@@ -117,6 +125,7 @@ export const TOOLS: McpTool[] = [
   ),
   makeTool(
     "doctor",
+    "P0",
     "Diagnose AnkiConnect and collection health. Every failing check carries fix steps (hints).",
     {},
     undefined,
@@ -125,6 +134,7 @@ export const TOOLS: McpTool[] = [
   ),
   makeTool(
     "list_decks",
+    "P0",
     "List all deck names in the collection.",
     {},
     undefined,
@@ -133,6 +143,7 @@ export const TOOLS: McpTool[] = [
   ),
   makeTool(
     "list_models",
+    "P0",
     "List all note types in the collection with their fields.",
     {},
     undefined,
@@ -141,6 +152,7 @@ export const TOOLS: McpTool[] = [
   ),
   makeTool(
     "plan_import",
+    "P1",
     "Dry-run preview: how a file would change the collection (add/update/remove/duplicates/unchanged).",
     {
       file: { type: "string" },
@@ -171,6 +183,7 @@ export const TOOLS: McpTool[] = [
   ),
   makeTool(
     "add_note",
+    "P1",
     "Add a single note.",
     {
       deck: { type: "string" },
@@ -203,6 +216,7 @@ export const TOOLS: McpTool[] = [
   ),
   makeTool(
     "add_notes",
+    "P1",
     "Add many notes in one request (batch).",
     {
       notes: {
@@ -239,6 +253,7 @@ export const TOOLS: McpTool[] = [
   ),
   makeTool(
     "find_notes",
+    "P1",
     "Find note ids by Anki search query (e.g. 'deck:Japanese').",
     { query: { type: "string" } },
     ["query"],
@@ -247,6 +262,7 @@ export const TOOLS: McpTool[] = [
   ),
   makeTool(
     "get_tags",
+    "P1",
     "List all tags in the collection.",
     {},
     undefined,
@@ -255,6 +271,7 @@ export const TOOLS: McpTool[] = [
   ),
   makeTool(
     "add_tags",
+    "P1",
     "Add tags to notes.",
     { note_ids: { type: "array", description: "Anki note ids" }, tags: { type: "string" } },
     ["note_ids", "tags"],
@@ -264,6 +281,7 @@ export const TOOLS: McpTool[] = [
   ),
   makeTool(
     "remove_tags",
+    "P1",
     "Remove tags from notes.",
     { note_ids: { type: "array" }, tags: { type: "string" } },
     ["note_ids", "tags"],
@@ -273,6 +291,7 @@ export const TOOLS: McpTool[] = [
   ),
   makeTool(
     "diff",
+    "P1",
     "Per-note field diff between a file and the live collection.",
     { file: { type: "string" } },
     ["file"],
@@ -286,6 +305,7 @@ export const TOOLS: McpTool[] = [
   ),
   makeTool(
     "store_media",
+    "P2",
     "Store a media file (image/audio) in the Anki media folder. Pass base64-encoded bytes.",
     { filename: { type: "string" }, data_base64: { type: "string" } },
     ["filename", "data_base64"],
@@ -295,6 +315,7 @@ export const TOOLS: McpTool[] = [
   ),
   makeTool(
     "get_media",
+    "P2",
     "Retrieve a media file as base64.",
     { filename: { type: "string" } },
     ["filename"],
@@ -306,6 +327,7 @@ export const TOOLS: McpTool[] = [
   ),
   makeTool(
     "collection_stats",
+    "P2",
     "Collection-level statistics (decks, models, notes, cards, per-deck counts).",
     {},
     undefined,
@@ -314,6 +336,7 @@ export const TOOLS: McpTool[] = [
   ),
   makeTool(
     "sync",
+    "P2",
     "Reconcile a file with the collection (create + update). Without a file, report checkpoint drift.",
     {
       file: { type: "string" },

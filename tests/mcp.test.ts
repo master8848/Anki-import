@@ -63,6 +63,25 @@ describe("mcp tools", () => {
     expect(names).toContain("collection_stats");
   });
 
+  it("assigns every tool a P0/P1/P2 tier per the spec", () => {
+    const p0 = TOOLS.filter((t) => t.tier === "P0").map((t) => t.name);
+    const p1 = TOOLS.filter((t) => t.tier === "P1").map((t) => t.name);
+    const p2 = TOOLS.filter((t) => t.tier === "P2").map((t) => t.name);
+    expect(p0.sort()).toEqual(["doctor", "import_xml", "list_decks", "list_models", "validate_xml"]);
+    expect(p1.sort()).toEqual([
+      "add_note",
+      "add_notes",
+      "add_tags",
+      "diff",
+      "find_notes",
+      "get_tags",
+      "plan_import",
+      "remove_tags",
+    ]);
+    expect(p2.sort()).toEqual(["collection_stats", "get_media", "store_media", "sync"]);
+    expect(TOOLS.every((t) => ["P0", "P1", "P2"].includes(t.tier))).toBe(true);
+  });
+
   it("validate_xml validates a temp file", async () => {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), "mcp-"));
     const file = path.join(dir, "ok.xml");

@@ -58,4 +58,15 @@ if (nextHelp !== help) {
   updated++;
 }
 
+const mcpVersionPath = "packages/mcp/src/version.ts";
+const mcpVersion = fs.readFileSync(mcpVersionPath, "utf8");
+const nextMcpVersion = mcpVersion.replace(
+  /export const MCP_VERSION = "[^"]+";/,
+  `export const MCP_VERSION = "${version}";`,
+);
+if (nextMcpVersion !== mcpVersion) {
+  fs.writeFileSync(mcpVersionPath, nextMcpVersion);
+  updated++;
+}
+
 console.log(`version ${version} synced across ${updated} files`);
