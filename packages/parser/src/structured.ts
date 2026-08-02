@@ -35,6 +35,9 @@ export interface StructuredDocument {
 
 const SPECIAL_KEYS = new Set(["deck", "model", "tags", "notes"]);
 
+/** Default note model when a document does not specify one. */
+export const DEFAULT_MODEL = "Basic";
+
 function coerceTags(raw: string | string[] | undefined): string {
   if (raw === undefined) return "";
   if (Array.isArray(raw)) return raw.filter((t) => typeof t === "string").join(" ");
@@ -46,7 +49,7 @@ export function structuredToNotes(doc: StructuredDocument): {
   defaultDeck: string;
 } {
   const defaultDeck = doc.deck ?? "";
-  const defaultModel = doc.model ?? "Basic";
+  const defaultModel = doc.model ?? DEFAULT_MODEL;
   const defaultTags = coerceTags(doc.tags);
 
   const notes: ParsedNote[] = [];

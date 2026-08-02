@@ -19,6 +19,9 @@
  */
 
 import { parse as parseYamlText } from "yaml";
+import { escapeCdataForHtml } from "./cdata.ts";
+import { YamlParseError } from "./errors.ts";
+import { DEFAULT_MODEL } from "./structured.ts";
 import type { ParsedNote } from "@anki-xml/utils";
 
 export interface MarkdownParseOptions {
@@ -41,23 +44,15 @@ function splitFrontmatter(source: string): { frontmatter: Frontmatter | null; bo
   if (fmText) {
     try {
       fm = (parseYamlText(fmText) ?? {}) as Frontmatter;
-    } catch {
-      fm = {};
+    } catch (err) {
+      throw new YamlParseError(`Invalid YAML frontmatter: ${(err as Error).message}`);
     }
   }
   return { frontmatter: fm, body: trimmed.slice(end + 4).replace(/^\n+/, "") };
 }
 
-/** Escape text for safe HTML embedding. */
-export function escapeHtml(s: string): string {
-  return s
-    .replace(/&(?!(?:[a-zA-Z][a-zA-Z0-9]*|#\d+|#x[0-9a-fA-F]+);)/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
-
 function bodyToHtml(body: string): string {
-  return escapeHtml(body.trim()).replace(/\n/g, "<br>");
+  return escapeCdataForHtml(body.trim()).replace(/\n/g, "<br>");
 }
 
 /** Parse a Markdown document into notes. Never decodes XML entities. */
@@ -67,10 +62,9 @@ export function parseMarkdown(source: string, opts: MarkdownParseOptions = {}): 
 } {
   const { frontmatter, body } = splitFrontmatter(source);
   const defaultDeck = frontmatter?.deck ?? opts.defaultDeck ?? "";
-  const defaultModel = frontmatter?.model ?? "Basic";
-  const defaultTags = Array.isArray(frontmatter?.tags)
-    ? frontmatter!.tags.join(" ")
-    : (frontmatter?.tags ?? "");
+  const defaultModel = frontmatter?.model ?? DEFAULT_MODEL;
+  const fmTags = frontmatter?.tags;
+  const defaultTags = Array.isArray(fmTags) ? fmTags.join(" ") : (fmTags ?? "");
 
   const notes: ParsedNote[] = [];
   let number = 0;
@@ -109,7 +103,7 @@ function makeNote(
     deck,
     tags,
     fields: [
-      { name: "front", html: escapeHtml(cur.front) },
+      { name: "front", html: escapeCdataForHtml(cur.front) },
       { name: "back", html: bodyToHtml(cur.body.join("\n")) },
     ],
     unknownElements: [],

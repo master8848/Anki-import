@@ -3,17 +3,7 @@
  * Never decodes entities. CDATA / comments / PIs are distinct token kinds.
  */
 
-export class XmlParseError extends Error {
-  line?: number;
-  column?: number;
-
-  constructor(message: string, loc?: { line?: number; column?: number }) {
-    super(message);
-    this.name = "XmlParseError";
-    if (loc?.line !== undefined) this.line = loc.line;
-    if (loc?.column !== undefined) this.column = loc.column;
-  }
-}
+import { XmlParseError } from "./errors.ts";
 
 export type XmlToken =
   | { kind: "start"; name: string; tagStart: number; tagEnd: number; contentStart: number; attrs: Record<string, string> }
@@ -198,28 +188,37 @@ export function tokenizeXml(source: string): XmlToken[] {
   return tokens;
 }
 
-export function sourceLocation(source: string, offset: number): { line: number; column: number } {
-  let line = 1;
-  let column = 1;
-  for (let i = 0; i < offset && i < source.length; i++) {
-    if (source.charCodeAt(i) === 10) {
-      line++;
-      column = 1;
-    } else {
-      column++;
-    }
+/**
+ * Build a line-start offset index for `source` (one entry per `\n` + 1).
+ * Used with `lineAtOffset` to resolve offsets to line/column in O(log n).
+ */
+export function createLineIndex(source: string): number[] {
+  const starts = [0];
+  for (let i = 0; i < source.length; i++) {
+    if (source.charCodeAt(i) === 10) starts.push(i + 1);
   }
-  return { line, column };
+  return starts;
 }
 
-export function offsetOfLine(source: string, line: number): number {
-  if (line <= 1) return 0;
-  let current = 1;
-  for (let i = 0; i < source.length; i++) {
-    if (source.charCodeAt(i) === 10) {
-      current++;
-      if (current === line) return i + 1;
-    }
+/**
+ * Resolve an offset to `{ line, column }` via binary search on a
+ * `createLineIndex` index. Column counts bytes since the line start.
+ */
+export function lineAtOffset(
+  lineStarts: number[],
+  offset: number,
+): { line: number; column: number } {
+  let lo = 0;
+  let hi = lineStarts.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (lineStarts[mid]! <= offset) lo = mid;
+    else hi = mid - 1;
   }
-  return source.length;
+  return { line: lo + 1, column: offset - lineStarts[lo]! + 1 };
+}
+
+/** One-shot convenience: build an index and resolve a single offset. */
+export function sourceLocation(source: string, offset: number): { line: number; column: number } {
+  return lineAtOffset(createLineIndex(source), offset);
 }

@@ -8,6 +8,8 @@
  */
 
 import { parse } from "csv-parse/sync";
+import { CsvParseError } from "./errors.ts";
+import { DEFAULT_MODEL } from "./structured.ts";
 import type { ParsedField, ParsedNote } from "@anki-xml/utils";
 
 export interface CsvParseOptions {
@@ -33,11 +35,11 @@ export function parseCsv(source: string, opts: CsvParseOptions = {}): {
       bom: true,
     }) as Record<string, string>[];
   } catch (err) {
-    throw new Error(`Invalid CSV: ${(err as Error).message}`);
+    throw new CsvParseError(`Invalid CSV: ${(err as Error).message}`);
   }
 
   const defaultDeck = opts.defaultDeck ?? "";
-  const defaultModel = opts.defaultModel ?? "Basic";
+  const defaultModel = opts.defaultModel ?? DEFAULT_MODEL;
   const notes: ParsedNote[] = [];
 
   for (let i = 0; i < rows.length; i++) {

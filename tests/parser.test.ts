@@ -75,4 +75,36 @@ describe("xml parser", () => {
     `);
     expect(doc.notes[0]!.fields[0]!.html).toContain("cat.png");
   });
+
+  it("reports note line numbers", () => {
+    const doc = parseDocument(`<anki deck="D">
+  <deck name="X">
+    <note type="Basic">
+      <front>q</front>
+      <back>a</back>
+    </note>
+  </deck>
+</anki>`);
+    expect(doc.notes).toHaveLength(1);
+    expect(doc.notes[0]!.line).toBe(3);
+  });
+
+  it("attaches line/column to PCDATA errors", () => {
+    try {
+      parseDocument(`<anki deck="D">\n<note type="Basic">\n<front>a < b</front>\n</note>\n</anki>`);
+      expect.unreachable();
+    } catch (err) {
+      if (!(err instanceof XmlParseError)) throw err;
+      expect(err.code).toBe("XML_PARSE_ERROR");
+      expect(err.line).toBe(3);
+      expect(err.message).toMatch(/Malformed XML|Illegal '<' in PCDATA/);
+    }
+  });
+
+  it("reports correct line numbers for late notes", () => {
+    const source = `<!-- header comment -->\n<anki deck="D">\n<note type="Basic"><front>q</front><back>a</back></note>\n<note type="Basic"><front>q2</front><back>a2</back></note>\n</anki>`;
+    const doc = parseDocument(source);
+    expect(doc.notes[0]!.line).toBe(3);
+    expect(doc.notes[1]!.line).toBe(4);
+  });
 });

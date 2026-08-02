@@ -6,11 +6,12 @@
 import { XMLValidator } from "fast-xml-parser";
 import { escapeCdataForHtml, HTML_VOID_TAGS } from "./cdata.ts";
 import {
-  sourceLocation,
+  createLineIndex,
+  lineAtOffset,
   tokenizeXml,
-  XmlParseError,
   type XmlToken,
 } from "./tokenize.ts";
+import { XmlParseError } from "./errors.ts";
 import { normalizeFieldKey } from "@anki-xml/models";
 import type { ParsedField, ParsedNote } from "@anki-xml/utils";
 
@@ -69,23 +70,32 @@ function extractTextContent(source: string, tokens: XmlToken[], openIdx: number)
   return extractFieldContent(source, tokens, openIdx).html;
 }
 
-function validatePcdata(source: string, tokens: XmlToken[]): void {
+function validatePcdata(source: string, tokens: XmlToken[], lineStarts: number[]): void {
   for (const tok of tokens) {
     if (tok.kind !== "text") continue;
     const text = source.slice(tok.start, tok.end);
     if (text.includes("<")) {
       throw new XmlParseError(
         `Illegal '<' in PCDATA at offset ${tok.start}; use &lt; or wrap the field in CDATA`,
-        sourceLocation(source, tok.start),
+        lineAtOffset(lineStarts, tok.start),
       );
     }
     if (/&(?!(?:[a-zA-Z][a-zA-Z0-9]*|#[0-9]+|#x[0-9a-fA-F]+);)/.test(text)) {
       throw new XmlParseError(
         `Illegal '&' in PCDATA at offset ${tok.start}; use &amp; or wrap the field in CDATA`,
-        sourceLocation(source, tok.start),
+        lineAtOffset(lineStarts, tok.start),
       );
     }
   }
+}
+
+export interface ParseDocumentOptions {
+  /**
+   * Skip the fast-xml-parser well-formedness pass. The streaming path
+   * passes `false` because its scanner + tokenizer already detect
+   * unterminated CDATA/comments/tags and PCDATA issues.
+   */
+  validateWellformed?: boolean;
 }
 
 /**
@@ -93,18 +103,24 @@ function validatePcdata(source: string, tokens: XmlToken[]): void {
  *   <anki deck="X"> <note>...</note> </anki>
  *   <anki> <deck name="X"> <note>...</note> </deck> </anki>
  */
-export function parseDocument(source: string): ParsedDocument {
-  const wellFormed = XMLValidator.validate(source, {
-    allowBooleanAttributes: false,
-    unpairedTags: [...HTML_VOID_TAGS],
-  });
-  if (wellFormed !== true) {
-    const { msg, line, col } = wellFormed.err;
-    throw new XmlParseError(`Malformed XML: ${msg}`, { line, column: col });
+export function parseDocument(
+  source: string,
+  options: ParseDocumentOptions = {},
+): ParsedDocument {
+  if (options.validateWellformed !== false) {
+    const wellFormed = XMLValidator.validate(source, {
+      allowBooleanAttributes: false,
+      unpairedTags: [...HTML_VOID_TAGS],
+    });
+    if (wellFormed !== true) {
+      const { msg, line, col } = wellFormed.err;
+      throw new XmlParseError(`Malformed XML: ${msg}`, { line, column: col });
+    }
   }
 
+  const lineStarts = createLineIndex(source);
   const tokens = tokenizeXml(source);
-  validatePcdata(source, tokens);
+  validatePcdata(source, tokens, lineStarts);
 
   let rootIdx = -1;
   for (let i = 0; i < tokens.length; i++) {
@@ -149,7 +165,7 @@ export function parseDocument(source: string): ParsedDocument {
 
     noteCounter++;
     const noteClose = findMatchingClose(tokens, i, "note");
-    const loc = sourceLocation(source, tok.tagStart);
+    const loc = lineAtOffset(lineStarts, tok.tagStart);
     const inheritedDeck = deckStack.length > 0 ? deckStack[deckStack.length - 1]! : "";
     const note: ParsedNote = {
       number: noteCounter,
@@ -230,10 +246,6 @@ export function parseDocument(source: string): ParsedDocument {
   }
 
   return { notes, defaultDeck, version };
-}
-
-export function parseNotes(source: string): ParsedNote[] {
-  return parseDocument(source).notes;
 }
 
 export { XmlParseError, HTML_VOID_TAGS };
