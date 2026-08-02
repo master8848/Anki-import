@@ -40,6 +40,21 @@ export function applyOverrides(
   }
 }
 
+export function emptyPlan(): ImportPlan {
+  return { add: [], update: [], remove: [], duplicates: [], unchanged: 0 };
+}
+
+/** Validate notes and append validator-plugin errors. */
+export function validateWithPlugins(
+  notes: ParsedNote[],
+  defaultDeck: string,
+  source?: string,
+): { notes: ValidatedNote[]; errors: NoteValidationError[]; warnings: NoteValidationError[] } {
+  const result = validateNotes(notes, defaultDeck, source);
+  for (const note of notes) result.errors.push(...runValidatorPlugins(note));
+  return result;
+}
+
 /** Parse + validate a file (any registered format), then plan it. */
 export async function planFile(
   file: string,
@@ -74,14 +89,12 @@ export async function planFile(
 
   applyOverrides(notes, opts);
 
-  const validated = validateNotes(notes, defaultDeck);
-  const errors = [...validated.errors];
-  for (const note of notes) errors.push(...runValidatorPlugins(note));
+  const validated = validateWithPlugins(notes, defaultDeck);
 
-  if (errors.length > 0) {
+  if (validated.errors.length > 0) {
     return {
-      plan: { add: [], update: [], remove: [], duplicates: [], unchanged: 0 },
-      errors,
+      plan: emptyPlan(),
+      errors: validated.errors,
       warnings: validated.warnings,
       validated: [],
       noteCount: notes.length,
@@ -97,5 +110,11 @@ export async function planFile(
     logger,
   });
 
-  return { plan, errors, warnings: validated.warnings, validated: validated.notes, noteCount: notes.length };
+  return {
+    plan,
+    errors: validated.errors,
+    warnings: validated.warnings,
+    validated: validated.notes,
+    noteCount: notes.length,
+  };
 }

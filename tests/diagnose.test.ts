@@ -31,10 +31,15 @@ describe("classifyConnectError", () => {
     expect(diag.hints.join(" ")).toMatch(/restart anki/i);
   });
 
-  it("classifies invalid JSON as bad-json", () => {
+  it("no longer classifies by message text — arbitrary messages are unknown", () => {
     const diag = classifyConnectError(new Error("Invalid JSON from AnkiConnect: x"), "url");
-    expect(diag.cause).toBe("bad-json");
-    expect(diag.hints.join(" ")).toMatch(/something else is listening/i);
+    expect(diag.cause).toBe("unknown");
+  });
+
+  it("classifies missing error codes as unknown with a doctor suggestion", () => {
+    const diag = classifyConnectError(new Error("something went wrong"), "url");
+    expect(diag.cause).toBe("unknown");
+    expect(diag.suggestion).toBe("anki-import doctor");
   });
 });
 

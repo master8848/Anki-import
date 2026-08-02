@@ -82,7 +82,6 @@ describe("collectionStats", () => {
     expect(calls.map((c) => c.action)).toEqual([
       "deckNames",
       "cardCounts",
-      "deckNames",
       "modelNames",
       "findNotes",
     ]);

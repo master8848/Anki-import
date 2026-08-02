@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AnkiClient } from "@anki-xml/anki";
+import { AnkiClient, AnkiConnectError } from "@anki-xml/anki";
 
 function jsonResponse(result: unknown, error: string | null = null) {
   return {
@@ -39,6 +39,91 @@ describe("AnkiClient", () => {
     await client.updateNoteFields({ id: 42, fields: { Front: "x" } });
     expect(calls[0]!.action).toBe("updateNoteFields");
     expect(calls[0]!.params["note"]).toEqual({ id: 42, fields: { Front: "x" } });
+  });
+
+  it("multi runs all actions in a single request and unwraps per-action envelopes", async () => {
+    const { client, calls } = makeClient(async () => [
+      { result: ["Default"], error: null },
+      { result: null, error: null },
+    ]);
+    const res = await client.multi([
+      { action: "deckNames" },
+      { action: "updateNote", params: { note: { id: 1, fields: {}, tags: [] } } },
+    ]);
+    expect(res).toEqual([["Default"], null]);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.action).toBe("multi");
+    const actions = calls[0]!.params["actions"] as Array<Record<string, unknown>>;
+    expect(actions).toHaveLength(2);
+    expect(actions[0]).toEqual({ action: "deckNames", version: 6, params: {} });
+    expect(actions[1]).toMatchObject({ action: "updateNote", version: 6 });
+  });
+
+  it("multi throws on a per-action error envelope", async () => {
+    const { client } = makeClient(async () => [
+      { result: null, error: "updateNote failed" },
+    ]);
+    await expect(client.multi([{ action: "updateNote", params: {} }])).rejects.toThrow(
+      /AnkiConnect error: updateNote failed/,
+    );
+  });
+
+  it("classifies malformed JSON bodies as bad-json without retrying", async () => {
+    let fetches = 0;
+    const client = new AnkiClient({
+      url: "http://127.0.0.1:8765",
+      retries: 3,
+      backoffMs: 1,
+      fetchImpl: async () => {
+        fetches++;
+        return { ok: true, json: async () => JSON.parse("not json") } as unknown as Response;
+      },
+    });
+    try {
+      await client.version();
+      expect.unreachable();
+    } catch (err) {
+      const e = err as AnkiConnectError;
+      expect(e.cause).toBe("bad-json");
+      expect(e.hints?.length).toBeGreaterThan(0);
+    }
+    expect(fetches).toBe(1);
+  });
+
+  it("classifies null JSON envelopes as bad-json", async () => {
+    const client = new AnkiClient({
+      url: "http://127.0.0.1:8765",
+      retries: 1,
+      fetchImpl: async () => ({ ok: true, json: async () => null }) as unknown as Response,
+    });
+    try {
+      await client.version();
+      expect.unreachable();
+    } catch (err) {
+      expect((err as AnkiConnectError).cause).toBe("bad-json");
+    }
+  });
+
+  it("treats HTTP errors as permanent (no retry) with cause http", async () => {
+    let fetches = 0;
+    const client = new AnkiClient({
+      url: "http://127.0.0.1:8765",
+      retries: 3,
+      backoffMs: 1,
+      fetchImpl: async () => {
+        fetches++;
+        return { ok: false, status: 500, statusText: "Internal Server Error" } as unknown as Response;
+      },
+    });
+    try {
+      await client.version();
+      expect.unreachable();
+    } catch (err) {
+      const e = err as AnkiConnectError;
+      expect(e.cause).toBe("http");
+      expect(e.hints?.length).toBeGreaterThan(0);
+    }
+    expect(fetches).toBe(1);
   });
 
   it("storeMedia base64-encodes payload", async () => {

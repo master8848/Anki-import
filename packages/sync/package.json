@@ -18,6 +18,7 @@
     "@anki-xml/anki": "workspace:*",
     "@anki-xml/checkpoint": "workspace:*",
     "@anki-xml/logger": "workspace:*",
-    "@anki-xml/planner": "workspace:*"
+    "@anki-xml/planner": "workspace:*",
+    "@anki-xml/utils": "workspace:*"
   }
 }

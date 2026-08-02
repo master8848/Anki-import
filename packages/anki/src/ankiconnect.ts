@@ -4,8 +4,10 @@
  */
 
 import type { AnkiConnectNote, AnkiConnectResponse } from "@anki-xml/utils";
+import { withRetries } from "@anki-xml/utils";
 import {
   classifyConnectError,
+  connectDiagnosis,
   DEFAULT_URL,
   type ConnectDiagnosis,
 } from "./errors.ts";
@@ -165,6 +167,42 @@ export class AnkiClient {
     await this.invoke<null>("deleteNotes", { notes: noteIds });
   }
 
+  /**
+   * Execute several actions in a single HTTP request. AnkiConnect runs
+   * them sequentially in order. Each action is sent with version 6, so
+   * every returned element is a per-action `{ result, error }` envelope;
+   * the first failing action throws (mirroring invoke()), otherwise the
+   * per-action results are returned in order.
+   */
+  async multi(
+    requests: Array<{ action: string; params?: Record<string, unknown> }>,
+  ): Promise<unknown[]> {
+    if (requests.length === 0) return [];
+    const results = await this.invoke<unknown[]>("multi", {
+      actions: requests.map((r) => ({
+        action: r.action,
+        version: 6,
+        params: r.params ?? {},
+      })),
+    });
+    if (!Array.isArray(results)) {
+      throw new AnkiConnectError(`Unexpected response from 'multi': ${JSON.stringify(results)}`);
+    }
+    return results.map((element, i) => {
+      const name = requests[i]?.action ?? String(i);
+      if (element === null || typeof element !== "object" || Array.isArray(element)) {
+        throw new AnkiConnectError(
+          `Unexpected result from '${name}' in multi: ${JSON.stringify(element)}`,
+        );
+      }
+      const env = element as Record<string, unknown>;
+      if (env["error"] !== undefined && env["error"] !== null) {
+        throw new AnkiConnectError(`AnkiConnect error: ${String(env["error"])}`);
+      }
+      return env["result"] ?? null;
+    });
+  }
+
   async notesInfo(noteIds: number[]): Promise<(AnkiConnectNoteInfo | null)[]> {
     if (noteIds.length === 0) return [];
     const res = await this.invoke<(AnkiConnectNoteInfo | null)[]>("notesInfo", {
@@ -266,75 +304,105 @@ export class AnkiClient {
 
   private async invoke<T>(action: string, params?: Record<string, unknown>): Promise<T> {
     const body = JSON.stringify({ action, version: 6, params: params ?? {} });
-    let lastError: Error | null = null;
-    let lastDiagnosis: ConnectDiagnosis | undefined;
-
-    for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
+    const run = async (): Promise<T> => {
+      let response: Response;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
       try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
-        let response: Response;
-        try {
-          response = await this.fetchImpl(`${this.url}/`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body,
-            signal: controller.signal,
-          });
-        } finally {
-          clearTimeout(timeoutId);
-        }
-
-        if (!response.ok) {
-          const diag = classifyConnectError(
-            new AnkiConnectError(`AnkiConnect returned HTTP ${response.status} ${response.statusText}`),
-            this.url,
-          );
-          lastDiagnosis = diag;
-          throw new AnkiConnectError(
-            `AnkiConnect returned HTTP ${response.status} ${response.statusText}`,
-            diag,
-          );
-        }
-
-        let envelope: AnkiConnectResponse<T>;
-        try {
-          envelope = (await response.json()) as AnkiConnectResponse<T>;
-        } catch (err) {
-          const diag = classifyConnectError(
-            new Error(`Invalid JSON from AnkiConnect: ${(err as Error).message}`),
-            this.url,
-          );
-          lastDiagnosis = diag;
-          throw new AnkiConnectError(`Invalid JSON from AnkiConnect: ${(err as Error).message}`, diag);
-        }
-
-        if (envelope.error) {
-          throw new AnkiConnectError(`AnkiConnect error: ${envelope.error}`);
-        }
-        return envelope.result as T;
-      } catch (err) {
-        lastError = err as Error;
-        if (lastError instanceof AnkiConnectError && lastError.cause === undefined) {
-          // Anki returned an envelope error — treat as permanent.
-          throw lastError;
-        }
-        if (lastDiagnosis === undefined) {
-          lastDiagnosis = classifyConnectError(err, this.url);
-        }
-        if (attempt < this.maxRetries) {
-          const delay = this.backoffMs * 2 ** (attempt - 1);
-          await new Promise((r) => setTimeout(r, delay));
-        }
+        response = await this.fetchImpl(`${this.url}/`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body,
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeoutId);
       }
-    }
 
-    throw new AnkiConnectError(
-      `Failed to reach AnkiConnect at ${this.url}: ${lastError?.message ?? "Unknown error"}`,
-      lastDiagnosis,
-    );
+      if (!response.ok) {
+        throw new AnkiConnectError(
+          `AnkiConnect returned HTTP ${response.status} ${response.statusText}`,
+          connectDiagnosis(
+            "http",
+            this.url,
+            `AnkiConnect returned HTTP ${response.status} ${response.statusText}`,
+          ),
+        );
+      }
+
+      const envelope = await this.parseEnvelope(response, action);
+      if (envelope.error) {
+        throw new AnkiConnectError(`AnkiConnect error: ${envelope.error}`);
+      }
+      return envelope.result as T;
+    };
+    try {
+      // AnkiConnectError is only thrown for permanent failures (HTTP
+      // status, bad JSON, envelope error); raw fetch/network errors are
+      // retried with backoff by withRetries.
+      return await withRetries(run, {
+        retries: this.maxRetries,
+        backoffMs: this.backoffMs,
+        shouldAbort: (err) => err instanceof AnkiConnectError,
+      });
+    } catch (err) {
+      if (err instanceof AnkiConnectError) throw err;
+      throw new AnkiConnectError(
+        `Failed to reach AnkiConnect at ${this.url}: ${err instanceof Error ? err.message : String(err)}`,
+        classifyConnectError(err, this.url),
+      );
+    }
+  }
+
+  /** Parse and shape-check an AnkiConnect envelope; bad shapes get the stable `bad-json` cause. */
+  private async parseEnvelope(
+    response: Response,
+    action: string,
+  ): Promise<AnkiConnectResponse<unknown>> {
+    let raw: unknown;
+    try {
+      raw = await response.json();
+    } catch (err) {
+      throw new AnkiConnectError(
+        `Invalid JSON from AnkiConnect: ${(err as Error).message}`,
+        connectDiagnosis(
+          "bad-json",
+          this.url,
+          `Non-AnkiConnect response from ${this.url}: ${(err as Error).message}`,
+        ),
+      );
+    }
+    if (raw === null || typeof raw !== "object" || Array.isArray(raw)) {
+      throw new AnkiConnectError(
+        `Invalid response from '${action}': ${JSON.stringify(raw)}`,
+        connectDiagnosis(
+          "bad-json",
+          this.url,
+          `Non-AnkiConnect response from ${this.url}: expected an object envelope, got ${JSON.stringify(raw)}`,
+        ),
+      );
+    }
+    const env = raw as Record<string, unknown>;
+    if (!("result" in env) || !("error" in env)) {
+      throw new AnkiConnectError(
+        `Invalid response envelope from '${action}': missing result/error`,
+        connectDiagnosis(
+          "bad-json",
+          this.url,
+          `Non-AnkiConnect response from ${this.url}: envelope missing result/error fields`,
+        ),
+      );
+    }
+    if (env["error"] !== null && typeof env["error"] !== "string") {
+      throw new AnkiConnectError(
+        `Invalid response envelope from '${action}': error must be a string or null`,
+        connectDiagnosis(
+          "bad-json",
+          this.url,
+          `Non-AnkiConnect response from ${this.url}: malformed error field`,
+        ),
+      );
+    }
+    return { result: env["result"] ?? null, error: env["error"] as string | null };
   }
 }
-
-/** @deprecated Use AnkiClient */
-export const AnkiConnectClient = AnkiClient;

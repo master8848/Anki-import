@@ -70,6 +70,26 @@ function nodeCode(err: unknown): string | undefined {
   return undefined;
 }
 
+/**
+ * Build a diagnosis for a failure whose cause is known at the throw
+ * site (HTTP status / malformed body) — never infer causes from
+ * message text (AGENTS.md #9).
+ */
+export function connectDiagnosis(
+  cause: "http" | "bad-json",
+  url: string,
+  detail: string,
+): ConnectDiagnosis {
+  return {
+    reachable: false,
+    cause,
+    url,
+    detail,
+    hints: cause === "http" ? HTTP_HINTS : BAD_JSON_HINTS,
+    suggestion: "anki-import doctor",
+  };
+}
+
 /** Classify a thrown fetch error against AnkiConnect. */
 export function classifyConnectError(err: unknown, url: string): ConnectDiagnosis {
   const code = nodeCode(err);
@@ -103,25 +123,6 @@ export function classifyConnectError(err: unknown, url: string): ConnectDiagnosi
       detail: `Could not resolve or reach ${url} (${code}).`,
       hints: NETWORK_HINTS,
       suggestion: "anki-import doctor",
-    };
-  }
-  if (/invalid json/i.test(msg)) {
-    return {
-      reachable: false,
-      cause: "bad-json",
-      url,
-      detail: `Non-AnkiConnect response from ${url}: ${msg}`,
-      hints: BAD_JSON_HINTS,
-      suggestion: "anki-import doctor",
-    };
-  }
-  if (/http \d+/i.test(msg)) {
-    return {
-      reachable: false,
-      cause: "http",
-      url,
-      detail: `AnkiConnect returned an HTTP error: ${msg}`,
-      hints: HTTP_HINTS,
     };
   }
   return {

@@ -2,16 +2,10 @@
  * Collection and deck statistics via AnkiConnect.
  */
 
-import type { AnkiClient } from "@anki-xml/anki";
+import type { AnkiClient, DeckCardCounts } from "@anki-xml/anki";
 
 /** Per-deck card counts, mirroring AnkiConnect cardCounts. */
-export interface DeckCounts {
-  new: number;
-  learning: number;
-  review: number;
-  suspended: number;
-  buried: number;
-}
+export type DeckCounts = DeckCardCounts;
 
 /** Overall collection statistics. */
 export interface CollectionStats {
@@ -36,13 +30,14 @@ export async function deckStats(
 
 /** Collection-level totals and per-deck counts. */
 export async function collectionStats(client: AnkiClient): Promise<CollectionStats> {
-  const perDeck = await deckStats(client);
+  const decks = await client.deckNames();
+  const perDeck = await client.cardCounts(decks);
   const cards = Object.values(perDeck).reduce(
     (sum, c) => sum + c.new + c.learning + c.review + c.suspended + c.buried,
     0,
   );
   return {
-    decks: (await client.deckNames()).length,
+    decks: decks.length,
     models: (await client.modelNames()).length,
     notes: (await client.findNotes("deck:*")).length,
     cards,

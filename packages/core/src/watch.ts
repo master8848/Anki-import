@@ -4,6 +4,8 @@
  * while agents pass --yes.
  */
 
+import * as fs from "node:fs";
+import { basename, dirname } from "node:path";
 import { applyPlan } from "@anki-xml/sync";
 import type { Logger } from "@anki-xml/logger";
 import { planFile } from "./plan.ts";
@@ -32,13 +34,18 @@ export async function watchFile(
   file: string,
   opts: WatchOptions = {},
 ): Promise<{ stop: () => Promise<void> }> {
-  const { watch } = await import("chokidar");
   const logger = opts.logger;
   let timer: ReturnType<typeof setTimeout> | null = null;
   let running = false;
+  let pending = false;
 
   const onChange = async (): Promise<void> => {
-    if (running) return;
+    if (running) {
+      // A change landed while an apply was in flight — re-run the latest
+      // one once the current apply finishes instead of dropping it.
+      pending = true;
+      return;
+    }
     running = true;
     try {
       logger?.info(`Change detected: ${file}`);
@@ -84,15 +91,24 @@ export async function watchFile(
       logger?.error(`watch error: ${(err as Error).message}`);
     } finally {
       running = false;
+      if (pending) {
+        pending = false;
+        void onChange();
+      }
     }
   };
 
-  const watcher = watch(file, { ignoreInitial: true });
-  watcher.on("change", () => {
+  // Watch the parent directory so the watch survives editor save
+  // patterns that rename the file (single file, no recursion needed).
+  const dir = dirname(file);
+  const target = basename(file);
+  const watcher = fs.watch(dir, (_event, filename) => {
+    const name = typeof filename === "string" ? filename : null;
+    if (name !== null && name !== target) return;
     if (timer) clearTimeout(timer);
     timer = setTimeout(() => void onChange(), 300);
   });
-  watcher.on("error", (err: unknown) => logger?.error(`watch error: ${(err as Error).message}`));
+  watcher.on("error", (err: Error) => logger?.error(`watch error: ${err.message}`));
 
   return {
     stop: async () => {

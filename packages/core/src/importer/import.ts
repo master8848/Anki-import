@@ -6,9 +6,9 @@
 import * as fsp from "node:fs/promises";
 import { Readable } from "node:stream";
 import { AnkiClient } from "@anki-xml/anki";
-import { XmlParseError, parseDocument, parseXmlFileStream } from "@anki-xml/parser";
-import { validateNote, validateNotes } from "@anki-xml/validation";
-import { createCheckpoint } from "@anki-xml/checkpoint";
+import { parseDocument, parseXmlFileStream } from "@anki-xml/parser";
+import { validateNote } from "@anki-xml/validation";
+import { createCheckpointForNotes } from "@anki-xml/checkpoint";
 import type { Logger } from "@anki-xml/logger";
 import type {
   AnkiConnectNote,
@@ -17,6 +17,7 @@ import type {
   ParsedNote,
   ValidatedNote,
 } from "@anki-xml/utils";
+import { applyOverrides, validateWithPlugins } from "../plan.ts";
 import {
   applyTransformers,
   getImporterFor,
@@ -58,6 +59,10 @@ function toPayload(note: ValidatedNote, allowDuplicate: boolean): AnkiConnectNot
   };
 }
 
+function emptyImportResult(): ImportResult {
+  return { created: 0, failed: [], noteIds: [] };
+}
+
 async function flushBatch(
   client: AnkiClient,
   batch: ValidatedNote[],
@@ -81,7 +86,8 @@ async function flushBatch(
   const ids = await client.addNotes(payloads);
   for (let i = 0; i < batch.length; i++) {
     const id = ids[i] ?? null;
-    const note = batch[i]!;
+    const note = batch[i];
+    if (note === undefined) continue;
     if (id === null) {
       result.failed.push({
         noteNumber: note.number,
@@ -120,7 +126,7 @@ async function importValidatedNotes(
 
   if (validationErrors.length > 0) {
     return {
-      result: { created: 0, failed: [], noteIds: [] },
+      result: emptyImportResult(),
       validationErrors,
       warnings,
       validCount: createList.length,
@@ -146,28 +152,14 @@ async function importValidatedNotes(
   await flushBatch(client, batch, allowDuplicate, autoCreateDeck, createdDecks, result);
 
   let checkpointId: string | undefined;
-  if (result.noteIds.length > 0) {
-    const id = opts.checkpointId ?? `import-${Date.now()}`;
-    const deck = createdDecks.size === 1 ? [...createdDecks][0]! : defaultDeck;
-    await createCheckpoint({ id, deck, noteIds: result.noteIds });
-    checkpointId = id;
-  }
+  const checkpoint = await createCheckpointForNotes(createdDecks, result.noteIds, "import", {
+    id: opts.checkpointId,
+    defaultDeck,
+  });
+  checkpointId = checkpoint?.id;
 
   log?.info(`Imported ${result.created} notes.`);
   return { result, validationErrors, warnings, validCount: createList.length, checkpointId };
-}
-
-/** Validate notes and append validator-plugin errors. */
-function validateWithPlugins(
-  notes: ParsedNote[],
-  defaultDeck: string,
-  source: string | undefined,
-): { notes: ValidatedNote[]; errors: NoteValidationError[]; warnings: NoteValidationError[] } {
-  const result = validateNotes(notes, defaultDeck, source);
-  for (const note of notes) {
-    result.errors.push(...runValidatorPlugins(note));
-  }
-  return result;
 }
 
 export async function importFromFile(opts: ImportOptions): Promise<ImportOutcome> {
@@ -176,7 +168,7 @@ export async function importFromFile(opts: ImportOptions): Promise<ImportOutcome
   const allowDuplicate = opts.allowDuplicate ?? false;
   const autoCreateDeck = opts.autoCreateDeck ?? true;
 
-  const result: ImportResult = { created: 0, failed: [], noteIds: [] };
+  const result = emptyImportResult();
   const validationErrors: NoteValidationError[] = [];
   const warnings: NoteValidationError[] = [];
 
@@ -198,23 +190,13 @@ export async function importFromFile(opts: ImportOptions): Promise<ImportOutcome
         client = new AnkiClient({ url: opts.url, fetchImpl: opts.fetchImpl });
       }
 
-      let defaultDeck = "";
-      try {
-        const fh = await fsp.open(opts.inputPath, "r");
-        const buf = Buffer.alloc(4096);
-        const { bytesRead } = await fh.read(buf, 0, 4096, 0);
-        await fh.close();
-        const head = buf.slice(0, bytesRead).toString("utf8");
-        const m = head.match(/<anki\b[^>]*\bdeck\s*=\s*["']([^"']*)["']/);
-        if (m) defaultDeck = m[1]!;
-      } catch {
-        /* continue */
-      }
-
+      // The streaming parser extracts the root deck and per-note decks
+      // itself; no head read needed here.
       let validCount = 0;
-      for await (const parsed of parseXmlFileStream(opts.inputPath, { defaultDeck })) {
+      for await (const parsed of parseXmlFileStream(opts.inputPath)) {
         const transformed = applyTransformers(parsed);
-        const { note, errors, warnings: w } = validateNote(transformed, defaultDeck);
+        applyOverrides([transformed], opts);
+        const { note, errors, warnings: w } = validateNote(transformed, "");
         validationErrors.push(...errors);
         warnings.push(...w);
         validationErrors.push(...runValidatorPlugins(transformed));
@@ -240,7 +222,7 @@ export async function importFromFile(opts: ImportOptions): Promise<ImportOutcome
       if (validationErrors.length > 0) {
         log?.info(`Validated with errors (${validationErrors.length}).`);
         return {
-          result: { created: 0, failed: [], noteIds: [] },
+          result: emptyImportResult(),
           validationErrors,
           warnings,
           validCount,
@@ -257,32 +239,19 @@ export async function importFromFile(opts: ImportOptions): Promise<ImportOutcome
         await flushBatch(client, batch, allowDuplicate, autoCreateDeck, createdDecks, result);
       }
 
-      let checkpointId: string | undefined;
-      if (opts.checkpointId || result.noteIds.length > 0) {
-        const id = opts.checkpointId ?? `import-${Date.now()}`;
-        const deck = createdDecks.size === 1 ? [...createdDecks][0]! : "";
-        await createCheckpoint({ id, deck, noteIds: result.noteIds });
-        checkpointId = id;
-      }
+      const checkpoint = await createCheckpointForNotes(createdDecks, result.noteIds, "import", {
+        id: opts.checkpointId,
+      });
 
       log?.info(`Imported ${result.created} notes.`);
-      return { result, validationErrors, warnings, validCount, checkpointId };
+      return { result, validationErrors, warnings, validCount, checkpointId: checkpoint?.id };
     }
 
     // Non-streaming XML path
     log?.info("Parsing XML...");
     const source = await fsp.readFile(opts.inputPath, "utf8");
-    let parsed;
-    try {
-      parsed = parseDocument(source);
-    } catch (err) {
-      if (err instanceof XmlParseError) throw err;
-      throw err;
-    }
-    for (const n of parsed.notes) {
-      if (opts.deck && !n.deck) n.deck = opts.deck;
-      if (opts.model && !n.type) n.type = opts.model;
-    }
+    const parsed = parseDocument(source);
+    applyOverrides(parsed.notes, opts);
     const transformed = parsed.notes.map(applyTransformers);
     const validated = validateWithPlugins(transformed, parsed.defaultDeck, source);
     validationErrors.push(...validated.errors);
@@ -304,8 +273,7 @@ export async function importFromFile(opts: ImportOptions): Promise<ImportOutcome
   const parsed = { notes: [] as ParsedNote[], defaultDeck: "" };
   for await (const note of plugin.parse(Readable.from([source]))) {
     const n = applyTransformers(note);
-    if (opts.deck && !n.deck) n.deck = opts.deck;
-    if (opts.model && !n.type) n.type = opts.model;
+    applyOverrides([n], opts);
     parsed.notes.push(n);
   }
   if (parsed.notes.length === 0) {

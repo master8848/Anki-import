@@ -4,8 +4,8 @@
  * it both creates and updates notes (import only creates).
  */
 
-import { applyPlan, driftFromCheckpoint, type DriftEntry, type SyncApplyOptions, type SyncApplyResult } from "@anki-xml/sync";
-import { listCheckpoints, type Checkpoint } from "@anki-xml/checkpoint";
+import { applyPlan, driftFromCheckpoint, emptySyncApplyResult, type DriftEntry, type SyncApplyOptions, type SyncApplyResult } from "@anki-xml/sync";
+import { listCheckpoints, loadCheckpoint, type Checkpoint } from "@anki-xml/checkpoint";
 import { planFile, type PlanFileOptions, type PlanFileResult } from "./plan.ts";
 
 export interface SyncFileOptions extends PlanFileOptions, SyncApplyOptions {
@@ -26,7 +26,7 @@ export async function syncFile(file: string, opts: SyncFileOptions = {}): Promis
   if (opts.dryRun) {
     return {
       plan: planned.plan,
-      applied: { created: 0, updated: 0, failed: [], checkpointId: undefined },
+      applied: emptySyncApplyResult(),
       errors: planned.errors,
       warnings: planned.warnings,
     };
@@ -34,7 +34,7 @@ export async function syncFile(file: string, opts: SyncFileOptions = {}): Promis
   if (planned.errors.length > 0 || planned.plan.add.length + planned.plan.update.length === 0) {
     return {
       plan: planned.plan,
-      applied: { created: 0, updated: 0, failed: [], checkpointId: undefined },
+      applied: emptySyncApplyResult(),
       errors: planned.errors,
       warnings: planned.warnings,
     };
@@ -64,7 +64,6 @@ export async function syncStatus(opts: {
 } = {}): Promise<SyncStatusResult> {
   let checkpoint: Checkpoint | null = null;
   if (opts.checkpointId) {
-    const { loadCheckpoint } = await import("@anki-xml/checkpoint");
     checkpoint = await loadCheckpoint(opts.checkpointId);
   } else {
     const all = await listCheckpoints();

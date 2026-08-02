@@ -4,9 +4,10 @@
  */
 
 import { AnkiClient } from "@anki-xml/anki";
-import { createCheckpoint, loadCheckpoint } from "@anki-xml/checkpoint";
+import { createCheckpointForNotes, loadCheckpoint } from "@anki-xml/checkpoint";
 import type { Logger } from "@anki-xml/logger";
 import { toAnkiConnectNote, type ImportPlan } from "@anki-xml/planner";
+import type { ImportResult } from "@anki-xml/utils";
 
 export interface SyncApplyOptions {
   url?: string;
@@ -21,15 +22,19 @@ export interface SyncApplyOptions {
 export interface SyncApplyResult {
   created: number;
   updated: number;
-  failed: { noteNumber: number; reason: string }[];
+  failed: ImportResult["failed"];
   checkpointId?: string;
+}
+
+export function emptySyncApplyResult(): SyncApplyResult {
+  return { created: 0, updated: 0, failed: [] };
 }
 
 /** Apply a plan: create decks, add notes, update fields, write a checkpoint. */
 export async function applyPlan(plan: ImportPlan, opts: SyncApplyOptions = {}): Promise<SyncApplyResult> {
   const batchSize = opts.batchSize ?? 500;
   const client = new AnkiClient({ url: opts.url, fetchImpl: opts.fetchImpl });
-  const result: SyncApplyResult = { created: 0, updated: 0, failed: [] };
+  const result = emptySyncApplyResult();
   const noteIds: number[] = [];
 
   if (plan.add.length > 0 && (opts.autoCreateDeck ?? true)) {
@@ -47,8 +52,8 @@ export async function applyPlan(plan: ImportPlan, opts: SyncApplyOptions = {}): 
     const ids = await client.addNotes(
       batch.map((n) => toAnkiConnectNote(n, opts.allowDuplicate ?? false)),
     );
-    ids.forEach((id, j) => {
-      const note = batch[j] as (typeof batch)[number];
+    batch.forEach((note, j) => {
+      const id = ids[j] ?? null;
       if (id === null) {
         result.failed.push({ noteNumber: note.number, reason: "AnkiConnect returned null id" });
       } else {
@@ -58,24 +63,28 @@ export async function applyPlan(plan: ImportPlan, opts: SyncApplyOptions = {}): 
     });
   }
 
-  for (const planned of plan.update) {
-    opts.logger?.debug(`sync: updateNoteFields(${planned.id})`);
-    await client.updateNoteFields({
-      id: planned.id,
-      fields: { ...planned.note.fields },
-      ...(planned.note.tags.length > 0 && { tags: [...planned.note.tags] }),
-    });
-    result.updated++;
+  // `updateNote` (not `updateNoteFields`) so tags are applied too —
+  // AnkiConnect's updateNoteFields ignores the tags field entirely,
+  // which would leave cleared tags stale on the note.
+  for (let i = 0; i < plan.update.length; i += batchSize) {
+    const batch = plan.update.slice(i, i + batchSize);
+    opts.logger?.debug(`sync: multi(updateNote x${batch.length})`);
+    await client.multi(
+      batch.map((u) => ({
+        action: "updateNote",
+        params: { note: { id: u.id, fields: { ...u.note.fields }, tags: [...u.note.tags] } },
+      })),
+    );
+    result.updated += batch.length;
   }
 
-  const changed = result.created + result.updated;
-  if (changed > 0 || opts.checkpointId !== undefined) {
-    const decks = new Set(plan.add.map((n) => n.deckName));
-    const id = opts.checkpointId ?? `sync-${Date.now()}`;
-    const deck = decks.size === 1 ? [...decks][0]! : "";
-    await createCheckpoint({ id, deck, noteIds });
-    result.checkpointId = id;
-  }
+  const checkpoint = await createCheckpointForNotes(
+    plan.add.map((n) => n.deckName),
+    noteIds,
+    "sync",
+    { id: opts.checkpointId },
+  );
+  result.checkpointId = checkpoint?.id;
 
   return result;
 }
