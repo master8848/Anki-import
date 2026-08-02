@@ -33,6 +33,8 @@ export async function runImportCommand(
       autoCreateDeck: !flagBool(args.rest, "no-auto-create-deck"),
       allowDuplicate: flagBool(args.rest, "allow-duplicate"),
       checkpointId: flagString(args.rest, "checkpoint"),
+      deck: flagString(args.rest, "deck"),
+      model: flagString(args.rest, "model"),
       logger: log,
     });
 

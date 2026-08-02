@@ -35,6 +35,7 @@ const GLOBAL_BOOL = new Set([
   "allow-duplicate",
   "no-auto-create-deck",
   "keep-checkpoint",
+  "yes",
 ]);
 
 const GLOBAL_VALUE = new Set([
@@ -43,6 +44,10 @@ const GLOBAL_VALUE = new Set([
   "checkpoint",
   "note-ids",
   "deck",
+  "model",
+  "query",
+  "as",
+  "out",
 ]);
 
 export function parseArgs(argv: string[]): ParsedArgs {

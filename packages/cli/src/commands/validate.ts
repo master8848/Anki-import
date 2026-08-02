@@ -1,14 +1,15 @@
 import * as fsp from "node:fs/promises";
 import { parseDocument, XmlParseError } from "@anki-xml/parser";
 import { validateNotes, formatValidationError } from "@anki-xml/validation";
-import type { GlobalFlags } from "../args.ts";
+import { flagString, type ParsedArgs } from "../args.ts";
 import type { Logger } from "@anki-xml/logger";
 
 export async function runValidate(
   file: string,
-  flags: GlobalFlags,
+  args: ParsedArgs,
   log: Logger,
 ): Promise<number> {
+  const flags = args.flags;
   let source: string;
   try {
     source = await fsp.readFile(file, "utf8");
@@ -40,6 +41,15 @@ export async function runValidate(
       return 1;
     }
     throw err;
+  }
+
+  const deckOverride = flagString(args.rest, "deck");
+  if (deckOverride) {
+    for (const n of parsed.notes) if (!n.deck) n.deck = deckOverride;
+  }
+  const modelOverride = flagString(args.rest, "model");
+  if (modelOverride) {
+    for (const n of parsed.notes) if (!n.type) n.type = modelOverride;
   }
 
   const result = validateNotes(parsed.notes, parsed.defaultDeck, source);

@@ -33,6 +33,10 @@ export interface ImportOptions {
   autoCreateDeck?: boolean;
   allowDuplicate?: boolean;
   checkpointId?: string;
+  /** Fill empty decks with this value. */
+  deck?: string;
+  /** Fill empty model types with this value. */
+  model?: string;
   logger?: Logger;
 }
 
@@ -275,6 +279,10 @@ export async function importFromFile(opts: ImportOptions): Promise<ImportOutcome
       if (err instanceof XmlParseError) throw err;
       throw err;
     }
+    for (const n of parsed.notes) {
+      if (opts.deck && !n.deck) n.deck = opts.deck;
+      if (opts.model && !n.type) n.type = opts.model;
+    }
     const transformed = parsed.notes.map(applyTransformers);
     const validated = validateWithPlugins(transformed, parsed.defaultDeck, source);
     validationErrors.push(...validated.errors);
@@ -295,7 +303,10 @@ export async function importFromFile(opts: ImportOptions): Promise<ImportOutcome
   const source = await fsp.readFile(opts.inputPath, "utf8");
   const parsed = { notes: [] as ParsedNote[], defaultDeck: "" };
   for await (const note of plugin.parse(Readable.from([source]))) {
-    parsed.notes.push(applyTransformers(note));
+    const n = applyTransformers(note);
+    if (opts.deck && !n.deck) n.deck = opts.deck;
+    if (opts.model && !n.type) n.type = opts.model;
+    parsed.notes.push(n);
   }
   if (parsed.notes.length === 0) {
     parsed.defaultDeck = "";
