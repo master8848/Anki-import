@@ -4,8 +4,11 @@ import type { ImportPlugin } from "./types.ts";
 import type { ParsedNote } from "@anki-xml/utils";
 
 export class XmlImportPlugin implements ImportPlugin {
+  readonly name = "xml";
+
   supports(ext: string): boolean {
-    return ext.toLowerCase() === ".xml" || ext.toLowerCase() === "xml";
+    const e = ext.toLowerCase();
+    return e === ".xml" || e === "xml";
   }
 
   async *parse(input: Readable): AsyncIterable<ParsedNote> {

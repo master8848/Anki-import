@@ -1,10 +1,12 @@
 /**
- * Import orchestration: parse → validate → batch → AnkiConnect.
+ * Import orchestration: parse → transform → validate → batch → AnkiConnect.
+ * Input format is resolved through the plugin registry (XML built-in).
  */
 
 import * as fsp from "node:fs/promises";
+import { Readable } from "node:stream";
 import { AnkiClient } from "@anki-xml/anki";
-import { parseDocument, XmlParseError, parseXmlFileStream } from "@anki-xml/parser";
+import { XmlParseError, parseDocument, parseXmlFileStream } from "@anki-xml/parser";
 import { validateNote, validateNotes } from "@anki-xml/validation";
 import { createCheckpoint } from "@anki-xml/checkpoint";
 import type { Logger } from "@anki-xml/logger";
@@ -12,8 +14,14 @@ import type {
   AnkiConnectNote,
   ImportResult,
   NoteValidationError,
+  ParsedNote,
   ValidatedNote,
 } from "@anki-xml/utils";
+import {
+  applyTransformers,
+  getImporterFor,
+  runValidatorPlugins,
+} from "../plugins/registry.ts";
 
 export interface ImportOptions {
   inputPath: string;
@@ -83,142 +91,49 @@ async function flushBatch(
   batch.length = 0;
 }
 
-export async function importFromFile(opts: ImportOptions): Promise<ImportOutcome> {
-  const log = opts.logger;
+/** Shared tail of both paths: batch the validated notes, write checkpoint. */
+async function importValidatedNotes(
+  opts: ImportOptions,
+  createNotes: ValidatedNote[],
+  validationErrors: NoteValidationError[],
+  warnings: NoteValidationError[],
+  defaultDeck: string,
+  log: Logger | undefined,
+  result: ImportResult,
+): Promise<ImportOutcome> {
   const batchSize = opts.batchSize ?? 500;
   const allowDuplicate = opts.allowDuplicate ?? false;
   const autoCreateDeck = opts.autoCreateDeck ?? true;
 
-  const result: ImportResult = { created: 0, failed: [], noteIds: [] };
-  const validationErrors: NoteValidationError[] = [];
-  const warnings: NoteValidationError[] = [];
-  let validCount = 0;
-
-  if (opts.stream) {
-    log?.info("Parsing XML (stream)...");
-    const batch: ValidatedNote[] = [];
-    const createdDecks = new Set<string>();
-    let client: AnkiClient | null = null;
-    if (!opts.dryRun) {
-      client = new AnkiClient({ url: opts.url, fetchImpl: opts.fetchImpl });
-    }
-
-    let defaultDeck = "";
-    // Peek root deck from first chunk
-    try {
-      const fh = await fsp.open(opts.inputPath, "r");
-      const buf = Buffer.alloc(4096);
-      const { bytesRead } = await fh.read(buf, 0, 4096, 0);
-      await fh.close();
-      const head = buf.slice(0, bytesRead).toString("utf8");
-      const m = head.match(/<anki\b[^>]*\bdeck\s*=\s*["']([^"']*)["']/);
-      if (m) defaultDeck = m[1]!;
-    } catch {
-      /* continue */
-    }
-
-    let noteCount = 0;
-    for await (const parsed of parseXmlFileStream(opts.inputPath, { defaultDeck })) {
-      noteCount++;
-      const { note, errors, warnings: w } = validateNote(parsed, defaultDeck);
-      validationErrors.push(...errors);
-      warnings.push(...w);
-      if (!note) continue;
-      if (note.id !== undefined) {
-        validationErrors.push({
-          noteNumber: note.number,
-          message: `<note id="${note.id}"> is an update target; import creates notes only`,
-          line: note.line,
-        });
-        continue;
-      }
-      validCount++;
-      if (opts.dryRun) continue;
-
-      batch.push(note);
-      if (batch.length >= batchSize && client) {
-        await flushBatch(client, batch, allowDuplicate, autoCreateDeck, createdDecks, result);
-        log?.debug(`Flushed batch; created=${result.created}`);
-      }
-    }
-
-    if (validationErrors.length > 0) {
-      log?.info(`Validated with errors (${validationErrors.length}).`);
-      return { result: { created: 0, failed: [], noteIds: [] }, validationErrors, warnings, validCount };
-    }
-
-    log?.info(`Validated ${validCount} notes...`);
-
-    if (opts.dryRun) {
-      return { result, validationErrors, warnings, validCount };
-    }
-
-    if (client) {
-      await flushBatch(client, batch, allowDuplicate, autoCreateDeck, createdDecks, result);
-    }
-
-    let checkpointId: string | undefined;
-    if (opts.checkpointId || result.noteIds.length > 0) {
-      const id = opts.checkpointId ?? `import-${Date.now()}`;
-      const deck = createdDecks.size === 1 ? [...createdDecks][0]! : "";
-      await createCheckpoint({ id, deck, noteIds: result.noteIds });
-      checkpointId = id;
-    }
-
-    log?.info(`Imported ${result.created} notes.`);
-    void noteCount;
-    return { result, validationErrors, warnings, validCount, checkpointId };
-  }
-
-  // Non-streaming path
-  log?.info("Parsing XML...");
-  const source = await fsp.readFile(opts.inputPath, "utf8");
-  let parsed;
-  try {
-    parsed = parseDocument(source);
-  } catch (err) {
-    if (err instanceof XmlParseError) throw err;
-    throw err;
-  }
-
-  const { notes: validNotes, errors, warnings: w } = validateNotes(
-    parsed.notes,
-    parsed.defaultDeck,
-    source,
-  );
-  validationErrors.push(...errors);
-  warnings.push(...w);
-
-  const createNotes = validNotes.filter((n) => n.id === undefined);
-  for (const idNote of validNotes.filter((n) => n.id !== undefined)) {
+  for (const idNote of createNotes.filter((n) => n.id !== undefined)) {
     validationErrors.push({
       noteNumber: idNote.number,
-      message: `<note id="${idNote.id}"> is an update target; import creates notes only`,
+      message: `<note id="${idNote.id}"> is an update target; import creates notes only (use 'sync')`,
       line: idNote.line,
     });
   }
+  const createList = createNotes.filter((n) => n.id === undefined);
 
   if (validationErrors.length > 0) {
     return {
       result: { created: 0, failed: [], noteIds: [] },
       validationErrors,
       warnings,
-      validCount: createNotes.length,
+      validCount: createList.length,
     };
   }
 
-  validCount = createNotes.length;
-  log?.info(`Validated ${validCount} notes...`);
+  log?.info(`Validated ${createList.length} notes...`);
 
-  if (opts.dryRun || validCount === 0) {
-    return { result, validationErrors, warnings, validCount };
+  if (opts.dryRun || createList.length === 0) {
+    return { result, validationErrors, warnings, validCount: createList.length };
   }
 
   const client = new AnkiClient({ url: opts.url, fetchImpl: opts.fetchImpl });
   const createdDecks = new Set<string>();
   const batch: ValidatedNote[] = [];
 
-  for (const note of createNotes) {
+  for (const note of createList) {
     batch.push(note);
     if (batch.length >= batchSize) {
       await flushBatch(client, batch, allowDuplicate, autoCreateDeck, createdDecks, result);
@@ -229,14 +144,172 @@ export async function importFromFile(opts: ImportOptions): Promise<ImportOutcome
   let checkpointId: string | undefined;
   if (result.noteIds.length > 0) {
     const id = opts.checkpointId ?? `import-${Date.now()}`;
-    const deck =
-      createdDecks.size === 1
-        ? [...createdDecks][0]!
-        : parsed.defaultDeck || "";
+    const deck = createdDecks.size === 1 ? [...createdDecks][0]! : defaultDeck;
     await createCheckpoint({ id, deck, noteIds: result.noteIds });
     checkpointId = id;
   }
 
   log?.info(`Imported ${result.created} notes.`);
-  return { result, validationErrors, warnings, validCount, checkpointId };
+  return { result, validationErrors, warnings, validCount: createList.length, checkpointId };
+}
+
+/** Validate notes and append validator-plugin errors. */
+function validateWithPlugins(
+  notes: ParsedNote[],
+  defaultDeck: string,
+  source: string | undefined,
+): { notes: ValidatedNote[]; errors: NoteValidationError[]; warnings: NoteValidationError[] } {
+  const result = validateNotes(notes, defaultDeck, source);
+  for (const note of notes) {
+    result.errors.push(...runValidatorPlugins(note));
+  }
+  return result;
+}
+
+export async function importFromFile(opts: ImportOptions): Promise<ImportOutcome> {
+  const log = opts.logger;
+  const batchSize = opts.batchSize ?? 500;
+  const allowDuplicate = opts.allowDuplicate ?? false;
+  const autoCreateDeck = opts.autoCreateDeck ?? true;
+
+  const result: ImportResult = { created: 0, failed: [], noteIds: [] };
+  const validationErrors: NoteValidationError[] = [];
+  const warnings: NoteValidationError[] = [];
+
+  const plugin = getImporterFor(opts.inputPath);
+  if (!plugin) {
+    throw new Error(
+      `Unsupported file format: ${opts.inputPath} (expected .xml, .yaml, .yml, .json, .csv, .md — or register an importer plugin)`,
+    );
+  }
+
+  // XML keeps its streaming fast path.
+  if (plugin.name === "xml") {
+    if (opts.stream) {
+      log?.info("Parsing XML (stream)...");
+      const batch: ValidatedNote[] = [];
+      const createdDecks = new Set<string>();
+      let client: AnkiClient | null = null;
+      if (!opts.dryRun) {
+        client = new AnkiClient({ url: opts.url, fetchImpl: opts.fetchImpl });
+      }
+
+      let defaultDeck = "";
+      try {
+        const fh = await fsp.open(opts.inputPath, "r");
+        const buf = Buffer.alloc(4096);
+        const { bytesRead } = await fh.read(buf, 0, 4096, 0);
+        await fh.close();
+        const head = buf.slice(0, bytesRead).toString("utf8");
+        const m = head.match(/<anki\b[^>]*\bdeck\s*=\s*["']([^"']*)["']/);
+        if (m) defaultDeck = m[1]!;
+      } catch {
+        /* continue */
+      }
+
+      let validCount = 0;
+      for await (const parsed of parseXmlFileStream(opts.inputPath, { defaultDeck })) {
+        const transformed = applyTransformers(parsed);
+        const { note, errors, warnings: w } = validateNote(transformed, defaultDeck);
+        validationErrors.push(...errors);
+        warnings.push(...w);
+        validationErrors.push(...runValidatorPlugins(transformed));
+        if (!note) continue;
+        if (note.id !== undefined) {
+          validationErrors.push({
+            noteNumber: note.number,
+            message: `<note id="${note.id}"> is an update target; import creates notes only (use 'sync')`,
+            line: note.line,
+          });
+          continue;
+        }
+        validCount++;
+        if (opts.dryRun) continue;
+
+        batch.push(note);
+        if (batch.length >= batchSize && client) {
+          await flushBatch(client, batch, allowDuplicate, autoCreateDeck, createdDecks, result);
+          log?.debug(`Flushed batch; created=${result.created}`);
+        }
+      }
+
+      if (validationErrors.length > 0) {
+        log?.info(`Validated with errors (${validationErrors.length}).`);
+        return {
+          result: { created: 0, failed: [], noteIds: [] },
+          validationErrors,
+          warnings,
+          validCount,
+        };
+      }
+
+      log?.info(`Validated ${validCount} notes...`);
+
+      if (opts.dryRun) {
+        return { result, validationErrors, warnings, validCount };
+      }
+
+      if (client) {
+        await flushBatch(client, batch, allowDuplicate, autoCreateDeck, createdDecks, result);
+      }
+
+      let checkpointId: string | undefined;
+      if (opts.checkpointId || result.noteIds.length > 0) {
+        const id = opts.checkpointId ?? `import-${Date.now()}`;
+        const deck = createdDecks.size === 1 ? [...createdDecks][0]! : "";
+        await createCheckpoint({ id, deck, noteIds: result.noteIds });
+        checkpointId = id;
+      }
+
+      log?.info(`Imported ${result.created} notes.`);
+      return { result, validationErrors, warnings, validCount, checkpointId };
+    }
+
+    // Non-streaming XML path
+    log?.info("Parsing XML...");
+    const source = await fsp.readFile(opts.inputPath, "utf8");
+    let parsed;
+    try {
+      parsed = parseDocument(source);
+    } catch (err) {
+      if (err instanceof XmlParseError) throw err;
+      throw err;
+    }
+    const transformed = parsed.notes.map(applyTransformers);
+    const validated = validateWithPlugins(transformed, parsed.defaultDeck, source);
+    validationErrors.push(...validated.errors);
+    warnings.push(...validated.warnings);
+    return importValidatedNotes(
+      opts,
+      validated.notes,
+      validationErrors,
+      warnings,
+      parsed.defaultDeck,
+      log,
+      result,
+    );
+  }
+
+  // Other formats (yaml/json/csv/markdown + user plugins)
+  log?.info(`Parsing ${plugin.name}...`);
+  const source = await fsp.readFile(opts.inputPath, "utf8");
+  const parsed = { notes: [] as ParsedNote[], defaultDeck: "" };
+  for await (const note of plugin.parse(Readable.from([source]))) {
+    parsed.notes.push(applyTransformers(note));
+  }
+  if (parsed.notes.length === 0) {
+    parsed.defaultDeck = "";
+  }
+  const validated = validateWithPlugins(parsed.notes, parsed.defaultDeck, undefined);
+  validationErrors.push(...validated.errors);
+  warnings.push(...validated.warnings);
+  return importValidatedNotes(
+    opts,
+    validated.notes,
+    validationErrors,
+    warnings,
+    parsed.defaultDeck,
+    log,
+    result,
+  );
 }
