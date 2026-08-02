@@ -60,8 +60,6 @@ function makeFetchImpl() {
 describe("watchFile", () => {
   it("re-queues a change that lands while an apply is running", async () => {
     const file = path.join(tmpDir, "cards.xml");
-    await writeFile(file, xml("a"), "utf8");
-
     const { fetchImpl, addNotesCalls } = makeFetchImpl();
     let confirmCount = 0;
     const watcher = await watchFile(file, {
@@ -80,6 +78,10 @@ describe("watchFile", () => {
       },
     });
 
+    // Write only after the watcher is live: fs.watch does not reliably
+    // deliver an event for a write that happened before watching.
+    await writeFile(file, xml("a"), "utf8");
+
     try {
       // First apply flushes the initial file.
       await waitFor(() => addNotesCalls.length >= 1, "first apply");
@@ -90,17 +92,19 @@ describe("watchFile", () => {
     } finally {
       await watcher.stop();
     }
-  });
+  }, 15_000);
 
   it("applies successive edits after the debounce", async () => {
     const file = path.join(tmpDir, "cards.xml");
-    await writeFile(file, xml("a"), "utf8");
 
     const { fetchImpl, addNotesCalls } = makeFetchImpl();
     const watcher = await watchFile(file, {
       url: "http://127.0.0.1:8765",
       fetchImpl,
     });
+
+    // Write only after the watcher is live (see note above).
+    await writeFile(file, xml("a"), "utf8");
 
     try {
       await waitFor(() => addNotesCalls.length >= 1, "first apply");
@@ -110,5 +114,5 @@ describe("watchFile", () => {
     } finally {
       await watcher.stop();
     }
-  });
+  }, 15_000);
 });
