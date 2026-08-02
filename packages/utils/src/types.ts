@@ -31,6 +31,8 @@ export interface ParsedNote {
   deck: string;
   /** Whitespace-separated tags attribute, plus any `<tag>` children. */
   tags: string;
+  /** True when the source explicitly specified tags (even empty). */
+  tagsSpecified?: boolean;
   fields: ParsedField[];
   sourceOffset?: number;
   fieldSourceOffsets?: number[];
@@ -55,6 +57,8 @@ export interface ValidatedNote {
   modelName: SupportedModel;
   fields: Record<string, string>;
   tags: string[];
+  /** True when the source explicitly specified tags (even empty). */
+  tagsSpecified?: boolean;
   line?: number;
 }
 

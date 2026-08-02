@@ -51,6 +51,7 @@ export function structuredToNotes(doc: StructuredDocument): {
   const defaultDeck = doc.deck ?? "";
   const defaultModel = doc.model ?? DEFAULT_MODEL;
   const defaultTags = coerceTags(doc.tags);
+  const defaultTagsSpecified = doc.tags !== undefined;
 
   const notes: ParsedNote[] = [];
   const arr = Array.isArray(doc.notes) ? doc.notes : [];
@@ -69,6 +70,7 @@ export function structuredToNotes(doc: StructuredDocument): {
       type: rec.model ?? defaultModel,
       deck: rec.deck ?? defaultDeck,
       tags: coerceTags(rec.tags) || defaultTags,
+      tagsSpecified: rec.tags !== undefined || defaultTagsSpecified,
       fields,
       unknownElements: [],
     };

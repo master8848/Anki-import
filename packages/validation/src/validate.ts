@@ -146,6 +146,7 @@ export function validateNote(
       modelName: note.type,
       fields: model.buildFields(note.fields),
       tags,
+      tagsSpecified: note.tagsSpecified,
       line: note.line,
     },
     errors,

@@ -172,6 +172,7 @@ export function parseDocument(
       type: tok.attrs["type"] ?? "",
       deck: tok.attrs["deck"] || inheritedDeck,
       tags: tok.attrs["tags"] ?? "",
+      tagsSpecified: tok.attrs["tags"] !== undefined,
       fields: [],
       sourceOffset: tok.tagStart,
       fieldSourceOffsets: [],
@@ -186,6 +187,7 @@ export function parseDocument(
     }
 
     const tagParts: string[] = [];
+    let hasTagChildren = false;
     if (note.tags.trim()) tagParts.push(note.tags.trim());
 
     for (let j = i + 1; j < noteClose; j++) {
@@ -195,6 +197,7 @@ export function parseDocument(
       const tagLower = child.name.toLowerCase();
 
       if (tagLower === "tag") {
+        hasTagChildren = true;
         const text = extractTextContent(source, tokens, j).trim();
         if (text) tagParts.push(text);
         j = findMatchingClose(tokens, j, child.name);
@@ -241,6 +244,7 @@ export function parseDocument(
     }
 
     note.tags = tagParts.join(" ");
+    if (note.tagsSpecified !== true && hasTagChildren) note.tagsSpecified = true;
     notes.push(note);
     i = noteClose;
   }

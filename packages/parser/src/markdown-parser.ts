@@ -65,6 +65,7 @@ export function parseMarkdown(source: string, opts: MarkdownParseOptions = {}): 
   const defaultModel = frontmatter?.model ?? DEFAULT_MODEL;
   const fmTags = frontmatter?.tags;
   const defaultTags = Array.isArray(fmTags) ? fmTags.join(" ") : (fmTags ?? "");
+  const defaultTagsSpecified = frontmatter?.tags !== undefined;
 
   const notes: ParsedNote[] = [];
   let number = 0;
@@ -75,7 +76,7 @@ export function parseMarkdown(source: string, opts: MarkdownParseOptions = {}): 
     if (h1) {
       if (current) {
         number++;
-        notes.push(makeNote(number, current, defaultDeck, defaultModel, defaultTags));
+        notes.push(makeNote(number, current, defaultDeck, defaultModel, defaultTags, defaultTagsSpecified));
       }
       current = { front: h1[1]!.trim(), body: [] };
       continue;
@@ -84,7 +85,7 @@ export function parseMarkdown(source: string, opts: MarkdownParseOptions = {}): 
   }
   if (current) {
     number++;
-    notes.push(makeNote(number, current, defaultDeck, defaultModel, defaultTags));
+    notes.push(makeNote(number, current, defaultDeck, defaultModel, defaultTags, defaultTagsSpecified));
   }
 
   return { notes, defaultDeck };
@@ -96,12 +97,14 @@ function makeNote(
   deck: string,
   model: string,
   tags: string,
+  tagsSpecified: boolean,
 ): ParsedNote {
   return {
     number,
     type: model,
     deck,
     tags,
+    tagsSpecified,
     fields: [
       { name: "front", html: escapeCdataForHtml(cur.front) },
       { name: "back", html: bodyToHtml(cur.body.join("\n")) },

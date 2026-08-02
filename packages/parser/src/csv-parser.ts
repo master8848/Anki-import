@@ -48,6 +48,7 @@ export function parseCsv(source: string, opts: CsvParseOptions = {}): {
     let deck = "";
     let model = "";
     let tags = "";
+    let tagsSpecified = false;
     for (const [key, value] of Object.entries(row)) {
       if (key === "deck") {
         deck = value;
@@ -55,6 +56,7 @@ export function parseCsv(source: string, opts: CsvParseOptions = {}): {
         model = value;
       } else if (key === "tags") {
         tags = value;
+        tagsSpecified = true;
       } else if (!SPECIAL_KEYS.has(key)) {
         fields.push({ name: key, html: value });
       }
@@ -64,6 +66,7 @@ export function parseCsv(source: string, opts: CsvParseOptions = {}): {
       type: model || defaultModel,
       deck: deck || defaultDeck,
       tags,
+      tagsSpecified,
       fields,
       unknownElements: [],
     });
