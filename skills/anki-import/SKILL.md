@@ -1,56 +1,76 @@
 ---
 name: anki-import
-description: Import Anki flashcards from XML via AnkiConnect. Use when the user asks to add cards to Anki, import flashcards, bulk-create notes, validate card XML, or rollback an import.
+description: Manage Anki collections as code via anki-xml (anki-import CLI). Use when the user wants to add/update flashcards, import cards from XML/YAML/JSON/Markdown/CSV, validate card files, plan/diff previews, rollback imports, sync collections, manage tags/media/stats, or use MCP tools against AnkiConnect.
 metadata:
   author: master8848
-  version: "0.0.3"
+  version: "0.0.4"
 ---
 
 # anki-import
 
-Import Anki notes from XML using AnkiConnect.
+Infrastructure-as-code for Anki: validate → plan → diff → apply →
+checkpoint → rollback → sync. XML is the canonical format; YAML, JSON,
+Markdown, and CSV map onto the same note model.
 
-## Overview
+Install: `npm install -g anki-xml`. Bins: `anki-import` and `anki-xml`.
+Requires Node 20+. Anki must be running with the AnkiConnect add-on
+(code `2055492159`).
 
-XML is the canonical card format. JSON is used only for output and checkpoints.
+## First step: doctor
 
-Install: `npm install -g anki-xml`. Bins: `anki-import` and `anki-xml`. Anki must be running with AnkiConnect.
-
-## Workflow
-
-Workflow: doctor → validate → import → rollback.
-
-Run doctor once before importing.
+`anki-import doctor` diagnoses AnkiConnect and prints ordered fix steps
+(start Anki, install add-on `2055492159`, restart, check `--url`).
+Every AnkiConnect failure carries the same stable
+`cause`/`hints`/`suggestion` envelope in `--json` output.
 
 ```bash
 anki-import doctor
-anki-import validate cards.xml
-anki-import import cards.xml --dry-run
-anki-import import cards.xml --stream
-anki-import rollback <id>
 ```
+
+## Workflow
+
+```bash
+anki-import validate cards.xml      # no Anki contact
+anki-import plan cards.yaml         # preview: add/update/duplicate/unchanged
+anki-import diff cards.xml          # per-note field diffs vs collection
+anki-import import cards.xml        # CREATE notes only (writes checkpoint)
+anki-import rollback <checkpoint-id> # undo an import
+anki-import sync cards.xml          # CREATE + UPDATE (reconcile)
+anki-import watch cards.xml --yes   # auto re-validate + apply on change
+```
+
+Use `--dry-run` and `--json` for previews; plan before import; rollback
+after mistakes; sync (not import) for updates.
 
 ## Commands
 
 | Command | Purpose |
 | --- | --- |
-| doctor | Check AnkiConnect |
-| validate | Validate XML |
-| import | Import notes |
-| checkpoint list | List checkpoints |
-| checkpoint create | Snapshot note ids |
-| rollback | Undo import / delete notes |
-| benchmark | Measure throughput |
+| doctor | Diagnose AnkiConnect with fix steps |
+| validate | Validate file, no Anki |
+| plan | Dry-run preview vs collection |
+| diff | Per-note diffs vs collection |
+| import | Create notes (batch, checkpoint) |
+| sync | Create + update; drift report w/o file |
+| rollback | Delete notes from checkpoint |
+| checkpoint list/create | Manage checkpoints |
+| watch | Watch file → validate → confirm → apply |
+| tags list/add/remove | Manage tags |
+| models | List note types + fields |
+| stats [--deck] | Collection statistics |
+| media store/list/retrieve/delete | Media files |
+| benchmark | Parse/validate throughput |
+| mcp | MCP server (stdio) |
 
-| Flag | Purpose |
-| --- | --- |
-| --dry-run | Validate only |
-| --stream | Stream large files |
-| --batch-size N | Batch size |
-| --json | JSON output |
-| --verbose | Verbose logs |
+Key flags: `--dry-run`, `--stream`, `--batch-size N`, `--json`,
+`--deck NAME`, `--model NAME`, `--allow-duplicate`,
+`--no-auto-create-deck`, `--checkpoint <id>`, `--yes` (watch),
+`--url <addr>` (default `http://127.0.0.1:8765`).
 
-## XML schema
+## Formats
+
+All formats use the same field keys (`front`, `back`, `text`, `extra`,
+or any `<field name=...>` equivalent):
 
 ```xml
 <anki deck="Spanish">
@@ -61,49 +81,46 @@ anki-import rollback <id>
 </anki>
 ```
 
-- root: `<anki>`
-- note: `<note type="...">`
-- fields: short tags (`<front>`, `<back>`) or `<field name="...">`
-- optional decks (`<deck name>`) and tags (`tags="a b"` or `<tag>`)
-- CDATA supported
-
-Note types: `Basic`, `Basic (and reversed card)`, `Basic (optional reversed card)`, `Basic (type in the answer)`, `Cloze`.
-
-## Validation
-
-| Type | Required fields |
-| --- | --- |
-| Basic (and variants) | Front, Back |
-| Basic (optional reversed card) | Front, Back, Add Reverse (`yes`\|`no`) |
-| Cloze | Text with at least one `{{cN::...}}` |
-
-Every note needs a deck (on `<anki>`, `<deck name>`, or `<note deck>`). Empty fields fail.
-
-Branch on exit codes and `--json` `error.code`, never on message text: `XML_PARSE_ERROR`, `VALIDATION_ERROR`, `ANKICONNECT_ERROR`, `FILE_NOT_FOUND`.
-
-## Rollback
-
-Successful imports create a checkpoint with created note ids.
-
-```bash
-anki-import checkpoint list
-anki-import rollback <checkpoint-id>
-anki-import rollback <checkpoint-id> --dry-run
+```yaml
+deck: Spanish
+model: Basic
+notes:
+  - front: Hola
+    back: Hello
 ```
+
+CSV: columns `deck,model,front,back,tags`. Markdown: frontmatter
+(`deck`/`model`/`tags`) + `# heading` = front, body = back.
+
+Note types: `Basic`, `Basic (and reversed card)`, `Basic (optional
+reversed card)`, `Basic (type in the answer)`, `Cloze` (requires
+`{{cN::...}}` markers). Custom types use `<field name=...>`.
+
+## XML rules
+
+- Root `<anki deck="...">`, `<note type="..." deck="..." tags="...">`
+- Never decode entities in field content; use CDATA for raw HTML
+- CDATA: escape bare `&`, `<`, `>` only; don't double-escape entities
+- Void tags (`br`, `img`, `hr`, …) are unpaired
+- Every note needs a deck; empty fields fail validation
+
+## For AI agents
+
+- Always run `doctor` (or check `--json`) before assuming Anki is ready
+- Branch on `--json` `error.code`, never message text:
+  `VALIDATION_ERROR`, `XML_PARSE_ERROR`, `ANKICONNECT_ERROR`, `FATAL`
+- `--json` keeps stdout clean (one JSON document, logs on stderr)
+- ANKICONNECT_ERROR includes `cause` (refused/timeout/http/bad-json/
+  network/unknown), `hints` (ordered fix steps), `suggestion` (e.g.
+  `anki-import doctor`)
+- Prefer `plan --json` before `import`; use `sync` for id-tagged updates;
+  notes with `id=` are rejected by `import` by design
+- MCP: `anki-import mcp` serves 17 tools over stdio
+  (import_xml, validate_xml, doctor, plan_import, diff, sync, …);
+  tool errors include the same hints envelope
 
 ## Example
 
-Fixtures in `examples/`:
-
-| File | Covers |
-| --- | --- |
-| `commands.md` | Runnable CLI |
-| `spanish-greetings.xml` | Basic + CDATA |
-| `all-note-types.xml` | Every note type |
-| `latex.xml` | `[latex]`, MathJax, HTML math |
-| `code-and-escapes.xml` | `<pre><code>`, entities, CDATA |
-| `update-and-delete.md` | Delete / replace notes |
-
 ```bash
-anki-import import examples/spanish-greetings.xml --stream
+anki-import import examples/basic.xml --dry-run --json
 ```

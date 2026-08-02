@@ -105,7 +105,7 @@ pnpm test:watch                # re-run on change
 ### 3.2 Single test focus
 
 ```sh
-bun test tests/import.test.ts -t 'duplicates'   # all tests whose name matches "duplicates"
+pnpm test tests/import.test.ts -t "duplicates"   # only tests whose name matches "duplicates"
 ```
 
 ### 3.3 Network tests
@@ -121,101 +121,94 @@ const fetchImpl: typeof fetch = async (url, init) => {
     headers: { "Content-Type": "application/json" },
   });
 };
-const client = createClient({ url: "...", fetchImpl });
+const client = new AnkiClient({ url: "...", fetchImpl });
 ```
 
-### 3.4 The publish check
+### 3.4 The quality gates
 
-`bun run publish:check` is the canonical "is the build safe to ship"
-harness. It:
+`pnpm test && pnpm typecheck && pnpm build && node dist/cli.js --version`
+is the canonical "is the build safe to ship" harness. It:
 
-1. Runs `bun test`.
-2. Verifies `bun run src/index.ts --version` works.
-3. Verifies `--help` lists every registered command (count must
-   match `src/cli/registry.ts`).
-4. Builds the npm bundle.
-5. Runs the resulting `dist/cli.js` with `node`.
-6. Confirms README, CHANGELOG, LICENSE, CONTRIBUTING all exist.
+1. Runs `pnpm test` (vitest, all AnkiConnect traffic mocked).
+2. Runs `pnpm typecheck` (strict `tsc --noEmit`, monorepo-wide).
+3. Builds the single-file bundle (`node scripts/build.mjs`).
+4. Runs the resulting `dist/cli.js` with `node` (`--version`).
 
 It exits non-zero on any failure.
 
 ### 3.5 Test conventions
 
-- One file per concern. `tests/foo.test.ts` for `src/foo.ts`.
+- One file per concern under `tests/`. `tests/foo.test.ts` tests
+  `packages/<pkg>/src/foo.ts`.
 - No snapshot tests. Use plain `expect(...)` against typed values.
-- Edge cases in their own files (see `tests/edge-cases.test.ts`).
-- For every `tests/foo.test.ts`, the corresponding `src/foo.ts`
-  must not import the test file (no test/prod cycles).
+- Mock ALL AnkiConnect traffic via the injectable `fetchImpl` on
+  `AnkiClient` — never hit the network in tests.
+- For every `tests/foo.test.ts`, the corresponding source file must
+  not import the test file (no test/prod cycles).
 - Mock external dependencies, not internal logic.
 
 ---
 
 ## 4. Adding a new command
 
-The CLI is data-driven: every command is a `Command<T>` object
-registered in `src/cli/registry.ts`.
+Commands are thin wrappers in `packages/cli/src/commands/*.ts`
+dispatched by a `switch` in `packages/cli/src/run.ts`. Business logic
+lives in `packages/core` (or a dedicated package); CLI files must
+contain no business logic.
 
 ### 4.1 Shape of a command
 
 ```ts
-const command: Command<MySubArgs> = {
-  name: "my-cmd",
-  description: "What this command does in one line.",
-  flags: { "--flag <value>": "Description for --help." },
-  parseSubArgs(positional, rest) {
-    return { /* parsed sub-args */ };
-  },
-  async run(args, sub) {
-    return withFatal(async () => {
-      const startMs = Date.now();
-      const data = await doTheWork(args.url);
-      const human = renderHuman(data);
-      console.log(
-        formatOutput(data, { args, startMs, command: "my-cmd" }, human),
-      );
-      return 0;
-    });
-  },
-};
-export default command;
+// packages/cli/src/commands/my-cmd.ts
+import { doTheWork } from "@anki-xml/core";
+import { flagString, type ParsedArgs } from "../args.ts";
+import type { Logger } from "@anki-xml/logger";
+
+export async function runMyCmd(
+  positional: string[],
+  args: ParsedArgs,
+  log: Logger,
+): Promise<number> {
+  const result = await doTheWork({ url: args.flags.url });
+  if (args.flags.json) console.log(JSON.stringify(result));
+  else log.info(`done: ${result.count}`);
+  return 0;
+}
 ```
 
 ### 4.2 Steps
 
-1. **Create the logic** — `src/my-thing.ts` with a pure async
-   function. Use injectable `fetchImpl` for AnkiConnect calls. Make
-   the function easy to mock.
+1. **Create the logic** — in `packages/core/src/my-thing.ts` (or a new
+   package if it owns a domain) with a pure async function and
+   injectable `fetchImpl` for AnkiConnect calls. Make it easy to mock.
 
-2. **Create the wrapper** — `src/cli/commands/my-cmd.ts` with the
-   `Command<T>` shape above. Use `formatOutput()` for both human
-   and `--json` paths. Wrap async work in `withFatal()`.
+2. **Export it** — add to `packages/core/src/index.ts` (or the new
+   package's `src/index.ts`).
 
-3. **Register** — add it to `src/cli/registry.ts`:
+3. **Create the wrapper** — `packages/cli/src/commands/my-cmd.ts` with
+   the thin shape above. Both human and `--json` output paths must be
+   covered; `--json` must keep stdout to a single JSON document.
 
-   ```ts
-   { name: "my-cmd", path: "./commands/my-cmd.ts", surface: "Read / Query" }
-   ```
+4. **Dispatch** — add a `case "my-cmd":` in `packages/cli/src/run.ts`.
 
-4. **Group it in `--help`** — update `src/cli/help.ts`'s `grouping`
-   map so the new command appears under the right surface.
+5. **Whitelist its flags** — add any new flags to `GLOBAL_BOOL` /
+   `GLOBAL_VALUE` in `packages/cli/src/args.ts`.
 
-5. **Whitelist its flags** — if it adds a new subcommand-level flag,
-   add it to the recognized flags list in `src/cli/args.ts`.
+6. **Update `--help`** — add the command to `printHelp()` and
+   `printCommandHelp()` in `packages/cli/src/help.ts`.
 
-6. **Add tests** — at minimum:
-   - `tests/my-thing.test.ts` — logic.
-   - `tests/cli-internals.test.ts` — registry expectation.
-   - `tests/cli.test.ts` — end-to-end via `spawn`.
+7. **Add tests** — at minimum:
+   - `tests/my-thing.test.ts` — logic with mocked `fetchImpl`.
+   - `tests/cli.test.ts` or `tests/cli-formats.test.ts` — command-level
+     via `main([...])` (error paths need no Anki).
 
-7. **Document** — add the command's section to
-   [`docs/commands.md`](docs/commands.md) and an `[Unreleased]` entry
-   in [`CHANGELOG.md`](CHANGELOG.md).
+8. **Document** — add the command's section to
+   [`docs/commands.md`](docs/commands.md) (or
+   `docs/monorepo-architecture.md` for design) and an `[Unreleased]`
+   entry in [`CHANGELOG.md`](CHANGELOG.md).
 
-8. **Update `--help` examples** — add a usage line to
-   `EXAMPLES_BLOCK` in `src/cli/help.ts`.
-
-9. **Run the gates** — `bun test && bunx tsc --noEmit && bun run
-   publish:check`.
+9. **Run the gates** — `pnpm test && pnpm typecheck && pnpm build &&
+   node dist/cli.js --version`.
 
 ### 4.3 Adding a subcommand
 
@@ -230,7 +223,9 @@ flat — no nested verbs.
 This is part of the JSON envelope contract. Treat it as a breaking
 change for AI agents.
 
-1. Add the code to `ErrorCode` in `src/cli/envelope.ts`.
+1. Add the code where the error is produced (error envelope helpers
+   live in `packages/cli/src/errors.ts`; diagnostics in
+   `packages/anki/src/errors.ts`).
 2. Document it in:
    - [`CHANGELOG.md`](CHANGELOG.md)
    - [`docs/ai-integration.md`](docs/ai-integration.md) §"Stable
@@ -274,20 +269,20 @@ Every doc file has a purpose. When you change a doc:
 
 ## 8. Releasing
 
-Cut a release **only** from `main`, only after `bun run
-publish:check` passes.
+We are **not publishing to npm yet** (v0.0.4 is a restructure release).
+When publishing begins, follow `docs/release-checklist.md`. Cut a
+release only from `main`, only after the quality gates pass:
 
 1. Move the `[Unreleased]` content to a dated `[x.y.z]` section in
    [`CHANGELOG.md`](CHANGELOG.md).
-2. Bump `version` in `package.json`.
-3. Update `VERSION` in `src/cli/help.ts`, `version` in
-   `src/cli/envelope.ts`, and `version` in `src/cli/output.ts`.
-4. Run `bun run publish:check` once more.
+2. Bump `version` in root `package.json` **and** every
+   `packages/*/package.json` + `apps/playground/package.json`.
+3. Update `VERSION` in `packages/cli/src/help.ts`.
+4. Run the gates once more: `pnpm test && pnpm typecheck && pnpm
+   build && node dist/cli.js --version`.
 5. Commit with message `chore: release vX.Y.Z`.
 6. Tag: `git tag -a vX.Y.Z -m "..."`.
 7. Push: `git push --follow-tags`.
-8. Publish to npm: `npm publish --access public` (after `npm login`).
-9. Cut a GitHub Release from the tag using the CHANGELOG entry.
 
 The minor version (`X.Y.0`) bumps when:
 - A new command is added.
@@ -309,22 +304,23 @@ Major version (`X.0.0`) bumps when:
 
 Use this when reviewing your own or another's PR:
 
-- [ ] **`bun test` passes locally.** (430/0)
-- [ ] **`bunx tsc --noEmit` is clean.**
-- [ ] **`bun run publish:check` is OK.**
+- [ ] **`pnpm test` passes locally.**
+- [ ] **`pnpm typecheck` is clean.**
+- [ ] **`pnpm build` + `node dist/cli.js --version` works.**
 - [ ] **Every new public function** has a test.
 - [ ] **No new global mutable state** introduced.
 - [ ] **No new dependencies** without discussion in an issue first.
-- [ ] **The new command's logic** lives in `src/*.ts`, not
-      `src/cli/commands/*.ts`.
-- [ ] **The new command** is registered in `src/cli/registry.ts`
-      **and** in `src/cli/help.ts`'s `grouping`.
+- [ ] **The new command's logic** lives in `packages/core` (or a
+      domain package), not `packages/cli/src/commands/*`.
+- [ ] **The new command** is dispatched in `packages/cli/src/run.ts`
+      **and** documented in `packages/cli/src/help.ts`.
 - [ ] **Documentation updates** match the docs table in §7.
 - [ ] **`[Unreleased]` entry** added to `CHANGELOG.md`.
 - [ ] **Commit messages** follow §2.2.
-- [ ] **No `process.exit` outside `src/index.ts`.**
+- [ ] **No `process.exit` outside `packages/cli/src/index.ts`.**
 - [ ] **No snapshot tests** introduced.
 - [ ] **No XML parsed with regex in tests.**
+- [ ] **AnkiConnect is only ever reached from `packages/anki`.**
 
 ---
 

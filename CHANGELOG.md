@@ -2,6 +2,48 @@
 
 All notable changes to `anki-xml` / `anki-import` are documented here.
 
+## [0.0.4] — 2026-08-02
+
+**Monorepo restructure.** `src/` becomes an 18-package pnpm workspace
+(`packages/*`), plus `apps/playground` and root-level `tests/`.
+
+### Added
+- **New commands:** `plan` (dry-run preview), `diff` (per-note field
+  diffs), `sync` (create + update + checkpoint drift), `watch`
+  (change → validate → confirm → apply), `tags`, `models`, `stats`,
+  `media`, `mcp` — 15 commands total
+- **New formats:** YAML, JSON, Markdown, CSV importers (XML stays
+  canonical; all formats map onto the same note model)
+- **Plugin API:** `registerImporter` / `registerExporter` /
+  `registerValidator` / `registerTransformer` with built-in importers
+  (xml/yaml/json/csv/markdown) and a JSON exporter
+- **MCP server** over stdio (SDK-free JSON-RPC 2.0, 17 tools,
+  P0/P1/P2 tiering); tool errors carry cause/hints/suggestion
+- **AnkiConnect diagnostics:** stable causes (`refused | timeout |
+  http | bad-json | network | unknown`) with ordered fix steps
+  (start Anki, install add-on `2055492159`, check `--url`, …);
+  exposed in `doctor`, every CLI error path, `--json`, and MCP
+- **New packages:** planner, diff, sync, tags, media, stats, config
+  (`anki.config.json/yaml/yml` discovery), mcp
+- AnkiClient methods: `canAddNotes`, `updateNoteFields`, `storeMedia`,
+  `retrieveMedia`, `deleteMedia`, `mediaList`, `getTags`, `addTags`,
+  `removeTags`, `cardCounts`, `modelFieldNames`, `modelTemplates`,
+  `diagnose`
+- `--json` guarantees stdout purity (single JSON document, logs on
+  stderr; stable `error.code` on all paths)
+
+### Changed
+- `import` rejects notes with `id=` (update targets) — use `sync`
+- `doctor` requires AnkiConnect API ≥ 6
+- Error envelopes now include `cause`/`hints`/`suggestion` for
+  ANKICONNECT_ERROR
+- Build: single esbuild bundle from `packages/cli/src/index.ts`
+  (external: chokidar/yaml/csv-parse); startup ≈ 25 ms, ≈ 150 KB
+- CI runs on all branches; smoke-tests `plan` on a YAML example
+
+### Removed
+- `src/` single-package layout (see `docs/migration-strategy.md`)
+
 ## [Unreleased]
 
 ### Changed
