@@ -93,7 +93,8 @@ export interface ParseDocumentOptions {
   /**
    * Skip the fast-xml-parser well-formedness pass. The streaming path
    * passes `false` because its scanner + tokenizer already detect
-   * unterminated CDATA/comments/tags and PCDATA issues.
+   * unterminated CDATA/comments/tags, duplicate or unquoted
+   * attributes, stray `</note>`/`</deck>` end tags, and PCDATA issues.
    */
   validateWellformed?: boolean;
 }
