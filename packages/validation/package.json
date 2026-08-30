@@ -15,7 +15,7 @@
     "node": ">=20"
   },
   "dependencies": {
-    "valibot": "^1.1.0",
+    "valibot": "1.4.2",
     "@anki-xml/models": "workspace:*",
     "@anki-xml/parser": "workspace:*",
     "@anki-xml/utils": "workspace:*"

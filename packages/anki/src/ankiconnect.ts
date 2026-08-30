@@ -5,9 +5,11 @@
 
 import type { AnkiConnectNote, AnkiConnectResponse } from "@anki-xml/utils";
 import {
+  authDiagnosis,
   classifyConnectError,
   connectDiagnosis,
   DEFAULT_URL,
+  isAuthErrorMessage,
   type ConnectDiagnosis,
 } from "./errors.ts";
 import { ankiConnectAbortSignal, isAnkiConnectAborted } from "./abort.ts";
@@ -303,6 +305,26 @@ export class AnkiClient {
       throw new AnkiConnectError(`Unexpected response from 'cardCounts': ${JSON.stringify(res)}`);
     }
     return res;
+  }
+
+  /**
+   * Trigger AnkiWeb sync (Anki desktop → AnkiWeb). This is what makes
+   * cards appear on the phone — the phone then syncs from AnkiWeb.
+   * Throws AnkiConnectError with cause "auth" if Anki is not logged in.
+   */
+  async sync(): Promise<void> {
+    try {
+      await this.invoke<null>("sync");
+    } catch (err) {
+      if (err instanceof AnkiConnectError) {
+        if (err.cause === "auth") throw err;
+        const msg = err.message;
+        if (isAuthErrorMessage(msg)) {
+          throw new AnkiConnectError(msg, authDiagnosis(this.url, msg));
+        }
+      }
+      throw err;
+    }
   }
 
   /**

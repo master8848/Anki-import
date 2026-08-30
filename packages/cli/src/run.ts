@@ -20,6 +20,7 @@ import { runMediaCommand } from "./commands/media.ts";
 import { runWatchCommand } from "./commands/watch.ts";
 import { runMcpCommand } from "./commands/mcp.ts";
 import { runInitCommand } from "./commands/init.ts";
+import { runAnkiSyncCommand } from "./commands/anki-sync.ts";
 
 export async function main(argv: string[] = process.argv.slice(2)): Promise<number> {
   let args;
@@ -115,6 +116,10 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
         return await runMcpCommand();
       case "init":
         return await runInitCommand(args.flags, args.rest, log);
+      case "anki-sync":
+      case "cloud-sync":
+      case "sync-anikiweb":
+        return await runAnkiSyncCommand(args, args.flags, log);
       default:
         console.error(`Unknown command: '${args.command}'`);
         console.error(`Run '${BIN_NAME} --help' to see available commands.`);

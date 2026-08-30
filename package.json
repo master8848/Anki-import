@@ -48,17 +48,17 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
-    "csv-parse": "^5.6.0",
-    "fast-xml-parser": "^5.10.0",
-    "valibot": "^1.1.0",
-    "yaml": "^2.7.0"
+    "csv-parse": "5.6.0",
+    "fast-xml-parser": "5.11.1",
+    "valibot": "1.4.2",
+    "yaml": "2.9.0"
   },
   "devDependencies": {
-    "@types/node": "^22.15.0",
-    "@rslib/core": "^0.20.0",
-    "tsx": "^4.19.0",
-    "typescript": "^5.8.0",
-    "vitest": "^3.1.0",
+    "@types/node": "22.20.1",
+    "@rslib/core": "0.20.3",
+    "tsx": "4.23.13",
+    "typescript": "5.9.3",
+    "vitest": "3.2.7",
     "@anki-xml/anki": "workspace:*",
     "@anki-xml/checkpoint": "workspace:*",
     "@anki-xml/cli": "workspace:*",

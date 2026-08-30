@@ -18,6 +18,7 @@ export type ConnectCause =
   | "http"
   | "bad-json"
   | "network"
+  | "auth"
   | "ok"
   | "unknown";
 
@@ -71,6 +72,13 @@ const NETWORK_HINTS = [
   `Run anki-import doctor to check.`,
 ];
 
+const AUTH_HINTS = [
+  `Not authenticated — Anki is not logged into AnkiWeb.`,
+  `In Anki: Tools → Preferences → Syncing → Log in with your AnkiWeb account.`,
+  `After logging in, press Sync in Anki, then run: anki-import anki-sync`,
+  `If you just created an account, verify your email first.`,
+];
+
 function nodeCode(err: unknown): string | undefined {
   if (err instanceof Error && "cause" in err) {
     const cause = err.cause;
@@ -87,10 +95,20 @@ function nodeCode(err: unknown): string | undefined {
  * message text (AGENTS.md #9).
  */
 export function connectDiagnosis(
-  cause: "http" | "bad-json",
+  cause: "http" | "bad-json" | "auth",
   url: string,
   detail: string,
 ): ConnectDiagnosis {
+  if (cause === "auth") {
+    return {
+      reachable: true,
+      cause,
+      url,
+      detail,
+      hints: AUTH_HINTS,
+      suggestion: "Log into AnkiWeb in Anki, then run: anki-import anki-sync",
+    };
+  }
   return {
     reachable: false,
     cause,
@@ -99,6 +117,20 @@ export function connectDiagnosis(
     hints: cause === "http" ? HTTP_HINTS : BAD_JSON_HINTS,
     suggestion: "anki-import doctor",
   };
+}
+
+export function authDiagnosis(url: string, detail?: string): ConnectDiagnosis {
+  return connectDiagnosis(
+    "auth",
+    url,
+    detail ?? `Not authenticated — Anki at ${url} is not logged into AnkiWeb.`,
+  );
+}
+
+const AUTH_ERROR_RE = /(auth|not authenticated|not configured|hkey|sync.*auth|login|credential)/i;
+
+export function isAuthErrorMessage(msg: string): boolean {
+  return AUTH_ERROR_RE.test(msg);
 }
 
 /** Classify a thrown fetch error against AnkiConnect. */

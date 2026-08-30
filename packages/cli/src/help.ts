@@ -28,6 +28,7 @@ Commands:
   stats [--deck <name>]          Show counts
   media store|list|retrieve|delete  Manage files
   benchmark <file>               Check speed
+  anki-sync [--check]            Check AnkiWeb auth + sync to phone
   mcp                            Start MCP server for AI agents
 
 Options:
@@ -107,6 +108,12 @@ Install Anki (if missing) and AnkiConnect 2055492159, then run doctor.
    --check                            Dry run (show what would be done)
    --timeout <ms>                     Wait for AnkiConnect after restart (default 60000)
    --url <url>                        AnkiConnect URL (default http://127.0.0.1:8765)`,
+    "anki-sync": `Usage: ${BIN_NAME} anki-sync [--check] [--url <url>] [--json]
+Check AnkiWeb auth + sync status and trigger AnkiWeb sync.
+  --check   Only check if Anki is reachable (no sync trigger)
+  --json    Machine-readable {ok, reachable, authenticated, synced, cause}
+If not logged in: "Not authenticated — log into AnkiWeb in Anki: Tools → Preferences → Syncing" (cause: auth).
+After import/sync, run anki-sync then sync on phone to pull cards.`,
     mcp: `Usage: ${BIN_NAME} mcp
 Start the MCP server for AI agents.`,
   };

@@ -32,6 +32,7 @@ anki-import rollback <id>         # undo last import
 | `sync [<file>]` | Add + update, or show missing if no file |
 | `rollback <id>` | Undo an import |
 | `watch <file>` | Watch file and auto-apply |
+| `anki-sync` | Check AnkiWeb auth + sync, trigger sync (`--check` / `--json`) |
 | `tags` / `models` / `stats` / `media` | Manage tags, types, stats, files |
 | `mcp` | Start MCP server (for AI agents) |
 
@@ -53,6 +54,26 @@ XML is the main format. YAML, JSON, CSV, Markdown all work — they become the s
 - Root is `<anki deck="...">`, each card is `<note type="..." deck="..." tags="...">`
 - Every card needs a deck
 
+### Cloze cards
+
+Cloze uses `<text>` (must contain `{{cN::...}}`) and optional `<extra>`:
+
+```xml
+<anki deck="Biology">
+  <note type="Cloze">
+    <text>The {{c1::mitochondrion}} is the powerhouse of the {{c2::cell}}.</text>
+    <extra>High-yield fact.</extra>
+  </note>
+</anki>
+```
+
+- `{{c1::answer}}` → card 1, `{{c2::answer}}` → card 2; reuse `c1` to hide multiple spots on same card
+- Hint: `{{c1::Paris::largest city}}`
+- `{{c1,2::shared}}` validates but Anki 25.09 won't create cards — stick to single ordinals for now
+- Missing marker fails `validate`: `<text> must contain {{cN::...}}`
+
+See `examples/all-note-types.xml` (Cloze example) and `examples/code-and-escapes.xml`.
+
 ### Formatting: when to use CDATA
 
 Keep it simple:
@@ -73,8 +94,20 @@ Tip: using &lt;br&gt; is better if styling mix is required
 
 Check: `anki-import validate file.xml` — bare `&` must be `&amp;`.
 
+### AnkiWeb sync — will it reach your phone?
+
+Cards are local until Anki syncs to AnkiWeb. Phone gets them after Anki's own sync.
+
+
+anki-import anki-sync              # check auth + trigger AnkiWeb sync
+anki-import anki-sync --check      # only check (no sync)
+
+
+- If not logged in: `Not authenticated — log into AnkiWeb in Anki: Tools → Preferences → Syncing → Log in, then retry.` (exit 1, `cause: "auth"`)
+- If Anki not open: same hints as `doctor` (`cause: "refused"` etc.)
+- After `import`/`sync <file>`, run `anki-sync` then sync on phone to verify.
+
 Examples: `all-note-types.xml`, `code-and-escapes.xml`, `latex.xml`, `spanish-greetings.xml` (in `skills/anki-import-cli/examples/`).
 
-```bash
+
 anki-import import examples/basic.xml --dry-run --json
-```
