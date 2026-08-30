@@ -44,7 +44,7 @@ tests/          # vitest; fixtures/ goldens/ snapshots/
 ## AnkiConnect diagnostics
 
 `packages/anki/src/errors.ts` classifies failures into stable causes
-(`refused | timeout | http | bad-json | network | ok | unknown`) with
+(`refused | timeout | http | bad-json | network | auth | ok | unknown`) with
 ordered `hints` and a `suggestion`. Every CLI error path renders them;
 `--json` and MCP expose `cause`/`hints`/`suggestion` for AI agents.
 `doctor` runs the full diagnosis. Fix steps cover: Anki app not running,
@@ -53,7 +53,7 @@ AnkiConnect add-on (2055492159) not installed, wrong URL, hung Anki.
 ## Commands
 
 `doctor` · `open` · `validate` · `plan` · `diff` · `import` · `sync` · `rollback`
-· `checkpoint` · `watch` · `tags` · `models` · `stats` · `media` ·
+· `checkpoint` · `watch` · `anki-sync` · `tags` · `models` · `stats` · `media` ·
 `benchmark` · `mcp`
 
 ## Quality gates

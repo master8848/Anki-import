@@ -12,7 +12,7 @@ The user-facing landing page is the repo root
 
 ## Documentation index
 
-### Current (v0.0.4 monorepo)
+### Current (v0.0.6 monorepo)
 
 - [**monorepo-architecture.md**](./monorepo-architecture.md) — folder
   structure (18 packages), package responsibilities, dependency graph,
@@ -20,7 +20,7 @@ The user-facing landing page is the repo root
 - [**js-interfaces.md**](./js-interfaces.md) — the public JavaScript
   API: every export of every `packages/*/src/index.ts`, with real
   signatures.
-- [**cli-design.md**](./cli-design.md) — the 16 commands, global and
+- [**cli-design.md**](./cli-design.md) — the 17 commands, global and
   import flags, exit codes, `--json` envelopes, design principles,
   example sessions.
 - [**mcp-design.md**](./mcp-design.md) — the stdio JSON-RPC MCP

@@ -23,6 +23,7 @@ lines below.
 | `rollback` | `rollback <checkpoint-id> [--dry-run]` | Deletes the notes recorded in a checkpoint, then deletes the checkpoint file (unless `--keep-checkpoint`). |
 | `checkpoint` | `checkpoint list` · `checkpoint create <id> --note-ids 1,2,3 [--deck NAME]` | Lists checkpoints (sorted by created date) or creates one from explicit note ids. |
 | `watch` | `watch <file> [--yes] [--stream]` | Watches a file (fs.watch, 300 ms debounce); on change: plan → show summary → confirm (`[y/N]`, auto-apply with `--yes` or `--json`) → apply via `applyPlan`. Ctrl+C stops. |
+| `anki-sync` | `anki-sync [--check] [--url <url>] [--json]` | Checks AnkiConnect reachability and AnkiWeb sync: `--check` is reachability only (no sync); without `--check` triggers `sync` to AnkiWeb so cards reach phone. `cause: "auth"` when not logged in (`Tools → Preferences → Syncing`). Aliases: `cloud-sync`, `sync-anikiweb`. |
 | `tags` | `tags list` · `tags add <tag> --note-ids 1,2,3 \| --query "deck:X"` · `tags remove <tag> ...` | Lists collection tags; adds/removes a tag from notes selected by `--note-ids` or a `--query` search. |
 | `models` | `models` | Lists note types with their field names. |
 | `stats` | `stats [--deck <name>]` | Collection totals (decks, models, notes, cards, per-deck counts) or one deck's card counts. |
@@ -43,7 +44,7 @@ lines below.
 | `--debug` | Include stack traces on fatal errors |
 | `--dry-run` | Validate + plan only; never write |
 | `--help`, `-h` | Help (command-specific when a command is present) |
-| `--version`, `-V` | Prints `anki-import v0.0.4` |
+| `--version`, `-V` | Prints `anki-import v0.0.6` |
 
 **File / import flags** (collected into `rest`; consumed per command):
 
@@ -99,7 +100,7 @@ always carry a stable `code`.
 ```
 
 `ANKICONNECT_ERROR` carries `cause` (stable: `refused | timeout | http |
-bad-json | network | ok | unknown`), ordered `hints`, and a `suggestion`
+bad-json | network | auth | ok | unknown`), ordered `hints`, and a `suggestion`
 — see `packages/anki/src/errors.ts` for the hint texts and
 `packages/cli/src/errors.ts` for the envelope.
 
@@ -119,6 +120,7 @@ bad-json | network | ok | unknown`), ordered `hints`, and a `suggestion`
 - `stats` → `CollectionStats` (`{decks, models, notes, cards, perDeck}`) or `{ deck, counts }`
 - `media` → `{ ok: true, filename }` / `{ ok: true, filename, out }` / `{ media: [...] }`
 - `benchmark` → `{ cards, memoryMb, timeSec, rate, stream }`
+- `anki-sync` → `{ ok, reachable, authenticated, synced, cause, detail, hints, suggestion }` (exit 1 on `auth` / `sync-required`)
 
 ## Design principles
 

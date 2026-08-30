@@ -7,6 +7,17 @@ All notable changes to `anki-xml` / `anki-import` are documented here.
 ### Changed
 - No unreleased changes yet.
 
+## [0.0.6] — 2026-08-30
+
+### Added
+- **`anki-sync` command** (`cloud-sync` / `sync-anikiweb` aliases) — single command to check AnkiConnect reachability, AnkiWeb authentication, and trigger `sync` to AnkiWeb so cards reach the phone. `--check` is reachability-only (no sync); `--json` returns `{ok, reachable, authenticated, synced, cause, detail, hints}`. When not logged in, exits 1 with `cause: "auth"` and `Not authenticated — Tools → Preferences → Syncing → Log in` (skill `AnkiWeb sync — will it reach your phone?` documents the workflow).
+- **Cloze documentation in skill** — `skills/anki-import-cli/SKILL.md` now documents `Cloze` (`<text>` must contain `{{cN::...}}`, `<extra>` optional, `c1`/`c2` card creation, hint `{{c1::answer::hint}}`, `c1,2` warning for Anki 25.09).
+
+### Changed
+- **Pinned dependencies** to exact versions (`csv-parse 5.6.0`, `fast-xml-parser 5.11.1`, `valibot 1.4.2`, `yaml 2.9.0`, `@types/node 22.20.1`, `@rslib/core 0.20.3`, `tsx 4.23.13`, `typescript 5.9.3`, `vitest 3.2.7`) for supply-chain security; `bun.lock` updated accordingly.
+- **AnkiConnect diagnostics** — new stable cause `auth` (`packages/anki/src/errors.ts`) with `authDiagnosis()` / `isAuthErrorMessage()`; `AnkiClient.sync()` classifies `sync: auth not configured` and related messages as `auth` with ordered hints. Documented in `AGENTS.md` and `docs/cli-design.md`.
+- Docs: `README.md` / `AGENTS.md` / `docs/cli-design.md` / `docs/README.md` / `docs/install.md` updated for 17 commands and `v0.0.6`.
+
 ## [0.0.5] — 2026-08-30
 
 ### Added

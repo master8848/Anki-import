@@ -1,6 +1,6 @@
 {
   "name": "anki-xml",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Git + Terraform for Anki knowledge. XML-first infrastructure-as-code toolkit for Anki collections.",
   "keywords": [
     "anki",

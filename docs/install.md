@@ -26,7 +26,7 @@ with two bins: `anki-import` and `anki-xml`. All dependencies are
 inlined; no `node_modules` install, no native bindings. Verify:
 
 ```sh
-npx anki-xml --version        # anki-xml v0.0.5
+npx anki-xml --version        # anki-import v0.0.6
 npx anki-xml doctor           # verify environment
 ```
 

@@ -6,7 +6,7 @@ toolkit for managing Anki collections through structured data files.
 Flashcards are treated as code: validate → plan → diff → apply →
 checkpoint → rollback → sync.
 
-**Current release: `0.0.5`** — published to npm as [`anki-xml`](https://www.npmjs.com/package/anki-xml)
+**Current release: `0.0.6`** — published to npm as [`anki-xml`](https://www.npmjs.com/package/anki-xml)
 
 This project is *not* an Anki replacement, a review app, or a GUI
 automation tool. It speaks to Anki through
@@ -18,7 +18,7 @@ automation tool. It speaks to Anki through
 npm install -g anki-xml          # install globally
 npx anki-xml doctor              # or run without installing
 # pin a version
-npx anki-xml@0.0.5 doctor
+npx anki-xml@0.0.6 doctor
 ```
 
 See [docs/install.md](docs/install.md) for other methods (build from source).
@@ -71,7 +71,7 @@ anki-import sync cards.md --dry-run
 
 ```
 open · doctor · validate · plan · diff · import · sync · rollback ·
-checkpoint · watch · tags · models · stats · media · benchmark · mcp
+checkpoint · watch · anki-sync · tags · models · stats · media · benchmark · mcp
 ```
 
 - `open` — launch the Anki desktop app (macOS: `open -a Anki`,
@@ -84,6 +84,7 @@ checkpoint · watch · tags · models · stats · media · benchmark · mcp
   `--allow-duplicate`, `--deck`, `--model`, ...)
 - `watch <file>` — auto re-validate on change, show the plan, ask before
   applying (`--yes` for agents)
+- `anki-sync [--check]` — AnkiWeb auth + sync: diagnose, trigger `sync` to AnkiWeb (so phone can pull), `cause: "auth"` when not logged in
 - `mcp` — Model Context Protocol server over stdio (optional; 18 tools)
 - `--json` — machine-readable output with stable error codes everywhere
 

@@ -1,6 +1,6 @@
 {
   "name": "@anki-xml/utils",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Shared types, hashing, retries, batching, file helpers",
   "type": "module",
   "exports": {

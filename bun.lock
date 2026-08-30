@@ -38,7 +38,7 @@
     },
     "apps/playground": {
       "name": "@anki-xml/playground",
-      "version": "0.0.5",
+      "version": "0.0.6",
       "dependencies": {
         "@anki-xml/cli": "workspace:*",
         "@anki-xml/core": "workspace:*",
@@ -49,21 +49,21 @@
     },
     "packages/anki": {
       "name": "@anki-xml/anki",
-      "version": "0.0.5",
+      "version": "0.0.6",
       "dependencies": {
         "@anki-xml/utils": "workspace:*",
       },
     },
     "packages/checkpoint": {
       "name": "@anki-xml/checkpoint",
-      "version": "0.0.5",
+      "version": "0.0.6",
       "dependencies": {
         "@anki-xml/utils": "workspace:*",
       },
     },
     "packages/cli": {
       "name": "@anki-xml/cli",
-      "version": "0.0.5",
+      "version": "0.0.6",
       "dependencies": {
         "@anki-xml/anki": "workspace:*",
         "@anki-xml/checkpoint": "workspace:*",
@@ -82,14 +82,14 @@
     },
     "packages/config": {
       "name": "@anki-xml/config",
-      "version": "0.0.5",
+      "version": "0.0.6",
       "dependencies": {
         "yaml": "2.9.0",
       },
     },
     "packages/core": {
       "name": "@anki-xml/core",
-      "version": "0.0.5",
+      "version": "0.0.6",
       "dependencies": {
         "@anki-xml/anki": "workspace:*",
         "@anki-xml/checkpoint": "workspace:*",
@@ -104,21 +104,21 @@
     },
     "packages/diff": {
       "name": "@anki-xml/diff",
-      "version": "0.0.5",
+      "version": "0.0.6",
       "dependencies": {
         "@anki-xml/utils": "workspace:*",
       },
     },
     "packages/logger": {
       "name": "@anki-xml/logger",
-      "version": "0.0.5",
+      "version": "0.0.6",
       "dependencies": {
         "@anki-xml/utils": "workspace:*",
       },
     },
     "packages/mcp": {
       "name": "@anki-xml/mcp",
-      "version": "0.0.5",
+      "version": "0.0.6",
       "dependencies": {
         "@anki-xml/anki": "workspace:*",
         "@anki-xml/core": "workspace:*",
@@ -133,14 +133,14 @@
     },
     "packages/media": {
       "name": "@anki-xml/media",
-      "version": "0.0.5",
+      "version": "0.0.6",
       "dependencies": {
         "@anki-xml/anki": "workspace:*",
       },
     },
     "packages/models": {
       "name": "@anki-xml/models",
-      "version": "0.0.5",
+      "version": "0.0.6",
       "dependencies": {
         "@anki-xml/anki": "workspace:*",
         "@anki-xml/utils": "workspace:*",
@@ -148,7 +148,7 @@
     },
     "packages/parser": {
       "name": "@anki-xml/parser",
-      "version": "0.0.5",
+      "version": "0.0.6",
       "dependencies": {
         "@anki-xml/models": "workspace:*",
         "@anki-xml/utils": "workspace:*",
@@ -159,7 +159,7 @@
     },
     "packages/planner": {
       "name": "@anki-xml/planner",
-      "version": "0.0.5",
+      "version": "0.0.6",
       "dependencies": {
         "@anki-xml/anki": "workspace:*",
         "@anki-xml/logger": "workspace:*",
@@ -168,7 +168,7 @@
     },
     "packages/rollback": {
       "name": "@anki-xml/rollback",
-      "version": "0.0.5",
+      "version": "0.0.6",
       "dependencies": {
         "@anki-xml/anki": "workspace:*",
         "@anki-xml/checkpoint": "workspace:*",
@@ -177,14 +177,14 @@
     },
     "packages/stats": {
       "name": "@anki-xml/stats",
-      "version": "0.0.5",
+      "version": "0.0.6",
       "dependencies": {
         "@anki-xml/anki": "workspace:*",
       },
     },
     "packages/sync": {
       "name": "@anki-xml/sync",
-      "version": "0.0.5",
+      "version": "0.0.6",
       "dependencies": {
         "@anki-xml/anki": "workspace:*",
         "@anki-xml/checkpoint": "workspace:*",
@@ -195,7 +195,7 @@
     },
     "packages/tags": {
       "name": "@anki-xml/tags",
-      "version": "0.0.5",
+      "version": "0.0.6",
       "dependencies": {
         "@anki-xml/anki": "workspace:*",
         "@anki-xml/utils": "workspace:*",
@@ -203,11 +203,11 @@
     },
     "packages/utils": {
       "name": "@anki-xml/utils",
-      "version": "0.0.5",
+      "version": "0.0.6",
     },
     "packages/validation": {
       "name": "@anki-xml/validation",
-      "version": "0.0.5",
+      "version": "0.0.6",
       "dependencies": {
         "@anki-xml/models": "workspace:*",
         "@anki-xml/parser": "workspace:*",

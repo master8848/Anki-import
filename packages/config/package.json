@@ -1,6 +1,6 @@
 {
   "name": "@anki-xml/config",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Workspace config discovery and loading",
   "type": "module",
   "exports": {

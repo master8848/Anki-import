@@ -1,6 +1,6 @@
 {
   "name": "@anki-xml/planner",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Dry-run planning: add/update/remove/duplicates",
   "type": "module",
   "exports": {
