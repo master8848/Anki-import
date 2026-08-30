@@ -1,12 +1,12 @@
 /**
- * MCP tool registry — minimal 6-tool surface for AI agents.
+ * MCP tool registry — minimal 5-tool surface for AI agents.
  * The CLI remains the main interface; MCP is optional.
  */
 
 import * as v from "valibot";
-import { AnkiConnectError, ankiLaunchCommand, launchAnki } from "@anki-xml/anki";
+import { AnkiClient, AnkiConnectError } from "@anki-xml/anki";
 import { runDoctor } from "@anki-xml/core";
-import { diffFile, planFile, syncFile, syncStatus } from "@anki-xml/core";
+import { diffFile, syncFile, syncStatus } from "@anki-xml/core";
 import { parseDocument } from "@anki-xml/parser";
 import { validateNotes } from "@anki-xml/validation";
 
@@ -111,59 +111,15 @@ export const TOOLS: McpTool[] = [
     },
   ),
   makeTool(
-    "open_anki",
-    "P1",
-    "Launch the Anki desktop app from here (macOS/Windows/Linux). Run this first when AnkiConnect is unreachable, then call doctor.",
+    "list_decks",
+    "P0",
+    "List all deck names in the collection (uses deckNames). Use to see which decks/cards exist before syncing.",
     {},
     undefined,
     v.object({}),
-    async () => {
-      const result = await launchAnki();
-      const hint = ankiLaunchCommand();
-      return {
-        ok: result.ok,
-        command: result.command,
-        fallback_commands: [hint.command, ...hint.alternatives],
-        detail: result.detail,
-      };
-    },
+    (_p, ctx) => new AnkiClient({ url: ctx.url, fetchImpl: ctx.fetchImpl }).deckNames(),
     {
-      title: "Launch Anki",
-      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-    },
-  ),
-  makeTool(
-    "plan_import",
-    "P1",
-    "Dry-run preview: how a file would change the collection (add/update/remove/duplicates/unchanged).",
-    {
-      file: { type: "string" },
-      allow_duplicate: { type: "boolean" },
-      batch_size: { type: "number" },
-      deck: { type: "string" },
-      model: { type: "string" },
-    },
-    ["file"],
-    v.object({ file: str, allow_duplicate: optBool, batch_size: optNum, deck: optStr, model: optStr }),
-    (p, ctx) =>
-      planFile(p["file"] as string, {
-        url: ctx.url,
-        fetchImpl: ctx.fetchImpl,
-        allowDuplicate: p["allow_duplicate"] as boolean | undefined,
-        batchSize: p["batch_size"] as number | undefined,
-        deck: p["deck"] as string | undefined,
-        model: p["model"] as string | undefined,
-      }).then((r) => ({
-        errors: r.errors,
-        warnings: r.warnings,
-        add: r.plan.add.map((n) => ({ number: n.number, deck: n.deckName, model: n.modelName })),
-        update: r.plan.update.map((u) => ({ id: u.id, changedFields: u.changedFields })),
-        remove: r.plan.remove,
-        duplicates: r.plan.duplicates.map((n) => ({ number: n.number })),
-        unchanged: r.plan.unchanged,
-      })),
-    {
-      title: "Plan import",
+      title: "List decks",
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
     },
   ),

@@ -1,6 +1,6 @@
 ---
 name: anki-import-mcp
-description: Manage Anki via AI — MCP server over stdio (6 tools). Use when MCP tools are available; for shell use anki-import-cli.
+description: Manage Anki via AI — MCP server over stdio (5 tools). Use when MCP tools are available; for shell use anki-import-cli.
 metadata:
   author: master8848
   version: "0.0.4"
@@ -8,20 +8,21 @@ metadata:
 
 # anki-import MCP
 
-Anki via AI — 6 tools over stdio (JSON-RPC). Anki must be open with AnkiConnect `2055492159`.
+Anki via AI — 5 tools over stdio (JSON-RPC). Anki must be open with AnkiConnect `2055492159`.
 
 ## Tools
 
 | Tool | What it does |
 |---|---|
-| `validate_xml` | Validate file without Anki |
-| `plan_import` | Preview adds / updates / duplicates |
-| `sync` | Add + update cards (or drift if no file) |
+| `validate_xml` | Validate file without Anki (offline — no duplicate check) |
 | `doctor` | Diagnose AnkiConnect connection |
-| `diff` | Show field diffs vs live collection |
-| `open_anki` | Open Anki app |
+| `list_decks` | List all deck names (see which decks/cards exist) |
+| `diff` | Show field diffs vs live collection (field-level preview) |
+| `sync` | Add + update cards (or drift if no file); reports duplicates via live `canAddNotes` |
 
-No `install-addon` / `install-binary` — not in MCP. Anki/add-on install is CLI-only via `anki-import init`.
+> `validate_xml` is offline and cannot detect duplicates; duplicate detection is live via `sync` (`sync` with `dry_run` previews adds/updates/duplicates).
+
+No `install-addon` / `install-binary` / `open` — not in MCP. Anki/add-on install and `open` are CLI-only via `anki-import init` / `anki-import open`.
 
 ## How to use
 
@@ -36,7 +37,7 @@ Add to your MCP client (stdio) — example:
 { "mcpServers": { "anki-xml": { "command": "npx", "args": ["-y", "anki-xml", "mcp"] } } }
 ```
 
-Restart client after adding. Then: `doctor` → `validate_xml` → `plan_import` → `sync`.
+Restart client after adding. Then: `doctor` → `validate_xml` → `list_decks` → `diff` → `sync` (use `sync` with `dry_run: true` to preview duplicates).
 
 ## CDATA cheat-sheet
 

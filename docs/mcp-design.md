@@ -20,7 +20,7 @@ stdio loop, `tools.ts` holds the tool registry.
 ## Handshake
 
 1. Client sends `initialize` → server answers with
-   `protocolVersion: "2024-11-05"`,
+   `protocolVersion: "2025-06-18"`,
    `capabilities: { tools: { listChanged: false } }`,
    `serverInfo: { name: "anki-xml", version: "0.0.4" }`.
 2. Client sends `notifications/initialized` → no response (notification).
@@ -30,10 +30,10 @@ stdio loop, `tools.ts` holds the tool registry.
 
 | Method | Response |
 |---|---|
-| `initialize` | `{ protocolVersion: "2024-11-05", capabilities: { tools: { listChanged: false } }, serverInfo: { name: "anki-xml", version: "0.0.4" } }` |
+| `initialize` | `{ protocolVersion: "2025-06-18", capabilities: { tools: { listChanged: false } }, serverInfo: { name: "anki-xml", version: "0.0.4" } }` |
 | `notifications/initialized` | none (notification) |
 | `ping` | `{}` |
-| `tools/list` | `{ tools: [{ name, description, inputSchema }] }` — 6 tools |
+| `tools/list` | `{ tools: [{ name, description, inputSchema }] }` — 5 tools |
 | `tools/call` | `{ content: [{ type: "text", text }], isError: false }`; tool output is JSON-stringified into `content[0].text` |
 | anything else | `-32601 Method not found: <method>` |
 
@@ -47,19 +47,18 @@ stdio loop, `tools.ts` holds the tool registry.
 | `-32602` | `INVALID_PARAMS` | Tool argument validation failure (`McpToolError`) |
 | `-32603` | `INTERNAL_ERROR` | Tool handler threw non-`McpToolError`; `error.data` carries the agent envelope |
 
-## Tools (6)
+## Tools (5)
 
 `tools/call` params: `{ name, arguments }`. Arguments are validated
 with Valibot schemas; `McpToolError` → `-32602`.
 
 | Tool | Params (required in bold) | Description |
 |---|---|---|
-| `validate_xml` | **file** | Validate a file without contacting Anki. Returns note count, errors, warnings. |
-| `plan_import` | **file**, `allow_duplicate`, `batch_size`, `deck`, `model` | Dry-run preview: add/update/remove/duplicates/unchanged. |
-| `sync` | `file`, `dry_run`, `checkpoint_id`, `batch_size`, `allow_duplicate`, `auto_create_deck`, `deck`, `model` | With `file`: reconcile (create + update). Without: checkpoint drift report with `missingIds`. |
+| `validate_xml` | **file** | Validate a file without contacting Anki. Returns note count, errors, warnings. Offline — cannot detect duplicates; use `sync` (live `canAddNotes`) for duplicate preview. |
 | `doctor` | — | Diagnose AnkiConnect and collection health; failing checks carry fix steps (`hints`). |
+| `list_decks` | — | List all deck names in the collection (uses `deckNames`). Use to see which decks/cards exist before syncing. |
 | `diff` | **file** | Per-note field diff between a file and the live collection. |
-| `open_anki` | — | Launch the Anki desktop app (macOS/Windows/Linux); returns the runnable command + fallbacks. Run when AnkiConnect is unreachable, before `doctor`. |
+| `sync` | `file`, `dry_run`, `checkpoint_id`, `batch_size`, `allow_duplicate`, `auto_create_deck`, `deck`, `model` | With `file`: reconcile (create + update) and report duplicates via live `canAddNotes` (`dry_run: true` for preview). Without: checkpoint drift report with `missingIds`. |
 
 ## Error surfacing
 
@@ -94,8 +93,8 @@ Every tool carries a `tier` field (`"P0" | "P1"`) defined in
 `packages/mcp/src/tools.ts` and exposed in `tools/list`. The spec's
 tiering is enforced by a test (`tests/mcp.test.ts`):
 
-- **P0 — diagnose + read baseline**: `doctor`, `validate_xml`.
-- **P1 — common write operations**: `plan_import`, `diff`, `open_anki`, `sync`.
+- **P0 — diagnose + read baseline**: `doctor`, `validate_xml`, `list_decks`.
+- **P1 — common write operations**: `diff`, `sync`.
 
 ## MCP is optional
 

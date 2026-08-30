@@ -97,15 +97,16 @@ describe("mcp server", () => {
 });
 
 describe("mcp tools", () => {
-  it("lists exactly 6 tools (validate_xml, plan_import, sync, doctor, diff, open_anki)", () => {
+  it("lists exactly 5 tools (validate_xml, sync, doctor, diff, list_decks)", () => {
     const names = TOOLS.map((t) => t.name).sort();
-    expect(names).toEqual(["diff", "doctor", "open_anki", "plan_import", "sync", "validate_xml"]);
-    expect(TOOLS).toHaveLength(6);
+    expect(names).toEqual(["diff", "doctor", "list_decks", "sync", "validate_xml"]);
+    expect(TOOLS).toHaveLength(5);
     // removed tools are absent
     expect(names).not.toContain("import_xml");
     expect(names).not.toContain("add_note");
     expect(names).not.toContain("add_notes");
-    expect(names).not.toContain("list_decks");
+    expect(names).not.toContain("plan_import");
+    expect(names).not.toContain("open_anki");
     expect(names).not.toContain("list_models");
     expect(names).not.toContain("find_notes");
     expect(names).not.toContain("get_tags");
@@ -120,8 +121,8 @@ describe("mcp tools", () => {
     const p0 = TOOLS.filter((t) => t.tier === "P0").map((t) => t.name);
     const p1 = TOOLS.filter((t) => t.tier === "P1").map((t) => t.name);
     const p2 = TOOLS.filter((t) => t.tier === "P2").map((t) => t.name);
-    expect(p0.sort()).toEqual(["doctor", "validate_xml"]);
-    expect(p1.sort()).toEqual(["diff", "open_anki", "plan_import", "sync"]);
+    expect(p0.sort()).toEqual(["doctor", "list_decks", "validate_xml"]);
+    expect(p1.sort()).toEqual(["diff", "sync"]);
     expect(p2).toEqual([]);
     expect(TOOLS.every((t) => ["P0", "P1", "P2"].includes(t.tier))).toBe(true);
 
@@ -129,7 +130,7 @@ describe("mcp tools", () => {
     const toolsByName = new Map(TOOLS.map((t) => [t.name, t]));
     const resp = await handleMessage('{"jsonrpc":"2.0","id":1,"method":"tools/list"}', toolsByName, ctx);
     const tools = (resp as unknown as { result: { tools: Record<string, unknown>[] } }).result.tools;
-    expect(tools).toHaveLength(6);
+    expect(tools).toHaveLength(5);
     for (const t of tools) {
       expect(t).not.toHaveProperty("tier");
       expect(t).toHaveProperty("_meta");
@@ -159,28 +160,14 @@ describe("mcp tools", () => {
     expect(result).toMatchObject({ ok: true, noteCount: 1 });
   });
 
-  it("plan_import dry-runs against mocked collection", async () => {
+  it("list_decks returns deck names via mocked AnkiConnect", async () => {
     const { fetchImpl } = mockClient(async (action) => {
-      if (action === "canAddNotes") return [true, true];
-      if (action === "notesInfo") return [];
+      if (action === "deckNames") return ["Default", "Japanese"];
       throw new Error(`unexpected ${action}`);
     });
-    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "mcp-"));
-    const file = path.join(dir, "cards.yaml");
-    await fs.writeFile(
-      file,
-      `deck: Japanese
-notes:
-  - front: こんにちは
-    back: Hello
-  - front: さようなら
-    back: Goodbye
-`,
-    );
-    const tool = TOOLS.find((t) => t.name === "plan_import")!;
-    const result = await tool.handler({ file }, { url: "http://x", fetchImpl });
-    const r = result as { add: unknown[] };
-    expect(r.add).toHaveLength(2);
+    const tool = TOOLS.find((t) => t.name === "list_decks")!;
+    const result = await tool.handler({}, { url: "http://x", fetchImpl });
+    expect(result).toEqual(["Default", "Japanese"]);
   });
 
   it("rejects missing required params with McpToolError", async () => {
