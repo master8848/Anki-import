@@ -1,5 +1,13 @@
 # GitHub repo setup checklist
 
+> **Historical (pre-monorepo).** Written for creating the repo the
+> first time; the repo now exists at `master8848/Anki-import`. The
+> Bun-based build and publish steps below describe the old setup and
+> **do not apply** — the current build is `pnpm build` (esbuild) and
+> the current release flow is `docs/release-checklist.md` (npm
+> publishing is not active yet). Only sections 1–2 (repo creation)
+> remain relevant, and only if you fork.
+
 Before pushing `anki-xml` to GitHub for the first time, do these
 things:
 

@@ -2,6 +2,38 @@
 
 All notable changes to `anki-xml` / `anki-import` are documented here.
 
+## [Unreleased]
+
+### Added
+- **`open` command** — launch the Anki desktop app from the CLI
+  (macOS: `open -a Anki`, Windows: `start "" "Anki"` / `anki.exe`,
+  Linux: `anki`); detached and non-blocking. MCP `open_anki` tool
+  exposes the same action for agents.
+- **Platform-aware launch hints** — every "connection refused"
+  diagnostic (doctor, CLI errors, MCP) now names the exact command
+  to start Anki on the current OS, plus `anki-import open` as the
+  one-command option.
+- **MCP `sync` tool parity** — the `sync` tool now mirrors the CLI
+  (`batch_size`, `allow_duplicate`, `auto_create_deck`, `deck`,
+  `model`) and its drift report returns `missingIds`; promoted from
+  P2 to P1 so agents can reconcile (create + update) directly.
+
+### Changed
+- **Skills split into two:** `skills/anki-import-cli/` (CLI — the
+  recommended interface) and `skills/anki-import-mcp/` (MCP subset
+  with the tool table and MCP-vs-CLI gaps). Both kept small and
+  self-contained; shared examples moved under
+  `skills/anki-import-cli/examples/`.
+- **Docs conflict cleanup** — canonical counts fixed everywhere
+  (16 commands, 18 tools, 20 test files, 178 tests); `docs/install.md`
+  rewritten for the monorepo (Node 20+, esbuild ESM bundle, npm not
+  published yet); legacy docs (`docs/cli.md`, `docs/commands.md`,
+  `docs/roadmap.md`, `docs/ai-integration.md`, `REPO_SETUP.md`) now
+  carry banners pointing at the canonical docs; `CONTRIBUTING.md` §4
+  gains a full "keep every surface in sync" checklist and a new §4.4
+  "Adding an MCP tool"; §7 doc-policy table now names canonical docs
+  only.
+
 ## [0.0.4] — 2026-08-02
 
 **Monorepo restructure.** `src/` becomes an 18-package pnpm workspace

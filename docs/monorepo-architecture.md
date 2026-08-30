@@ -24,7 +24,8 @@ ankiXML/
 │                           # html-and-latex.xml, math.xml, issue-cases.xml,
 │                           # cards.{yaml,json,csv,md}
 ├── schema/anki.xsd
-├── skills/anki-import/     # agent skill (SKILL.md, examples/)
+├── skills/anki-import-cli/  # CLI skill (recommended; SKILL.md, examples/)
+├── skills/anki-import-mcp/  # MCP skill (SKILL.md, tool table)
 ├── tests/                  # 15 vitest files (see testing-strategy.md)
 └── packages/
     ├── utils/       src/{index,types,files,hash,retry,format}.ts   # shared types + helpers, no deps
@@ -48,10 +49,10 @@ ankiXML/
     │                src/importer/import.ts                         # import pipeline orchestration
     │                src/plugins/{types,registry,xml-plugin,exporter-json}.ts  # plugin API
     ├── cli/         src/{index,run,args,help,errors}.ts
-    │                src/commands/{doctor,validate,plan,diff,import,sync,
+    │                src/commands/{open,doctor,validate,plan,diff,import,sync,
     │                              rollback,checkpoint,watch,tags,models,
     │                              stats,media,benchmark,mcp}.ts      # argv wiring only
-    └── mcp/         src/{index,protocol,server,tools}.ts           # MCP stdio server (JSON-RPC 2.0, 17 tools)
+    └── mcp/         src/{index,protocol,server,tools}.ts           # MCP stdio server (JSON-RPC 2.0, 18 tools)
 ```
 
 ## 2. Package responsibilities
@@ -114,7 +115,7 @@ ankiXML/
   help text, and exit-code rendering. Contains no business logic;
   every command delegates to `@anki-xml/core` or the other packages.
 - **mcp** — SDK-free MCP server over stdio: JSON-RPC 2.0 framing,
-  `initialize`/`tools/list`/`tools/call`, 17 tools validated with
+  `initialize`/`tools/list`/`tools/call`, 18 tools validated with
   Valibot, AnkiConnect errors surfaced as `error.data` with the
   cause/hints/suggestion envelope.
 

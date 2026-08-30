@@ -21,8 +21,9 @@ describe("classifyConnectError", () => {
     expect(diag.cause).toBe("refused");
     expect(diag.hints.length).toBeGreaterThan(0);
     expect(diag.hints.join(" ")).toMatch(/start the anki app/i);
+    expect(diag.hints.join(" ")).toMatch(/anki-import open/);
     expect(diag.hints.join(" ")).toMatch(/2055492159/);
-    expect(diag.suggestion).toBe("anki-import doctor");
+    expect(diag.suggestion).toBe("anki-import open");
   });
 
   it("classifies timeouts", () => {
@@ -86,7 +87,7 @@ describe("AnkiClient diagnostics", () => {
       const e = err as AnkiConnectError;
       expect(e.cause).toBe("refused");
       expect(e.hints?.length).toBeGreaterThan(0);
-      expect(e.suggestion).toBe("anki-import doctor");
+      expect(e.suggestion).toBe("anki-import open");
     }
   });
 });

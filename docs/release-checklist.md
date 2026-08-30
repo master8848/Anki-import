@@ -27,9 +27,10 @@ publish steps.
   (`packages/mcp/src/version.ts`). Verify: `grep '"version"' package.json
   packages/*/package.json apps/playground/package.json` and
   `grep VERSION packages/cli/src/help.ts packages/mcp/src/version.ts`.
-- [ ] **Manual:** `skills/anki-import/SKILL.md` carries `metadata:
-  version: "0.0.4"` — `version-sync.mjs` does **not** touch it. Update
-  it by hand if the skill ships version metadata.
+- [ ] **Manual:** both `skills/anki-import-cli/SKILL.md` and
+  `skills/anki-import-mcp/SKILL.md` carry `metadata: version: "0.0.4"`
+  — `version-sync.mjs` does **not** touch them. Update by hand if the
+  skills ship version metadata.
 - [ ] Rebuild so `dist/cli.js` contains the new version:
   `pnpm build`.
 
@@ -71,7 +72,7 @@ pnpm test && pnpm typecheck && pnpm build && node dist/cli.js --version
   `plan examples/cards.json`, `plan examples/cards.csv`,
   `plan examples/cards.md` — each prints `Plan: …` and exits 0.
 - [ ] **MCP handshake**: `node scripts/smoke-mcp.mjs` — prints
-  `ok initialize: anki-xml 2024-11-05`, `ok tools/list: 17 tools`,
+  `ok initialize: anki-xml 2024-11-05`, `ok tools/list: <N> tools`,
   `ok validate_xml: …` (also runnable via `pnpm smoke:mcp`).
 - [ ] **Rollback dry-run**: `checkpoint list`; for a checkpoint,
   `rollback <id> --dry-run` prints "Dry run: would delete N notes"

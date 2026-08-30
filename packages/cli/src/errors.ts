@@ -18,10 +18,10 @@ export function printAnkiConnectError(
   } else {
     log.error(err.message);
     if (err.hints && err.hints.length > 0) {
-      log.error("Fix:");
-      for (const h of err.hints) log.error(`  ${h}`);
+      log.error("Try this:");
+      for (const h of err.hints) log.error(`  • ${h}`);
     }
-    if (err.suggestion) log.error(`Run: ${err.suggestion}`);
+    if (err.suggestion) log.error(`Next: ${err.suggestion}`);
   }
   return 2;
 }

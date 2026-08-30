@@ -4,6 +4,7 @@ import { createLogger } from "@anki-xml/logger";
 import { AnkiConnectError, isAnkiConnectAborted } from "@anki-xml/anki";
 import { printAnkiConnectError } from "./errors.ts";
 import { runDoctorCommand } from "./commands/doctor.ts";
+import { runOpenCommand } from "./commands/open.ts";
 import { runValidate } from "./commands/validate.ts";
 import { runImportCommand } from "./commands/import.ts";
 import { runPlanCommand } from "./commands/plan.ts";
@@ -25,7 +26,8 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
     args = parseArgs(argv);
   } catch (err) {
     if (err instanceof CliError) {
-      console.error(`error: ${err.message}`);
+      console.error(`Error: ${err.message}`);
+      console.error(`Tip: run 'anki-import --help' to see how to use it.`);
       return 2;
     }
     throw err;
@@ -57,6 +59,8 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
     switch (args.command) {
       case "doctor":
         return await runDoctorCommand(args.flags, log);
+      case "open":
+        return await runOpenCommand(args.flags, log);
       case "validate":
         return await runValidate(requireFile("validate", args), args, log);
       case "import":
@@ -109,8 +113,8 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
       case "mcp":
         return await runMcpCommand();
       default:
-        console.error(`error: unknown command '${args.command}'`);
-        console.error(`Run '${BIN_NAME} --help' for usage.`);
+        console.error(`Unknown command: '${args.command}'`);
+        console.error(`Run '${BIN_NAME} --help' to see available commands.`);
         return 2;
     }
   } catch (err) {
@@ -118,7 +122,7 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
       if (args.flags.json) {
         console.log(JSON.stringify({ ok: false, error: { code: "USAGE_ERROR", message: err.message } }));
       } else {
-        console.error(`error: ${err.message}`);
+        console.error(`Error: ${err.message}`);
       }
       return 2;
     }

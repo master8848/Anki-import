@@ -52,7 +52,7 @@ AnkiConnect add-on (2055492159) not installed, wrong URL, hung Anki.
 
 ## Commands
 
-`doctor` · `validate` · `plan` · `diff` · `import` · `sync` · `rollback`
+`doctor` · `open` · `validate` · `plan` · `diff` · `import` · `sync` · `rollback`
 · `checkpoint` · `watch` · `tags` · `models` · `stats` · `media` ·
 `benchmark` · `mcp`
 
@@ -64,5 +64,7 @@ pnpm test && pnpm typecheck && pnpm build && node dist/cli.js --version
 
 ## Skill
 
-Agent-facing docs: `skills/anki-import/SKILL.md` — self-contained for
-npm users. Contributor skill rules: `CONTRIBUTING.md` §13.
+Agent-facing docs: `skills/anki-import-cli/SKILL.md` (CLI — the
+recommended interface) and `skills/anki-import-mcp/SKILL.md` (MCP
+subset) — self-contained for npm users. Contributor skill rules:
+`CONTRIBUTING.md` §13.

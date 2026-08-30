@@ -759,7 +759,7 @@ export interface McpTool {
   handler: (params: Record<string, unknown>, ctx: McpContext) => Promise<unknown>;
 }
 export interface McpContext { url: string; fetchImpl?: typeof fetch; }
-export const TOOLS: McpTool[];   // 17 tools — see mcp-design.md
+export const TOOLS: McpTool[];   // 18 tools — see mcp-design.md
 export class McpToolError extends Error {}
 
 export function toolErrorData(err: unknown): {

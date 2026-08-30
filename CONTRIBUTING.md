@@ -112,7 +112,7 @@ pnpm test tests/import.test.ts -t "duplicates"   # only tests whose name matches
 
 Tests **never** talk to a real AnkiConnect. They mock `fetch` with
 a one-line shim that returns canned JSON. See the canonical pattern
-in `tests/checkpoints.test.ts` and `tests/addon.test.ts`:
+in `tests/ankiconnect.test.ts` and `tests/mcp.test.ts`:
 
 ```ts
 const fetchImpl: typeof fetch = async (url, init) => {
@@ -202,19 +202,55 @@ export async function runMyCmd(
    - `tests/cli.test.ts` or `tests/cli-formats.test.ts` — command-level
      via `main([...])` (error paths need no Anki).
 
-8. **Document** — add the command's section to
-   [`docs/commands.md`](docs/commands.md) (or
-   `docs/monorepo-architecture.md` for design) and an `[Unreleased]`
-   entry in [`CHANGELOG.md`](CHANGELOG.md).
+8. **Document** — keep every surface in sync so no doc contradicts
+   another (this is a reviewable checklist):
+   - `packages/cli/src/help.ts` — `printHelp()` command list + examples
+     and `printCommandHelp()` usage line.
+   - `docs/cli-design.md` — the canonical command table (one row per
+     command; update the command count in its header text if you touch
+     the surface).
+   - `README.md` — `## Commands` list (and quick start for a new
+     top-level workflow).
+   - `AGENTS.md` — the `## Commands` line.
+   - `skills/anki-import-cli/SKILL.md` — command table (agent-facing).
+   - `docs/README.md` — doc index, if it lists a command count.
+   - `CHANGELOG.md` — `[Unreleased]` entry.
+   - `tests/cli.test.ts` or `tests/cli-formats.test.ts` — help/exit
+     behavior if the change affects it.
+   - `docs/commands.md` — legacy surface; only update if the command
+     exists there (historical, not canonical).
 
 9. **Run the gates** — `pnpm test && pnpm typecheck && pnpm build &&
    node dist/cli.js --version`.
 
 ### 4.3 Adding a subcommand
 
-Commands with multiple subcommands (`profile`, `checkpoint`, `addon`)
+Commands with multiple subcommands (`checkpoint`, `tags`, `media`)
 parse the verb in their own `parseSubArgs`. Keep the subcommand set
 flat — no nested verbs.
+
+### 4.4 Adding an MCP tool
+
+MCP tools live in `packages/mcp/src/tools.ts` via the `makeTool`
+helper (name, tier, description, Valibot `inputSchema`, handler).
+Steps:
+
+1. **Reuse core** — the handler must call `@anki-xml/core` (or a
+   package) functions, never talk to AnkiConnect directly; use
+   `clientFor(ctx)` for the shared client.
+2. **Pick a tier** — P0 (diagnose/read baseline), P1 (common writes),
+   P2 (advanced). Update the tiering list in
+   `docs/mcp-design.md`.
+3. **Validate params** — a Valibot schema; wrong params must throw
+   `McpToolError` (→ `-32602`).
+4. **Keep stdout clean** — the handler returns data; the server
+   serializes it. No `console.log`.
+5. **Document** — `docs/mcp-design.md` (tool table + `## Tools (N)`
+   count), `tests/mcp.test.ts` (tier-list assertions + a handler
+   test), `skills/anki-import-mcp/SKILL.md` (tool table), `README.md`
+   (`mcp` bullet tool count), `docs/js-interfaces.md` (`TOOLS`
+   count), `CHANGELOG.md` `[Unreleased]`.
+6. **Run the gates** — `pnpm test && pnpm typecheck && pnpm build`.
 
 ---
 
@@ -230,7 +266,8 @@ change for AI agents.
    - [`CHANGELOG.md`](CHANGELOG.md)
    - [`docs/ai-integration.md`](docs/ai-integration.md) §"Stable
      JSON Shapes Per Command"
-   - [`AGENTS.md`](AGENTS.md) §5
+   - [`AGENTS.md`](AGENTS.md) — "AnkiConnect diagnostics" section
+     (constraint #9: branch on `code`, never `message`)
 3. Add a test that asserts the code appears in the error envelope
    (don't just test the message).
 
@@ -253,17 +290,26 @@ flag them in the release notes.
 
 ## 7. Documentation policy
 
-Every doc file has a purpose. When you change a doc:
+Every doc file has a purpose. When you change a doc, keep the
+surfaces below in sync — they describe the **same** thing (commands,
+tools, flags) and drift silently:
 
-| Change | Doc to update |
+| Change | Canonical doc(s) to update |
 |---|---|
-| New command | `docs/commands.md`, `CHANGELOG.md`, `src/cli/help.ts` (`EXAMPLES_BLOCK`) |
-| New flag (global) | `docs/cli.md`, `README.md`, `AGENTS.md` §4 |
-| New flag (subcommand) | `src/cli/help.ts` flags map, `docs/commands.md` |
-| New error code | `docs/ai-integration.md`, `AGENTS.md` §5, `CHANGELOG.md` |
+| New command | `packages/cli/src/help.ts`, `docs/cli-design.md`, `README.md`, `AGENTS.md` (Commands), `skills/anki-import-cli/SKILL.md`, `CHANGELOG.md` (see §4.2 step 8) |
+| New MCP tool | `packages/mcp/src/tools.ts`, `docs/mcp-design.md`, `tests/mcp.test.ts`, `skills/anki-import-mcp/SKILL.md`, `CHANGELOG.md` (see §4.4) |
+| New flag (global) | `docs/cli-design.md`, `README.md`, `AGENTS.md` (Commands) |
+| New flag (subcommand) | `packages/cli/src/help.ts` flags map, `docs/cli-design.md` |
+| New error code | `docs/ai-integration.md`, `AGENTS.md` (AnkiConnect diagnostics), `CHANGELOG.md` |
 | New XML attribute | `docs/language.md`, `docs/usage.md`, `docs/field-names.md` |
-| New exit code | `docs/cli.md`, `AGENTS.md` §4.3 |
-| Architectural change | `docs/architecture-review.md`, `AGENTS.md` §3 |
+| New exit code | `docs/cli-design.md`, `AGENTS.md` |
+| Architectural change | `docs/monorepo-architecture.md`, `AGENTS.md` (Architecture) |
+| Skill change | `skills/*/SKILL.md` + §13 of this file |
+
+Legacy docs that must **not** be extended (historical only):
+`docs/cli.md`, `docs/commands.md`, `docs/cli-command-design.md`,
+`docs/architecture-review.md`. Point readers to `docs/cli-design.md`
+and `docs/mcp-design.md` instead.
 
 ---
 
@@ -364,25 +410,34 @@ The build produces `dist/cli.js` — a self-contained ESM bundle for Node 20+.
 
 ---
 
-## 13. Agent skill (`skills/anki-import/`)
+## 13. Agent skills (`skills/anki-import-cli/`, `skills/anki-import-mcp/`)
 
-The skill ships in the npm package for agents that only have
-`npm install -g anki-xml` — not this repository.
+The skills ship in the npm package for agents that only have
+`npm install -g anki-xml` — not this repository. There are two:
 
-Rules when editing it:
+- `skills/anki-import-cli/SKILL.md` — the CLI, **the recommended
+  interface** (full surface).
+- `skills/anki-import-mcp/SKILL.md` — the MCP subset (18 tools, tiers,
+  what MCP cannot do).
 
-1. Keep `SKILL.md` self-contained (≈150–250 lines). No links to
-   `schema/anki.xsd`, `CHANGELOG.md`, `../SKILL.md`, or repo paths.
-2. One command table lives in `SKILL.md` only. Do not reintroduce
+Rules when editing them:
+
+1. Keep each `SKILL.md` self-contained and small (≈60–120 lines). No
+   links to `schema/anki.xsd`, `CHANGELOG.md`, `../SKILL.md`, or repo
+   paths. The MCP skill may point at the CLI skill by name.
+2. One command table lives in the CLI `SKILL.md` only; one tool table
+   in the MCP `SKILL.md` only. Do not reintroduce
    `references/commands.md` or `references/xml-schema.md`.
-3. All examples live under `skills/anki-import/examples/`
+3. All examples live under `skills/anki-import-cli/examples/`
    (`commands.md`, XML fixtures, `update-and-delete.md`). Do not
-   keep a sibling `examples.md` next to `SKILL.md`.
-4. Do not duplicate fixture content into `SKILL.md` — list filenames
-   only.
-5. Contributor / from-source docs belong here, not in the skill.
+   keep a sibling `examples.md` next to either `SKILL.md`.
+4. Do not duplicate fixture content into either `SKILL.md` — list
+   filenames only.
+5. Contributor / from-source docs belong here, not in the skills.
    There is no `update` CLI in the current release; document
    delete/replace via `checkpoint` + `rollback` + re-`import`.
+6. Keep `description` frontmatter distinct per skill (CLI vs MCP
+   triggers) so agents pick the right one.
 
 ---
 

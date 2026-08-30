@@ -1,88 +1,36 @@
 # Install
 
-Three install methods. Pick based on your environment:
+Two active install methods (npm is **not published yet** — build from
+source until the first npm release; see `docs/release-checklist.md`):
 
 | Method | Prerequisite | Bundle | Best for |
 |---|---|---|---|
-| `npm install -g` or `npx` | Node ≥ 18 | 175 KB CommonJS | Most users, CI, agents |
-| Standalone binary | none | ~62 MB native | Air-gapped, no runtime |
-| Build from source | Bun ≥ 1.3 | source + dist | Contributors |
+| `npm install -g` or `npx` (when published) | Node ≥ 20 | single ESM bundle (`dist/cli.js`) | Most users, CI, agents |
+| Build from source | Node ≥ 20 + pnpm ≥ 10 | source + `dist/cli.js` | Contributors, unreleased features |
 
-## npm / npx (recommended)
+## npm / npx (recommended — once published)
 
 ```sh
-# Global install
 npm install -g anki-xml
-
-# No install
 npx anki-xml --help
 ```
 
-The npm package contains a **single self-contained CommonJS bundle**
-(`dist/cli.js`, ~175 KB). All dependencies are inlined. No
-`node_modules` install, no native bindings.
-
-Verifies on:
-
-- Node ≥ 18 (LTS)
-- macOS, Linux, Windows
-- Alpine / minimal containers
-
-The bundle is produced by `bun run build:npm`, which calls
-`bun build --target=node --format=cjs --bundle --minify`. The
-output gets a `#!/usr/bin/env node` shebang and is marked
-executable so `npm` symlinks it directly into your `bin`.
-
-### Verify the install
+The package ships a single self-contained ESM bundle (`dist/cli.js`)
+with two bins: `anki-import` and `anki-xml`. All dependencies are
+inlined; no `node_modules` install, no native bindings. Verify:
 
 ```sh
-npx anki-xml --version        # anki-xml v0.0.1
-npx anki-xml --help           # grouped help
+npx anki-xml --version        # anki-xml v0.0.4
 npx anki-xml doctor           # verify environment
 ```
 
-### Updating
-
-```sh
-npm update -g anki-xml
-```
-
-To pin to a version:
-
-```sh
-npm install -g anki-xml@0.0.1
-```
-
-## Standalone binary
-
-Single file. No runtime required. Cross-platform.
-
-```sh
-# macOS arm64
-curl -L https://github.com/master8848/Anki-import/releases/latest/download/anki-xml-darwin-arm64 \
-  -o /usr/local/bin/anki-xml
-chmod +x /usr/local/bin/anki-xml
-anki-xml --version
-```
-
-Build the binary yourself with [Bun](https://bun.sh):
-
-```sh
-bun run build --out anki-xml
-./anki-xml --version
-```
-
-Binaries are produced by GitHub Actions on every release and
-attached as release artifacts. See the
-[Releases page](https://github.com/master8848/Anki-import/releases).
-
-## Build from source
+## Build from source (current way)
 
 ```sh
 git clone https://github.com/master8848/Anki-import
 cd Anki-import
 pnpm install
-pnpm build              # dist/cli.js
+pnpm build              # esbuild → dist/cli.js (ESM, Node ≥ 20)
 node dist/cli.js --version
 ```
 
@@ -94,15 +42,16 @@ Useful when:
 
 ## Choosing between methods
 
-- **Just want to use it now?** `npx anki-xml --help`. No install.
-- **CI / agents / scripting?** `npm install -g anki-xml` (published registry package). Then call it from anywhere.
-- **Air-gapped?** Download the binary from Releases.
-- **Developing?** Clone + `pnpm install` + `pnpm start`.
+- **Just want to use it now?** Build from source, then use
+  `node dist/cli.js` or `pnpm start` during development.
+- **CI / agents / scripting?** Once published: `npm install -g anki-xml`.
+- **Developing?** Clone + `pnpm install` + `pnpm start`
+  (or `pnpm doctor`).
 
 ## Updating
 
-After updating, re-run `anki-xml doctor` to confirm the new
-version still talks to AnkiConnect:
+After updating, re-run `anki-xml doctor` to confirm the new version
+still talks to AnkiConnect:
 
 ```sh
 npm update -g anki-xml
@@ -115,12 +64,10 @@ anki-xml doctor
 npm uninstall -g anki-xml
 ```
 
-Local checkpoints live in
-`$XDG_DATA_HOME/anki-xml/` and are **not removed** by uninstall.
-To wipe them:
+Local checkpoints live in `$XDG_DATA_HOME/anki-import/checkpoints`
+(default `~/.local/share/anki-import/`) and are **not removed** by
+uninstall:
 
 ```sh
-rm -rf ~/.local/share/anki-xml
-# config:
-rm -rf ~/.config/anki-xml
+rm -rf ~/.local/share/anki-import
 ```

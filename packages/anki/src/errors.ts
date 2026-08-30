@@ -6,6 +6,8 @@
  * what to do next.
  */
 
+import { ankiLaunchCommand } from "./launch.ts";
+
 export const ANKICONNECT_ADDON_CODE = "2055492159";
 export const DEFAULT_URL = "http://127.0.0.1:8765";
 
@@ -31,33 +33,41 @@ export interface ConnectDiagnosis {
   suggestion?: string;
 }
 
-const REFUSED_HINTS = [
-  `Start the Anki app — AnkiConnect is served from inside Anki and cannot run standalone.`,
-  `Install the AnkiConnect add-on: in Anki, Tools → Add-ons → Get Add-ons → enter ${ANKICONNECT_ADDON_CODE}.`,
-  `Restart Anki after installing or enabling the add-on (Tools → Add-ons → check it is enabled).`,
-  `Confirm the URL is correct: AnkiConnect listens on ${DEFAULT_URL} by default; pass --url <addr> if you configured another port.`,
-];
+/** Hints for "connection refused" — Anki is not running. Platform-aware. */
+function refusedHints(): string[] {
+  const { command, alternatives } = ankiLaunchCommand();
+  const launch = alternatives.length > 0 ? `${command} (or ${alternatives.join(", ")})` : command;
+  return [
+    `Start the Anki app: ${launch}`,
+    `Or run: anki-import open`,
+    `Need AnkiConnect? In Anki: Tools → Add-ons → Get Add-ons → ${ANKICONNECT_ADDON_CODE}`,
+    `After installing, restart Anki.`,
+    `Wrong address? Anki uses ${DEFAULT_URL} by default. Use --url if yours is different.`,
+  ];
+}
+
+const REFUSED_HINTS = refusedHints();
 
 const TIMEOUT_HINTS = [
-  `Anki is running but did not answer in time — it may be busy or frozen.`,
-  `Restart Anki, or wait and retry.`,
-  `If this persists, reinstall AnkiConnect: Tools → Add-ons → Browse/Remove → Get Add-ons → ${ANKICONNECT_ADDON_CODE}.`,
+  `Anki is open but not responding. It may be busy.`,
+  `Wait a bit and try again, or restart Anki.`,
+  `Still stuck? Reinstall AnkiConnect: Tools → Add-ons → ${ANKICONNECT_ADDON_CODE}.`,
 ];
 
 const HTTP_HINTS = [
-  `AnkiConnect answered with an HTTP error — the URL likely points at a non-AnkiConnect service (proxy, another web app).`,
-  `Check Anki's add-on settings for the configured port, then pass the matching --url.`,
+  `Got an HTTP error — the address may point to the wrong app.`,
+  `Check AnkiConnect's port in Anki, then use --url to match it.`,
 ];
 
 const BAD_JSON_HINTS = [
-  `Something else is listening on that port — it returned a non-AnkiConnect response.`,
-  `Run "anki-import doctor" to re-check, or change the port in AnkiConnect settings and pass --url.`,
+  `Something else is using that port — not Anki.`,
+  `Run anki-import doctor, or fix the port in Anki and use --url.`,
 ];
 
 const NETWORK_HINTS = [
-  `The host could not be reached at all (DNS, firewall, or wrong host).`,
-  `AnkiConnect only listens on localhost; if Anki is on another machine, set up a reverse tunnel first.`,
-  `Run "anki-import doctor" for a full diagnosis.`,
+  `Can't reach that address. Check the URL and your network.`,
+  `Anki only listens on this computer. For another computer, use a tunnel.`,
+  `Run anki-import doctor to check.`,
 ];
 
 function nodeCode(err: unknown): string | undefined {
@@ -100,9 +110,9 @@ export function classifyConnectError(err: unknown, url: string): ConnectDiagnosi
       reachable: false,
       cause: "refused",
       url,
-      detail: `Connection refused at ${url}${code ? ` (${code})` : ""}.`,
+      detail: `Can't connect to ${url}${code ? ` (${code})` : ""} — Anki may be closed.`,
       hints: REFUSED_HINTS,
-      suggestion: "anki-import doctor",
+      suggestion: "anki-import open",
     };
   }
   if (code === "ETIMEDOUT" || code === "EAI_AGAIN" || (err instanceof Error && err.name === "AbortError")) {
@@ -110,7 +120,7 @@ export function classifyConnectError(err: unknown, url: string): ConnectDiagnosi
       reachable: false,
       cause: "timeout",
       url,
-      detail: `Request to ${url} timed out${code ? ` (${code})` : ""}.`,
+      detail: `Anki didn't answer at ${url}${code ? ` (${code})` : ""}.`,
       hints: TIMEOUT_HINTS,
       suggestion: "anki-import doctor",
     };
@@ -120,7 +130,7 @@ export function classifyConnectError(err: unknown, url: string): ConnectDiagnosi
       reachable: false,
       cause: "network",
       url,
-      detail: `Could not resolve or reach ${url} (${code}).`,
+      detail: `Can't find ${url} (${code}). Check the address.`,
       hints: NETWORK_HINTS,
       suggestion: "anki-import doctor",
     };
@@ -129,8 +139,8 @@ export function classifyConnectError(err: unknown, url: string): ConnectDiagnosi
     reachable: false,
     cause: "unknown",
     url,
-    detail: `Failed to reach AnkiConnect at ${url}: ${msg}`,
-    hints: [`Run "anki-import doctor" for a full diagnosis.`],
+    detail: `Can't reach Anki at ${url}: ${msg}`,
+    hints: [`Run anki-import doctor to check.`],
     suggestion: "anki-import doctor",
   };
 }

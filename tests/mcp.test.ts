@@ -104,6 +104,7 @@ describe("mcp tools", () => {
     expect(names).toContain("doctor");
     expect(names).toContain("list_decks");
     expect(names).toContain("list_models");
+    expect(names).toContain("open_anki");
     expect(names).toContain("plan_import");
     expect(names).toContain("sync");
     expect(names).toContain("collection_stats");
@@ -121,10 +122,12 @@ describe("mcp tools", () => {
       "diff",
       "find_notes",
       "get_tags",
+      "open_anki",
       "plan_import",
       "remove_tags",
+      "sync",
     ]);
-    expect(p2.sort()).toEqual(["collection_stats", "get_media", "store_media", "sync"]);
+    expect(p2.sort()).toEqual(["collection_stats", "get_media", "store_media"]);
     expect(TOOLS.every((t) => ["P0", "P1", "P2"].includes(t.tier))).toBe(true);
   });
 

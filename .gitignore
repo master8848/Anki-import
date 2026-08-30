@@ -35,5 +35,9 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # IntelliJ based IDEs
 .idea
 
+# agents/skills cache
+.agents/
+skills-lock.json
+
 # Finder (MacOS) folder config
 .DS_Store

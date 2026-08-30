@@ -124,9 +124,9 @@ serializes `ValidatedNote[]` back out).
 - **Stable codes**: `VALIDATION_ERROR`, `XML_PARSE_ERROR`,
   `ANKICONNECT_ERROR` (with `cause`/`hints`/`suggestion`), `USAGE_ERROR`,
   `FATAL`.
-- **MCP as the agent surface** — `anki-import mcp` exposes 17 tools
-  (doctor, list_decks, plan_import, import_xml, diff, sync, …) over
-  stdio with the same error envelope in `error.data`.
+- **MCP as the agent surface** — `anki-import mcp` exposes 18 tools
+  (doctor, open_anki, list_decks, plan_import, import_xml, diff,
+  sync, …) over stdio with the same error envelope in `error.data`.
 - **Safe loop**: `plan --json` → `import --dry-run --json` → `import
   --checkpoint <id>` → verify with `diff`/`stats` → `rollback` on
   failure. Use `sync` (not `import`) for id-tagged updates.

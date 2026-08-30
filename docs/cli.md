@@ -1,5 +1,9 @@
 # CLI reference
 
+> **Legacy (pre-monorepo).** Superseded by `docs/cli-design.md` —
+> keep read-only. Flags and commands here (`--profile`, `--resume-from`,
+> `.anki-xmlrc`) may not exist in the current CLI.
+
 The `anki-xml` command-line interface.
 
 ## Synopsis

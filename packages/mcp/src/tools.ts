@@ -4,7 +4,7 @@
  */
 
 import * as v from "valibot";
-import { AnkiClient, AnkiConnectError } from "@anki-xml/anki";
+import { AnkiClient, AnkiConnectError, ankiLaunchCommand, launchAnki } from "@anki-xml/anki";
 import { runDoctor } from "@anki-xml/core";
 import { diffFile, importFromFile, planFile, syncFile, syncStatus } from "@anki-xml/core";
 import { listModels } from "@anki-xml/models";
@@ -131,6 +131,24 @@ export const TOOLS: McpTool[] = [
     undefined,
     v.object({}),
     (_p, ctx) => runDoctor({ url: ctx.url, fetchImpl: ctx.fetchImpl }),
+  ),
+  makeTool(
+    "open_anki",
+    "P1",
+    "Launch the Anki desktop app from here (macOS/Windows/Linux). Run this first when AnkiConnect is unreachable, then call doctor.",
+    {},
+    undefined,
+    v.object({}),
+    async () => {
+      const result = await launchAnki();
+      const hint = ankiLaunchCommand();
+      return {
+        ok: result.ok,
+        command: result.command,
+        fallback_commands: [hint.command, ...hint.alternatives],
+        detail: result.detail,
+      };
+    },
   ),
   makeTool(
     "list_decks",
@@ -336,15 +354,29 @@ export const TOOLS: McpTool[] = [
   ),
   makeTool(
     "sync",
-    "P2",
-    "Reconcile a file with the collection (create + update). Without a file, report checkpoint drift.",
+    "P1",
+    "Reconcile a file with the collection (create + update). With a file: full import options. Without a file: checkpoint drift report.",
     {
-      file: { type: "string" },
+      file: { type: "string", description: "Path to the file to sync (xml/yaml/json/csv/md)" },
       dry_run: { type: "boolean" },
       checkpoint_id: { type: "string" },
+      batch_size: { type: "number" },
+      allow_duplicate: { type: "boolean" },
+      auto_create_deck: { type: "boolean" },
+      deck: { type: "string", description: "Fill empty decks with this value" },
+      model: { type: "string", description: "Fill empty model types with this value" },
     },
     undefined,
-    v.object({ file: optStr, dry_run: optBool, checkpoint_id: optStr }),
+    v.object({
+      file: optStr,
+      dry_run: optBool,
+      checkpoint_id: optStr,
+      batch_size: optNum,
+      allow_duplicate: optBool,
+      auto_create_deck: optBool,
+      deck: optStr,
+      model: optStr,
+    }),
     async (p, ctx) => {
       if (p["file"] === undefined) {
         const status = await syncStatus({
@@ -352,16 +384,24 @@ export const TOOLS: McpTool[] = [
           url: ctx.url,
           fetchImpl: ctx.fetchImpl,
         });
+        const missing = status.drift.filter((d) => !d.exists);
         return {
           checkpoint: status.checkpoint,
-          missing: status.drift.filter((d) => !d.exists).length,
+          drift: status.drift,
+          missingIds: missing.map((d) => d.id),
+          missing: missing.length,
         };
       }
       const result = await syncFile(p["file"] as string, {
         url: ctx.url,
         fetchImpl: ctx.fetchImpl,
         dryRun: p["dry_run"] as boolean | undefined,
+        batchSize: p["batch_size"] as number | undefined,
+        allowDuplicate: p["allow_duplicate"] as boolean | undefined,
+        autoCreateDeck: p["auto_create_deck"] as boolean | undefined,
         checkpointId: p["checkpoint_id"] as string | undefined,
+        deck: p["deck"] as string | undefined,
+        model: p["model"] as string | undefined,
       });
       return {
         errors: result.errors,

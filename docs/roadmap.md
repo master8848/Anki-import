@@ -1,7 +1,17 @@
 # Roadmap
 
+> **Historical milestone tracker (pre-monorepo).** The M-milestone
+> tables below track the original project; several rows describe
+> commands that no longer exist or were renamed in the monorepo
+> restructure. The **current** command/tool surface is
+> `docs/cli-design.md` and `docs/mcp-design.md`; release status is
+> `docs/release-checklist.md`. Do not edit milestone rows as if they
+> described today's code — only `docs/cli-design.md` is the source
+> of truth for the current surface.
+
 This document is the implementation plan for `anki-xml`. The
-**Status** section at the bottom is the source of truth.
+**Status** section at the bottom carries the current, canonical
+numbers (commands, tests, tools).
 
 ## Priorities
 
@@ -108,11 +118,11 @@ In order:
 | M14 | Config file (`.anki-xmlrc`) + `--config` flag | ✅ shipped |
 | M15 | Top-level `README.md` | ✅ shipped |
 | M16 | `CHANGELOG.md`, `LICENSE`, `CONTRIBUTING.md` | ✅ shipped |
-| M17 | Watch mode | ⏸ deferred (not needed for AI agents) |
-| M18 | Bun standalone-binary build | ✅ shipped |
+| M17 | Watch mode | ✅ shipped (as `watch`, in the monorepo CLI) |
+| M18 | Bun standalone-binary build | ⏸ superseded — monorepo ships a Node esbuild bundle |
 | M19 | Top-level `README.md` help surface grouped by category | ✅ shipped |
 | M20 | Per-command help with positional argument + examples | ✅ shipped |
-| M21 | npm distribution (Node ≥ 18 CommonJS bundle; `npm i -g` and `npx`) | ✅ shipped |
+| M21 | npm distribution (Node ≥ 18 CommonJS bundle; `npm i -g` and `npx`) | ⏸ not active — see `docs/release-checklist.md` |
 | M22 | `addon` command + `doctor` add-on checks + MathJax detection | ✅ shipped |
 
 ## Original commit log (Phase 1..4)
@@ -136,18 +146,16 @@ All 11 priority commits shipped. See `git log`.
 
 ## Status (current)
 
-**34 commands ship.** 430 tests pass. The CLI is feature-complete for
-every phase-1..4 item that didn't require plugin hosts, plus the
-M1..M22 reliability, distribution, and add-on layer.
+**16 commands ship** — see `docs/cli-design.md` for the canonical
+surface. **178 tests pass** (`pnpm test`). MCP serves **18 tools**
+— see `docs/mcp-design.md`. The v0.0.4 monorepo restructure is
+complete; npm distribution is **not active yet** (see
+`docs/release-checklist.md`). These are the only three numbers that
+describe today's code; milestone rows above are historical.
 
 **Deferred items:**
 
-- **P4.9 plugin hooks** — waiting for 3 real plugin requests. The
-  design shape is in `src/plugins.ts`.
-- **M8 partial refactors (R1/R4/R6)** — mechanical migrations,
-  low-value. Follow-up commits.
-- **M17 watch mode** — not needed for AI agents. Polling is faster
-  and more deterministic.
+- **P4.9 plugin hooks** — waiting for 3 real plugin requests.
 
 ## Out of scope until requested
 

@@ -33,7 +33,7 @@ stdio loop, `tools.ts` holds the tool registry.
 | `initialize` | `{ protocolVersion: "2024-11-05", capabilities: { tools: { listChanged: false } }, serverInfo: { name: "anki-xml", version: "0.0.4" } }` |
 | `notifications/initialized` | none (notification) |
 | `ping` | `{}` |
-| `tools/list` | `{ tools: [{ name, description, inputSchema }] }` — 17 tools |
+| `tools/list` | `{ tools: [{ name, description, inputSchema }] }` — 18 tools |
 | `tools/call` | `{ content: [{ type: "text", text }], isError: false }`; tool output is JSON-stringified into `content[0].text` |
 | anything else | `-32601 Method not found: <method>` |
 
@@ -47,7 +47,7 @@ stdio loop, `tools.ts` holds the tool registry.
 | `-32602` | `INVALID_PARAMS` | Tool argument validation failure (`McpToolError`) |
 | `-32603` | `INTERNAL_ERROR` | Tool handler threw non-`McpToolError`; `error.data` carries the agent envelope |
 
-## Tools (17)
+## Tools (18)
 
 `tools/call` params: `{ name, arguments }`. Arguments are validated
 with Valibot schemas; `McpToolError` → `-32602`.
@@ -57,6 +57,7 @@ with Valibot schemas; `McpToolError` → `-32602`.
 | `import_xml` | **file**, `dry_run`, `batch_size`, `allow_duplicate`, `auto_create_deck`, `deck`, `model` | Import a file (xml/yaml/json/csv/md). Creates notes; rejects update targets (use `sync`). |
 | `validate_xml` | **file** | Validate a file without contacting Anki. Returns note count, errors, warnings. |
 | `doctor` | — | Diagnose AnkiConnect and collection health; failing checks carry fix steps (`hints`). |
+| `open_anki` | — | Launch the Anki desktop app (macOS/Windows/Linux); returns the runnable command + fallbacks. Run when AnkiConnect is unreachable, before `doctor`. |
 | `list_decks` | — | All deck names in the collection. |
 | `list_models` | — | All note types with their fields. |
 | `plan_import` | **file**, `allow_duplicate`, `batch_size`, `deck`, `model` | Dry-run preview: add/update/remove/duplicates/unchanged. |
@@ -70,7 +71,7 @@ with Valibot schemas; `McpToolError` → `-32602`.
 | `store_media` | **filename, data_base64** | Store a media file (base64-encoded bytes). |
 | `get_media` | **filename** | Retrieve a media file as base64 (`{filename, data_base64, bytes}`). |
 | `collection_stats` | — | Decks, models, notes, cards, per-deck counts. |
-| `sync` | `file`, `dry_run`, `checkpoint_id` | With `file`: reconcile (create + update). Without: checkpoint drift report. |
+| `sync` | `file`, `dry_run`, `checkpoint_id`, `batch_size`, `allow_duplicate`, `auto_create_deck`, `deck`, `model` | With `file`: reconcile (create + update). Without: checkpoint drift report with `missingIds`. |
 
 ## Error surfacing
 
@@ -109,12 +110,12 @@ tiering is enforced by a test (`tests/mcp.test.ts`):
   `validate_xml`, `list_decks`, `list_models`.
 - **P1 — common write operations**: `plan_import`, `add_note`,
   `add_notes`, `find_notes`, `get_tags`, `add_tags`, `remove_tags`,
-  `diff`.
+  `diff`, `open_anki`, `sync`.
 - **P2 — advanced workflows**: `store_media`, `get_media`,
-  `collection_stats`, `sync`.
+  `collection_stats`.
 
 ## MCP is optional
 
-The CLI is the main interface. `mcp` is one of 15 commands; the server
+The CLI is the main interface. `mcp` is one of 16 commands; the server
 adds no capabilities the CLI lacks. `scripts/smoke-mcp.mjs` smoke-tests
 the handshake (`initialize` → `tools/list` → `validate_xml`).

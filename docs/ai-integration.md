@@ -1,5 +1,13 @@
 # AI Agent Integration Guide
 
+> **Design reference (partly aspirational).** The envelope contract,
+> error codes, and recovery patterns below describe the real `--json`
+> surface; but several example commands (`update`, `search`,
+> `--strategy`, `--resume-from`) are from the design surface and do
+> **not** exist in the current CLI. For the canonical current command
+> list, JSON envelopes, and error codes see `docs/cli-design.md` and
+> `docs/mcp-design.md` — and the runnable `skills/anki-import-cli/`.
+
 This document is the bridge between the design work (commands, schema,
 roadmap) and an actual AI agent that uses `anki-xml` as its backend.
 

@@ -1,5 +1,11 @@
 # Commands
 
+> **Legacy (pre-monorepo).** This page documents the old 31-command
+> design surface; several commands shown here (search, update, addon,
+> migrate, profile, …) do **not** exist in the current CLI. The
+> canonical current surface is `docs/cli-design.md` (16 commands,
+> 18 MCP tools). Keep this page read-only — historical only.
+
 `anki-xml` ships **34 commands** grouped by purpose. Every command
 accepts the [global flags](#global-flags) below. Per-command `Usage:` and
 `Example(s):` appear in `--help`; this page explains the why, the
@@ -9,7 +15,7 @@ how, and the trade-offs.
 
 ```
 Read / Query     validate  plan  decks  stats  search  export  diff
-                 preview   sample  schema-validate  doctor
+                 preview   sample  schema-validate  doctor  open
 Write            import  update  tag  untag  delete  rename-deck
                  delete-deck  move-notes  suspend  unsuspend  bury  sync
 Schema           models  fields  tags  note-info
@@ -225,6 +231,33 @@ either `anki-xml addon install 1610307553` or switching the source
 content to the native `[latex]...[/latex]` syntax, which renders
 without MathJax.
 
+### `open`
+
+Launch the Anki desktop app from the CLI. AnkiConnect is served from
+inside Anki, so Anki must be running as a desktop app (macOS /
+Windows / Linux) before any AnkiConnect command works. `open` spawns
+it detached so the CLI can exit while Anki starts.
+
+```bash
+anki-xml open            # launch Anki on this machine
+anki-xml open --json     # { ok, command, detail }
+```
+
+Platform commands (also printed in every "connection refused" hint):
+
+| Platform | Command |
+|---|---|
+| macOS | `open -a Anki` (fallback `open /Applications/Anki.app`) |
+| Windows | `start "" "Anki"` (fallback `C:\Program Files\Anki\anki.exe`) |
+| Linux | `anki` (fallbacks `anki-desktop`, `flatpak run net.ankiweb.Anki`) |
+
+Exits 0 when the spawn succeeded (the app may still be starting),
+1 when the spawn failed (e.g. Anki not installed) — the message then
+names the manual command. MCP exposes the same action as `open_anki`.
+Every "connection refused" hint from `doctor` includes the exact
+launch command for the current platform, so agents can either run
+`anki-xml open` or the raw command themselves.
+
 ### `addon`
 
 Manage Anki add-ons via AnkiConnect (`getAddons` / `installAddon`
@@ -388,15 +421,32 @@ anki-xml bury --ids 1,2,3
 
 ### `sync <file>`
 
-Three-way reconcile a file against the live collection. Reports
-`added` / `changed` / `removed` then applies. Requires `--yes`.
+Reconcile a file against the live collection — the create **and**
+update API (unlike `import`, which only creates). Notes with `id=`
+are matched against the collection; new notes are created, changed
+ones updated, and a checkpoint is written so the run is rollback-able.
 
 ```bash
 anki-xml sync ./cards.xml --json
-anki-xml sync ./cards.xml --yes
+anki-xml sync ./cards.xml --dry-run
 ```
 
-Use `--dry-run` to preview.
+Use `--dry-run` to preview. All import options apply
+(`--batch-size`, `--allow-duplicate`, `--no-auto-create-deck`,
+`--deck`, `--model`, `--checkpoint <id>`).
+
+### `sync` (no file) — drift report
+
+Compare the most recent checkpoint (or `--checkpoint <id>`) against
+the collection: which tracked notes are still there and which are
+missing.
+
+```bash
+anki-xml sync --json     # { checkpoint, drift: [{id, exists}], missing }
+```
+
+MCP exposes the same API as the `sync` tool with full option parity
+and returns `missingIds` in the drift report.
 
 ---
 

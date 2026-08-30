@@ -4,7 +4,7 @@
 
 - **Vitest 3** (`vitest run`), configured in `vitest.config.ts`:
   `include: ["tests/**/*.test.ts", "packages/**/tests/**/*.test.ts"]`,
-  excluding `node_modules` and `dist`. All 15 test files currently live
+  excluding `node_modules` and `dist`. All 20 test files currently live
   in the root `tests/` directory; package-local `tests/` dirs are
   supported for the future.
 - Tests import workspace packages directly (`@anki-xml/*`), so they
@@ -29,25 +29,33 @@ This makes every test deterministic and offline, and it enforces the
 architecture rule that only `packages/anki` knows how to talk to
 AnkiConnect.
 
-## Test inventory (15 files, `tests/`)
+## Test inventory (20 files, `tests/`)
 
 | File | Tests | Covers |
 |---|---|---|
-| `parser.test.ts` | 6 | `parseDocument`: legacy short tags, `<field name=>` + nested `<deck>` + `<tag>` children, CDATA, version gate, unknown elements, error cases |
+| `parser.test.ts` | 9 | `parseDocument`: legacy short tags, `<field name=>` + nested `<deck>` + `<tag>` children, CDATA, version gate, unknown elements, error cases |
 | `validator.test.ts` | 5 | `validateNotes`/`formatValidationError`: valid Basic, missing fields with line info, empty deck, Cloze/optional-reversed rules |
-| `stream.test.ts` | 3 | `parseXmlStream`: whole-doc and chunked streaming, note numbering, CDATA across chunk boundaries, validate-per-note |
-| `ankiconnect.test.ts` | 8 | `AnkiClient` request/response contract: `canAddNotes`, `updateNoteFields`, `storeMedia` base64, `retrieveMedia`, `addTags`/`removeTags` string joining, batching, envelope-error handling |
-| `diagnose.test.ts` | 6 | `classifyConnectError`: ECONNREFUSED→`refused` with add-on hints, timeouts, `bad-json`, HTTP; `diagnose()` result paths |
-| `planner.test.ts` | 5 | `buildPlan`/`toAnkiConnectNote`: id-targets vs candidates, `notesInfo`-driven update/unchanged/add, `canAddNotes`-driven add/duplicates |
-| `diff.test.ts` | 7 | `diffTags`, `diffDecks`, `diffNote`, `diffNoteLists` matching by id/number |
-| `sync.test.ts` | 4 | `applyPlan` deck creation + add/update + checkpoint write (XDG_DATA_HOME redirected to tmp), `driftFromCheckpoint` |
-| `cli.test.ts` | 6 | `main()`: version, help, validate ok/fail, unknown commands (exit 2), checkpoint create/list/load + rollback dry-run (no network in dry-run) |
-| `cli-formats.test.ts` | 7 | CLI error paths in JSON (`VALIDATION_ERROR` envelopes) and per-format dry-run imports: yaml, csv with `--deck`, markdown; unsupported-format error; `--json` stdout purity (logger silenced) |
+| `stream.test.ts` | 30 | `parseXmlStream`: whole-doc and chunked streaming, note numbering, CDATA across chunk boundaries, validate-per-note |
+| `ankiconnect.test.ts` | 17 | `AnkiClient` request/response contract: `canAddNotes`, `updateNoteFields`, `storeMedia` base64, `retrieveMedia`, `addTags`/`removeTags` string joining, batching, envelope-error handling |
+| `diagnose.test.ts` | 7 | `classifyConnectError`: ECONNREFUSED→`refused` with add-on hints, timeouts, `bad-json`, HTTP; `diagnose()` result paths |
+| `planner.test.ts` | 7 | `buildPlan`/`toAnkiConnectNote`: id-targets vs candidates, `notesInfo`-driven update/unchanged/add, `canAddNotes`-driven add/duplicates |
+| `diff.test.ts` | 11 | `diffTags`, `diffDecks`, `diffNote`, `diffNoteLists` matching by id/number |
+| `sync.test.ts` | 11 | `applyPlan` deck creation + add/update + checkpoint write (XDG_DATA_HOME redirected to tmp), `driftFromCheckpoint` |
+| `checkpoint.test.ts` | 12 | checkpoint create/list/load/delete, id generation, XDG_DATA_HOME redirect |
+| `cli.test.ts` | 7 | `main()`: version, help, validate ok/fail, unknown commands (exit 2), checkpoint create/list/load + rollback dry-run (no network in dry-run) |
+| `cli-formats.test.ts` | 8 | CLI error paths in JSON (`VALIDATION_ERROR` envelopes) and per-format dry-run imports: yaml, csv with `--deck`, markdown; unsupported-format error; `--json` stdout purity (logger silenced) |
 | `config.test.ts` | 10 | `CONFIG_FILE_NAMES` precedence, `findConfig` walk-up, `loadConfig` json/yaml parsing, missing config → `{}` |
-| `mcp.test.ts` | 10 | `parseRequest` (valid/invalid/notifications), tool list contents, `validate_xml` on a temp file, `plan_import` against mocked collection, `add_note` payload + `McpToolError` on missing params, media base64 round-trip, `toolErrorData` hints |
+| `mcp.test.ts` | 17 | `parseRequest` (valid/invalid/notifications), tool list contents + tiers, `validate_xml` on a temp file, `plan_import` against mocked collection, `add_note` payload + `McpToolError` on missing params, media base64 round-trip, `toolErrorData` hints |
+| `importer.test.ts` | 2 | importer plugin registry: format resolution + built-in importers |
 | `media.test.ts` | 6 | `storeMedia`/`storeMediaFile`/`retrieveMediaToFile`/`deleteMedia`/`listMedia` against a mocked client |
 | `tags.test.ts` | 6 | `parseTagList`, `listTags` sorting, chunked `addTags`/`removeTags` batching |
 | `stats.test.ts` | 4 | `deckStats` single/all decks, `collectionStats` totals (notes via `findNotes`) |
+| `utils.test.ts` | 3 | shared utils (hashes, retries, formatting) |
+| `launch.test.ts` | 4 | `ankiLaunchCommand` platform commands (macOS/Windows/Linux/unknown) |
+| `watch.test.ts` | 2 | `watchFile`: debounce + re-queue during apply, apply on change |
+
+Keep this table in sync when adding a test file (name it
+`tests/<thing>.test.ts` mirroring `packages/<pkg>/src/<thing>.ts`).
 
 ## fixtures / goldens / snapshots
 

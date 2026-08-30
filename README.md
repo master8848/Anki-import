@@ -14,6 +14,10 @@ automation tool. It speaks to Anki through
 
 ## Install
 
+> **npm publishing is not active yet** — build from source for now
+> (`pnpm install && pnpm build && node dist/cli.js`); see
+> [docs/install.md](docs/install.md). Once published:
+
 ```bash
 npm install -g anki-xml@0.0.4
 # or
@@ -26,15 +30,16 @@ Contributor setup (from source): see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Quick start
 
-Workflow: doctor → validate → plan → import → rollback.
+Workflow: open → doctor → validate → plan → import → rollback.
 
 ```bash
-anki-import doctor                        # diagnose AnkiConnect with fix steps
-anki-import validate cards.xml            # validate without touching Anki
-anki-import plan cards.xml                # preview changes vs collection
-anki-import import cards.xml --dry-run    # validate + plan only
-anki-import import cards.xml              # create notes (writes a checkpoint)
-anki-import rollback import-1234          # undo with one command
+anki-import open                            # launch the Anki desktop app
+anki-import doctor                          # diagnose AnkiConnect with fix steps
+anki-import validate cards.xml              # validate without touching Anki
+anki-import plan cards.xml                  # preview changes vs collection
+anki-import import cards.xml --dry-run      # validate + plan only
+anki-import import cards.xml                # create notes (writes a checkpoint)
+anki-import rollback import-1234            # undo with one command
 ```
 
 ```xml
@@ -66,18 +71,21 @@ anki-import sync cards.md --dry-run
 ## Commands
 
 ```
-doctor · validate · plan · diff · import · sync · rollback ·
+open · doctor · validate · plan · diff · import · sync · rollback ·
 checkpoint · watch · tags · models · stats · media · benchmark · mcp
 ```
 
+- `open` — launch the Anki desktop app (macOS: `open -a Anki`,
+  Windows: anki.exe, Linux: `anki`); also via MCP `open_anki`
 - `plan <file>` — dry-run preview: adds / updates / duplicates / unchanged
 - `diff <file>` — per-note field diffs against the live collection
 - `import <file>` — create notes only (writes a checkpoint)
 - `sync [<file>]` — reconcile: create + update; without a file, report
-  checkpoint drift
+  checkpoint drift. MCP `sync` mirrors every option (`--batch-size`,
+  `--allow-duplicate`, `--deck`, `--model`, ...)
 - `watch <file>` — auto re-validate on change, show the plan, ask before
   applying (`--yes` for agents)
-- `mcp` — Model Context Protocol server over stdio (optional; 17 tools)
+- `mcp` — Model Context Protocol server over stdio (optional; 18 tools)
 - `--json` — machine-readable output with stable error codes everywhere
 
 ## Troubleshooting AnkiConnect
@@ -87,10 +95,11 @@ checkpoint · watch · tags · models · stats · media · benchmark · mcp
 ```
 [FAIL] anki-connect-reachable: Connection refused at http://127.0.0.1:8765 (ECONNREFUSED).
 Fix:
-  1. Start the Anki app — AnkiConnect is served from inside Anki and cannot run standalone.
-  2. Install the AnkiConnect add-on: in Anki, Tools → Add-ons → Get Add-ons → enter 2055492159.
-  3. Restart Anki after installing or enabling the add-on.
-  4. Confirm the URL is correct; pass --url <addr> if you configured another port.
+  1. Start the Anki app — run: open -a Anki (or open /Applications/Anki.app). AnkiConnect is served from inside Anki and cannot run standalone.
+  2. Or let this tool launch it for you: run "anki-import open".
+  3. Install the AnkiConnect add-on: in Anki, Tools → Add-ons → Get Add-ons → enter 2055492159.
+  4. Restart Anki after installing or enabling the add-on.
+  5. Confirm the URL is correct; pass --url <addr> if you configured another port.
 Run: anki-import doctor
 ```
 

@@ -14,6 +14,7 @@ lines below.
 | Command | Usage | Behavior |
 |---|---|---|
 | `doctor` | `doctor [--url <url>]` | Runs AnkiConnect diagnostics: reachability, API version ≥ 6, decks, models, add-ons, MathJax. Failing checks carry ordered `hints`. Exit 1 when any check fails. |
+| `open` | `open` | Launches the Anki desktop app for the current platform (macOS: `open -a Anki`, Windows: `start "" "Anki"` or anki.exe, Linux: `anki`). Detached, non-blocking. Exit 1 when the spawn fails; hints name the manual command. |
 | `validate` | `validate <file> [--deck NAME] [--model NAME]` | Parses + validates without contacting Anki. Exit 1 on validation/parse errors. |
 | `plan` | `plan <file> [--stream] [--deck NAME] [--model NAME]` | Dry-run preview against the live collection: add / update / duplicate / unchanged counts and per-note detail. Never mutates. |
 | `diff` | `diff <file> [--stream] [--deck NAME] [--model NAME]` | Per-note field diffs vs the collection plus deck presence diff (`missing` / `extra`). |
