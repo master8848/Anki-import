@@ -9,6 +9,7 @@
 import { ankiLaunchCommand } from "./launch.ts";
 
 export const ANKICONNECT_ADDON_CODE = "2055492159";
+export const ANKICONNECT_PLUS_CODE = "2036732292";
 export const DEFAULT_URL = "http://127.0.0.1:8765";
 
 export type ConnectCause =
@@ -40,7 +41,7 @@ function refusedHints(): string[] {
   return [
     `Start the Anki app: ${launch}`,
     `Or run: anki-import open`,
-    `Need AnkiConnect? In Anki: Tools → Add-ons → Get Add-ons → ${ANKICONNECT_ADDON_CODE}`,
+    `Need AnkiConnect? In Anki: Tools → Add-ons → Get Add-ons → ${ANKICONNECT_ADDON_CODE} (AnkiConnect) or ${ANKICONNECT_PLUS_CODE} (AnkiConnect Plus) — either is ok, default is ${ANKICONNECT_ADDON_CODE} (more stable)`,
     `After installing, restart Anki.`,
     `Wrong address? Anki uses ${DEFAULT_URL} by default. Use --url if yours is different.`,
   ];
@@ -51,7 +52,7 @@ const REFUSED_HINTS = refusedHints();
 const TIMEOUT_HINTS = [
   `Anki is open but not responding. It may be busy.`,
   `Wait a bit and try again, or restart Anki.`,
-  `Still stuck? Reinstall AnkiConnect: Tools → Add-ons → ${ANKICONNECT_ADDON_CODE}.`,
+  `Still stuck? Reinstall AnkiConnect: Tools → Add-ons → ${ANKICONNECT_ADDON_CODE} (or ${ANKICONNECT_PLUS_CODE} — either is ok, default is ${ANKICONNECT_ADDON_CODE}).`,
 ];
 
 const HTTP_HINTS = [

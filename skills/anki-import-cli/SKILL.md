@@ -10,7 +10,7 @@ metadata:
 
 The main way to manage Anki cards as code. Simple, safe, scriptable.
 
-Install: `npm i -g anki-xml` → you get `anki-import` and `anki-xml`. Needs Node 20+ and Anki open with AnkiConnect add-on `2055492159`.
+Install: `npm i -g anki-xml` → you get `anki-import` and `anki-xml`. Needs Node 20+ and Anki open with AnkiConnect add-on `2055492159` (or `2036732292` Plus — either is ok, default install is `2055492159` more stable).
 
 ## Quick start
 

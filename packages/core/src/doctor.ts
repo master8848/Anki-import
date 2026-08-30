@@ -5,7 +5,7 @@
  * humans and AI agents (install the add-on, open Anki, restart, ...).
  */
 
-import { AnkiClient, ANKICONNECT_ADDON_CODE } from "@anki-xml/anki";
+import { AnkiClient, ANKICONNECT_ADDON_CODE, ANKICONNECT_PLUS_CODE } from "@anki-xml/anki";
 import type { ConnectDiagnosis } from "@anki-xml/anki";
 
 export const MATHJAX_ADDON_CODE = "1610307553";
@@ -134,6 +134,41 @@ export async function runDoctor(opts: DoctorOptions = {}): Promise<DoctorResult>
       detail: `${Object.keys(addons).length} add-on(s)`,
       hints: [],
     });
+    // AnkiConnect addon presence: either 2055492159 or Plus 2036732292 is ok, default is 2055492159
+    const hasPrimary = addons[ANKICONNECT_ADDON_CODE] === true;
+    const hasPlus = addons[ANKICONNECT_PLUS_CODE] === true;
+    const hasAny = hasPrimary || hasPlus;
+    const bothEnabled = hasPrimary && hasPlus;
+    if (bothEnabled) {
+      checks.push({
+        name: "ankiconnect-addon-installed",
+        ok: true,
+        detail: `Both AnkiConnect (${ANKICONNECT_ADDON_CODE}) and AnkiConnect Plus (${ANKICONNECT_PLUS_CODE}) enabled — either is ok, but both share port 8765 and may conflict. Consider disabling one.`,
+        hints: [],
+      });
+    } else if (hasAny) {
+      const which = hasPrimary
+        ? `AnkiConnect ${ANKICONNECT_ADDON_CODE} enabled`
+        : `AnkiConnect Plus ${ANKICONNECT_PLUS_CODE} enabled — either is ok (default is ${ANKICONNECT_ADDON_CODE}, more stable)`;
+      checks.push({
+        name: "ankiconnect-addon-installed",
+        ok: true,
+        detail: which,
+        hints: [],
+      });
+    } else {
+      checks.push({
+        name: "ankiconnect-addon-installed",
+        ok: false,
+        detail: `Neither AnkiConnect (${ANKICONNECT_ADDON_CODE}) nor AnkiConnect Plus (${ANKICONNECT_PLUS_CODE}) is enabled`,
+        hints: [
+          `Install AnkiConnect (default, more stable): Tools → Add-ons → Get Add-ons → ${ANKICONNECT_ADDON_CODE}`,
+          `Or AnkiConnect Plus is also ok: Get Add-ons → ${ANKICONNECT_PLUS_CODE} — either is enough`,
+          `After installing, restart Anki.`,
+        ],
+        suggestion: "anki-import init",
+      });
+    }
     const mathjax = addons[MATHJAX_ADDON_CODE] === true;
     checks.push({
       name: "mathjax-addon-installed",

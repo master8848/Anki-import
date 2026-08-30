@@ -8,7 +8,7 @@ metadata:
 
 # anki-import MCP
 
-Anki via AI — 5 tools over stdio (JSON-RPC). Anki must be open with AnkiConnect `2055492159`.
+Anki via AI — 5 tools over stdio (JSON-RPC). Anki must be open with AnkiConnect `2055492159` or `2036732292` Plus — either is ok, default is `2055492159` (more stable).
 
 ## Tools
 

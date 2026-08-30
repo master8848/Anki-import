@@ -8,10 +8,18 @@ import {
 } from "@anki-xml/anki";
 import {
   addonDir,
+  addonDirForCode,
+  ANKICONNECT_CODE,
+  ANKICONNECT_PLUS_CODE,
   isAddonInstalled,
   isAddonEnabled,
+  isAddonEnabledForCode,
+  isAnyAnkiConnectInstalled,
+  isAnyAnkiConnectEnabled,
+  installedAnkiConnectCodes,
   installAddon,
   enableAddon,
+  enableAddonForCode,
   quitAnki,
 } from "@anki-xml/anki";
 import { launchAnki } from "@anki-xml/anki";
@@ -169,7 +177,9 @@ export async function runInit(opts: InitOptions = {}, log: Logger): Promise<numb
     } else {
       out("[check] Skipping Anki install (--skip-anki-install) (dry run)");
     }
-    out(`[check] Checking AnkiConnect 2055492159... would install to ${addonDir(platform)} (dry run)`);
+    out(`[check] Checking AnkiConnect 2055492159 (or ${ANKICONNECT_PLUS_CODE} Plus — either is ok, default is 2055492159)... would install to ${addonDir(platform)} (dry run)`);
+    // Also note Plus path for completeness
+    out(`[check] Either add-on is ok; default install is ${ANKICONNECT_CODE} to ${addonDirForCode(ANKICONNECT_CODE, platform)} (Plus would be ${addonDirForCode(ANKICONNECT_PLUS_CODE, platform)}) (dry run)`);
     out("[check] Doctor: dry run — skipping verification (no changes made)");
     if (json) {
       console.log(JSON.stringify({ ok: true, dryRun: true }));
@@ -253,10 +263,10 @@ export async function runInit(opts: InitOptions = {}, log: Logger): Promise<numb
     out("Skipping Anki install (--skip-anki-install) — skipping binary check");
   }
 
-  // 4. Install and enable AnkiConnect
+  // 4. Install and enable AnkiConnect (either 2055492159 or 2036732292 is ok, default 2055492159)
   const addonPath = addonDir(platform);
-  out(`Installing AnkiConnect 2055492159...`);
-  out(`Addon dir: ${addonPath}`);
+  out(`Checking AnkiConnect (either ${ANKICONNECT_CODE} or ${ANKICONNECT_PLUS_CODE} Plus is ok, default ${ANKICONNECT_CODE})...`);
+  out(`Addon dir: ${addonPath} (Plus: ${addonDirForCode(ANKICONNECT_PLUS_CODE, platform)})`);
 
   if (isCheck) {
     // already handled above
@@ -270,63 +280,130 @@ export async function runInit(opts: InitOptions = {}, log: Logger): Promise<numb
       reachable = false;
     }
 
-    // Try filesystem method (always). If reachable, we could try API toggle, but filesystem is primary.
-    const alreadyInstalled = isAddonInstalled(platform);
-    const alreadyEnabled = isAddonEnabled(platform);
-
-    if (alreadyInstalled && alreadyEnabled) {
-      out("AnkiConnect already installed and enabled — ensuring files...");
-      // Still ensure enabled
+    // Version check: if addon reachable, ensure API >=6 else force reinstall primary
+    let forceReinstall = false;
+    if (reachable) {
       try {
-        enableAddon(platform);
-        out("AnkiConnect enabled");
-      } catch (err) {
-        log.error(`Failed to enable AnkiConnect: ${(err as Error).message}`);
-        return 1;
-      }
-    } else {
-      // Need to install
-      if (reachable) {
-        // If Anki is running, we should quit before overwriting addon files to avoid file lock
-        // But spec says: if Anki was already running before install -> restart after install.
-        // We will install via filesystem anyway.
-      }
-      try {
-        // If already installed but disabled, just enable without re-download
-        if (alreadyInstalled && !alreadyEnabled) {
-          enableAddon(platform);
-          out("AnkiConnect enabled");
-        } else {
-          await installAddon(platform);
-          out("AnkiConnect installed");
-          out("AnkiConnect enabled");
+        const ver = await client.version();
+        if (typeof ver === "number" && ver < 6) {
+          out(`AnkiConnect API version ${ver} is too old (need ≥ 6) — reinstalling ${ANKICONNECT_CODE} (stale upgrade)...`);
+          forceReinstall = true;
         }
-      } catch (err) {
-        const msg = (err as Error).message;
-        if (json) {
-          console.log(JSON.stringify({ ok: false, error: { code: "ADDON_INSTALL_FAILED", message: msg } }));
-        } else {
-          log.error(msg);
-          log.error("Hint: download manually from https://ankiweb.net/shared/info/2055492159 and unzip to " + addonPath);
-        }
-        return 1;
+      } catch {
+        // version check failed — ignore, proceed to filesystem check
       }
     }
 
-    // Ensure enabled if not already
-    if (!isAddonEnabled(platform)) {
+    // Respect legacy mocks (vitest spies on isAddonInstalled/isAddonEnabled) alongside new helpers
+    const legacyInstalled = isAddonInstalled(platform);
+    const legacyEnabled = legacyInstalled && isAddonEnabled(platform);
+    const anyInstalled = isAnyAnkiConnectInstalled(platform) || legacyInstalled;
+    const anyEnabled = isAnyAnkiConnectEnabled(platform) || legacyEnabled;
+    let codes = installedAnkiConnectCodes(platform);
+    if (legacyInstalled && !codes.includes(ANKICONNECT_CODE)) codes = [...codes, ANKICONNECT_CODE];
+    const hasPrimary = codes.includes(ANKICONNECT_CODE);
+    const hasPlus = codes.includes(ANKICONNECT_PLUS_CODE);
+    const primaryEnabled = hasPrimary && (isAddonEnabledForCode(ANKICONNECT_CODE, platform) || legacyEnabled);
+    const plusEnabled = hasPlus && isAddonEnabledForCode(ANKICONNECT_PLUS_CODE, platform);
+    const bothEnabled = primaryEnabled && plusEnabled;
+
+    // If either variant is installed and enabled (and not stale), skip install to avoid port conflict
+    if (anyInstalled && anyEnabled && !forceReinstall) {
+      if (hasPrimary && hasPlus) {
+        if (bothEnabled) {
+          out(`Warning: both AnkiConnect ${ANKICONNECT_CODE} and AnkiConnect Plus ${ANKICONNECT_PLUS_CODE} are enabled — they share port 8765 and may conflict. Either is enough; consider disabling one.`);
+        }
+        out(`AnkiConnect ${ANKICONNECT_CODE} and AnkiConnect Plus ${ANKICONNECT_PLUS_CODE} already installed — skipping install (either is ok)`);
+      } else if (hasPrimary) {
+        if (primaryEnabled) out(`AnkiConnect ${ANKICONNECT_CODE} already installed and enabled — skipping install (either is ok)`);
+        else out(`AnkiConnect ${ANKICONNECT_CODE} already installed (disabled) — enabling...`);
+      } else if (hasPlus) {
+        out(`AnkiConnect Plus ${ANKICONNECT_PLUS_CODE} already enabled — skipping install (either is ok)`);
+      }
+      // Ensure disabled one is enabled if needed
+      if (hasPrimary && !primaryEnabled) {
+        try {
+          enableAddon(platform);
+          out("AnkiConnect enabled");
+        } catch (err) {
+          log.error(`Failed to enable AnkiConnect: ${(err as Error).message}`);
+          return 1;
+        }
+      }
+      if (hasPlus && !plusEnabled) {
+        try {
+          enableAddonForCode(ANKICONNECT_PLUS_CODE, platform);
+          out("AnkiConnect Plus enabled");
+        } catch (err) {
+          log.error(`Failed to enable AnkiConnect Plus: ${(err as Error).message}`);
+          return 1;
+        }
+      }
+      if (primaryEnabled) out("AnkiConnect enabled");
+      else if (plusEnabled) out("AnkiConnect Plus enabled");
+    } else {
+      // Need to install / enable / reinstall (stale)
+      if (forceReinstall) {
+        // Force reinstall primary regardless of existing state
+        try {
+          await installAddon(platform);
+          out("AnkiConnect installed (upgrade)");
+          out("AnkiConnect enabled");
+        } catch (err) {
+          const msg = (err as Error).message;
+          if (json) {
+            console.log(JSON.stringify({ ok: false, error: { code: "ADDON_INSTALL_FAILED", message: msg } }));
+          } else {
+            log.error(msg);
+            log.error("Hint: download manually from https://ankiweb.net/shared/info/2055492159 and unzip to " + addonPath);
+          }
+          return 1;
+        }
+      } else if (anyInstalled && !anyEnabled) {
+        // Installed but disabled — just enable without re-download
+        try {
+          if (hasPrimary) {
+            enableAddon(platform);
+            out("AnkiConnect enabled");
+          }
+          if (hasPlus) {
+            enableAddonForCode(ANKICONNECT_PLUS_CODE, platform);
+            out("AnkiConnect Plus enabled");
+          }
+        } catch (err) {
+          log.error(`Failed to enable AnkiConnect: ${(err as Error).message}`);
+          return 1;
+        }
+      } else {
+        // Neither present — default install primary 2055492159
+        try {
+          await installAddon(platform);
+          out("AnkiConnect installed");
+          out("AnkiConnect enabled");
+        } catch (err) {
+          const msg = (err as Error).message;
+          if (json) {
+            console.log(JSON.stringify({ ok: false, error: { code: "ADDON_INSTALL_FAILED", message: msg } }));
+          } else {
+            log.error(msg);
+            log.error("Hint: download manually from https://ankiweb.net/shared/info/2055492159 and unzip to " + addonPath);
+          }
+          return 1;
+        }
+      }
+    }
+
+    // Final ensure enabled for primary if not already (avoid missing enable after Plus-only path)
+    if (!isAnyAnkiConnectEnabled(platform)) {
       try {
-        enableAddon(platform);
-        out("AnkiConnect enabled");
+        // Try enabling primary dir as fallback; if Plus was the installed one, its enable already attempted above
+        if (hasPrimary || codes.length === 0) {
+          enableAddon(platform);
+          out("AnkiConnect enabled");
+        }
       } catch (err) {
         log.error(`Failed to enable AnkiConnect: ${(err as Error).message}`);
         return 1;
-      }
-    } else {
-      if (!alreadyInstalled || !alreadyEnabled) {
-        // already printed enabled above; avoid duplicate
-      } else {
-        out("AnkiConnect enabled");
       }
     }
   }

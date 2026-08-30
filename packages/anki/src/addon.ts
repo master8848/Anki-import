@@ -6,12 +6,12 @@ import { createWriteStream } from "node:fs";
 import { pipeline } from "node:stream/promises";
 
 export const ANKICONNECT_CODE = "2055492159";
+export const ANKICONNECT_PLUS_CODE = "2036732292";
 export const ANKICONNECT_DOWNLOAD_URL =
   "https://ankiweb.net/shared/download/2055492159?v=2.1&p=0";
 
-/** Determine Anki addon directory for 2055492159 */
-export function addonDir(platform = process.platform): string {
-  const code = ANKICONNECT_CODE;
+/** Determine addon directory for a specific code */
+export function addonDirForCode(code: string, platform = process.platform): string {
   const baseOverride = process.env.ANKI_BASE;
   if (baseOverride) {
     return join(baseOverride, "addons21", code);
@@ -30,6 +30,11 @@ export function addonDir(platform = process.platform): string {
   // linux
   const xdg = process.env.XDG_DATA_HOME || join(homedir(), ".local", "share");
   return join(xdg, "Anki2", "addons21", code);
+}
+
+/** Determine Anki addon directory for 2055492159 (primary) */
+export function addonDir(platform = process.platform): string {
+  return addonDirForCode(ANKICONNECT_CODE, platform);
 }
 
 export function addonsBaseDir(platform = process.platform): string {
@@ -60,6 +65,67 @@ export function isAddonEnabled(platform = process.platform): boolean {
   } catch {
     return true;
   }
+}
+
+export function isAddonInstalledForCode(code: string, platform = process.platform): boolean {
+  const dir = addonDirForCode(code, platform);
+  if (!existsSync(dir)) return false;
+  try {
+    return existsSync(join(dir, "meta.json")) || existsSync(dir);
+  } catch {
+    return false;
+  }
+}
+
+export function isAddonEnabledForCode(code: string, platform = process.platform): boolean {
+  const dir = addonDirForCode(code, platform);
+  if (!existsSync(dir)) return false;
+  const metaPath = join(dir, "meta.json");
+  if (!existsSync(metaPath)) return true; // installed without meta = enabled
+  try {
+    const raw = readFileSync(metaPath, "utf8");
+    const data = JSON.parse(raw) as { disabled?: boolean };
+    return data.disabled !== true;
+  } catch {
+    return true;
+  }
+}
+
+export function enableAddonForCode(code: string, platform = process.platform): void {
+  const dir = addonDirForCode(code, platform);
+  const metaPath = join(dir, "meta.json");
+  mkdirSync(dir, { recursive: true });
+  let data: Record<string, unknown> = {};
+  if (existsSync(metaPath)) {
+    try {
+      data = JSON.parse(readFileSync(metaPath, "utf8")) as Record<string, unknown>;
+    } catch {
+      data = {};
+    }
+  }
+  data["disabled"] = false;
+  if (!data["config"]) data["config"] = {};
+  writeFileSync(metaPath, JSON.stringify(data, null, 2), "utf8");
+}
+
+/** Return list of installed AnkiConnect codes (primary and Plus) found on disk */
+export function installedAnkiConnectCodes(platform = process.platform): string[] {
+  const codes: string[] = [];
+  if (isAddonInstalledForCode(ANKICONNECT_CODE, platform)) codes.push(ANKICONNECT_CODE);
+  if (isAddonInstalledForCode(ANKICONNECT_PLUS_CODE, platform)) codes.push(ANKICONNECT_PLUS_CODE);
+  return codes;
+}
+
+/** Whether any AnkiConnect variant (2055492159 or 2036732292) is installed */
+export function isAnyAnkiConnectInstalled(platform = process.platform): boolean {
+  return installedAnkiConnectCodes(platform).length > 0;
+}
+
+/** Whether any installed AnkiConnect variant is enabled */
+export function isAnyAnkiConnectEnabled(platform = process.platform): boolean {
+  if (isAddonEnabledForCode(ANKICONNECT_CODE, platform) && isAddonInstalledForCode(ANKICONNECT_CODE, platform)) return true;
+  if (isAddonEnabledForCode(ANKICONNECT_PLUS_CODE, platform) && isAddonInstalledForCode(ANKICONNECT_PLUS_CODE, platform)) return true;
+  return false;
 }
 
 export function enableAddon(platform = process.platform): void {
