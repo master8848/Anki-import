@@ -10,6 +10,8 @@ export { diffFile } from "./diff-file.ts";
 export type { DiffFileResult } from "./diff-file.ts";
 export { watchFile } from "./watch.ts";
 export type { WatchOptions, WatchSummary } from "./watch.ts";
+export { runInit } from "./init.ts";
+export type { InitOptions } from "./init.ts";
 export { XmlImportPlugin } from "./plugins/xml-plugin.ts";
 export type {
   ImportPlugin,

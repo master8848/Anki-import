@@ -1,6 +1,6 @@
 ---
 name: anki-import-mcp
-description: Manage Anki flashcards via the anki-import MCP server (JSON-RPC over stdio, 18 tools). Use when you have MCP tools available (import_xml, sync, plan_import, etc.) instead of shell commands.
+description: Manage Anki via AI — MCP server over stdio (6 tools). Use when MCP tools are available; for shell use anki-import-cli.
 metadata:
   author: master8848
   version: "0.0.4"
@@ -8,58 +8,44 @@ metadata:
 
 # anki-import MCP
 
-MCP server for chat agents — 18 tools over stdio. Use this when you have MCP tools. For shells and scripts, see the `anki-import-cli` skill.
-
-## Start the server
-
-```bash
-anki-import mcp              # if installed with npm i -g anki-xml
-npx anki-xml mcp             # without install — always works
-```
-
-Add it to your MCP client config (stdio). Anki must be open with AnkiConnect `2055492159`.
-
-## If MCP is missing
-
-If your agent says "no MCP tools" or `mcp` command not found:
-
-1. Try `npx anki-xml mcp` — no install needed
-2. Or install: `npm i -g anki-xml`, then `anki-import mcp`
-3. Restart your MCP client after adding the server
-4. Check: run `anki-import doctor` — if Anki is closed, run `anki-import open` first
-
-This is separate from the CLI — the CLI works even without MCP.
+Anki via AI — 6 tools over stdio (JSON-RPC). Anki must be open with AnkiConnect `2055492159`.
 
 ## Tools
 
 | Tool | What it does |
 |---|---|
+| `validate_xml` | Validate file without Anki |
+| `plan_import` | Preview adds / updates / duplicates |
+| `sync` | Add + update cards (or drift if no file) |
+| `doctor` | Diagnose AnkiConnect connection |
+| `diff` | Show field diffs vs live collection |
 | `open_anki` | Open Anki app |
-| `doctor` | Check Anki connection |
-| `validate_xml` | Check file — no Anki needed |
-| `import_xml` | Add new cards |
-| `plan_import` | Preview changes |
-| `diff` | Show card changes |
-| `sync` | Add + update; or drift if no file |
-| `add_note` / `add_notes` | Add one or many cards |
-| `find_notes` | Find cards (`deck:Japanese`) |
-| `get_tags` / `add_tags` / `remove_tags` | Manage tags |
-| `list_decks` / `list_models` | List decks and card types |
-| `store_media` / `get_media` | Upload / download files |
-| `collection_stats` | Counts per deck |
 
-`sync` / `import_xml` / `plan_import` also take `deck`, `model`, `batch_size`, `allow_duplicate`, `auto_create_deck`.
+No `install-addon` / `install-binary` — not in MCP. Anki/add-on install is CLI-only via `anki-import init`.
 
 ## How to use
 
-1. Anki not open? → `open_anki`, then `doctor`
-2. Preview → `plan_import`, add → `import_xml`, update → `sync` (needs `id=`), quick add → `add_note`
-3. Check → `find_notes` / `diff`, cleanup → tags/media
+```bash
+npx anki-xml mcp          # start server (no install needed)
+npx anki-xml mcp config   # print client config snippet
+```
 
-## Not in MCP — use CLI
+Add to your MCP client (stdio) — example:
 
-`rollback`, `checkpoint`, `watch`, `benchmark`, `media list/retrieve/delete`, `--stream`. Errors are same as CLI `--json`: `cause`, `hints`, `suggestion` — check `code`, not message.
+```json
+{ "mcpServers": { "anki-xml": { "command": "npx", "args": ["-y", "anki-xml", "mcp"] } } }
+```
 
-## File format
+Restart client after adding. Then: `doctor` → `validate_xml` → `plan_import` → `sync`.
 
-Same as CLI. Card fields are `front`/`back`/`text`/`extra` or `<field name=...>`. For full XML rules see the `anki-import-cli` skill.
+## CDATA cheat-sheet
+
+| You want | Do |
+|---|---|
+| Real formatting (bold, `<br>`) | No CDATA — `<field>hi<br>there</field>` |
+| Show code/tags as text | CDATA — `<![CDATA[<div>hi</div>]]>` |
+| Math `\(x^2\)` | CDATA — `<![CDATA[\(x^2\)]]>` |
+| Bare `&` | `&amp;` — `validate` catches bare `&` |
+| Mixed formatting + code | Split — `<![CDATA[Code: ]]><b>hi</b><![CDATA[ end]]>` |
+
+> CLI has more: `rollback`, `checkpoint`, `watch`, `tags`/`media`. See `anki-import-cli` skill.

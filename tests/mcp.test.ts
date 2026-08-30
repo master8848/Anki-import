@@ -97,38 +97,54 @@ describe("mcp server", () => {
 });
 
 describe("mcp tools", () => {
-  it("lists P0 tools including import_xml and doctor", () => {
-    const names = TOOLS.map((t) => t.name);
-    expect(names).toContain("import_xml");
-    expect(names).toContain("validate_xml");
-    expect(names).toContain("doctor");
-    expect(names).toContain("list_decks");
-    expect(names).toContain("list_models");
-    expect(names).toContain("open_anki");
-    expect(names).toContain("plan_import");
-    expect(names).toContain("sync");
-    expect(names).toContain("collection_stats");
+  it("lists exactly 6 tools (validate_xml, plan_import, sync, doctor, diff, open_anki)", () => {
+    const names = TOOLS.map((t) => t.name).sort();
+    expect(names).toEqual(["diff", "doctor", "open_anki", "plan_import", "sync", "validate_xml"]);
+    expect(TOOLS).toHaveLength(6);
+    // removed tools are absent
+    expect(names).not.toContain("import_xml");
+    expect(names).not.toContain("add_note");
+    expect(names).not.toContain("add_notes");
+    expect(names).not.toContain("list_decks");
+    expect(names).not.toContain("list_models");
+    expect(names).not.toContain("find_notes");
+    expect(names).not.toContain("get_tags");
+    expect(names).not.toContain("add_tags");
+    expect(names).not.toContain("remove_tags");
+    expect(names).not.toContain("store_media");
+    expect(names).not.toContain("get_media");
+    expect(names).not.toContain("collection_stats");
   });
 
-  it("assigns every tool a P0/P1/P2 tier per the spec", () => {
+  it("assigns every tool a P0/P1/P2 tier per the spec (internal) and exposes tier via _meta not top-level", async () => {
     const p0 = TOOLS.filter((t) => t.tier === "P0").map((t) => t.name);
     const p1 = TOOLS.filter((t) => t.tier === "P1").map((t) => t.name);
     const p2 = TOOLS.filter((t) => t.tier === "P2").map((t) => t.name);
-    expect(p0.sort()).toEqual(["doctor", "import_xml", "list_decks", "list_models", "validate_xml"]);
-    expect(p1.sort()).toEqual([
-      "add_note",
-      "add_notes",
-      "add_tags",
-      "diff",
-      "find_notes",
-      "get_tags",
-      "open_anki",
-      "plan_import",
-      "remove_tags",
-      "sync",
-    ]);
-    expect(p2.sort()).toEqual(["collection_stats", "get_media", "store_media"]);
+    expect(p0.sort()).toEqual(["doctor", "validate_xml"]);
+    expect(p1.sort()).toEqual(["diff", "open_anki", "plan_import", "sync"]);
+    expect(p2).toEqual([]);
     expect(TOOLS.every((t) => ["P0", "P1", "P2"].includes(t.tier))).toBe(true);
+
+    // wire format: tier moved to _meta, not top-level, and annotations present
+    const toolsByName = new Map(TOOLS.map((t) => [t.name, t]));
+    const resp = await handleMessage('{"jsonrpc":"2.0","id":1,"method":"tools/list"}', toolsByName, ctx);
+    const tools = (resp as unknown as { result: { tools: Record<string, unknown>[] } }).result.tools;
+    expect(tools).toHaveLength(6);
+    for (const t of tools) {
+      expect(t).not.toHaveProperty("tier");
+      expect(t).toHaveProperty("_meta");
+      expect((t["_meta"] as Record<string, unknown>)).toHaveProperty("tier");
+      expect(t).toHaveProperty("annotations");
+      const ann = t["annotations"] as Record<string, unknown>;
+      expect(ann).toHaveProperty("readOnlyHint");
+      expect(ann).toHaveProperty("destructiveHint");
+      expect(ann).toHaveProperty("idempotentHint");
+      expect(ann).toHaveProperty("openWorldHint");
+      expect(t).toHaveProperty("title");
+      // inputSchema must have additionalProperties:false
+      const schema = t["inputSchema"] as Record<string, unknown>;
+      expect(schema["additionalProperties"]).toBe(false);
+    }
   });
 
   it("validate_xml validates a temp file", async () => {
@@ -167,36 +183,15 @@ notes:
     expect(r.add).toHaveLength(2);
   });
 
-  it("add_note validates params and forwards payload", async () => {
-    const { fetchImpl, calls } = mockClient(async () => [123]);
-    const tool = TOOLS.find((t) => t.name === "add_note")!;
-    const result = await tool.handler(
-      { deck: "D", model: "Basic", fields: { Front: "a" }, tags: "x y" },
-      { url: "http://x", fetchImpl },
-    );
-    expect(result).toEqual({ id: 123 });
-    expect(calls[0]!.action).toBe("addNotes");
-    expect(calls[0]!.params["notes"]).toMatchObject([
-      { deckName: "D", modelName: "Basic", fields: { Front: "a" }, tags: ["x", "y"] },
-    ]);
-  });
-
   it("rejects missing required params with McpToolError", async () => {
-    const tool = TOOLS.find((t) => t.name === "add_note")!;
+    const tool = TOOLS.find((t) => t.name === "validate_xml")!;
     await expect(tool.handler({}, ctx)).rejects.toBeInstanceOf(McpToolError);
   });
 
-  it("store_media/get_media round-trip base64", async () => {
-    const { fetchImpl } = mockClient(async (action, params) => {
-      if (action === "storeMedia") return "ok";
-      if (action === "retrieveMedia") return params["filename"] === "a.bin" ? Buffer.from("data").toString("base64") : "";
-      throw new Error(`unexpected ${action}`);
-    });
-    const store = TOOLS.find((t) => t.name === "store_media")!;
-    await store.handler({ filename: "a.bin", data_base64: Buffer.from("data").toString("base64") }, { url: "http://x", fetchImpl });
-    const get = TOOLS.find((t) => t.name === "get_media")!;
-    const result = await get.handler({ filename: "a.bin" }, { url: "http://x", fetchImpl });
-    expect(result).toMatchObject({ filename: "a.bin", bytes: 4 });
+  it("initialize advertises protocolVersion 2025-06-18", async () => {
+    const toolsByName = new Map(TOOLS.map((t) => [t.name, t]));
+    const resp = await handleMessage('{"jsonrpc":"2.0","id":1,"method":"initialize"}', toolsByName, ctx);
+    expect((resp as unknown as { result: { protocolVersion: string } }).result.protocolVersion).toBe("2025-06-18");
   });
 
   it("toolErrorData/ankiConnectErrorData exposes hints + cause for AI agents", () => {

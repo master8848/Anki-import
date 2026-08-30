@@ -12,6 +12,7 @@ Usage:
   ${BIN_NAME} <command> [options]
 
 Commands:
+  init                           Install Anki + AnkiConnect and verify
   open                           Open Anki app
   doctor                         Check if Anki is reachable
   validate <file>                Check file for errors (no Anki needed)
@@ -98,6 +99,14 @@ Show how many cards you have.`,
        ${BIN_NAME} media delete <name>`,
     benchmark: `Usage: ${BIN_NAME} benchmark <file> [--stream]
 Check how fast your file parses.`,
+    init: `Usage: ${BIN_NAME} init [--url <url>] [--timeout <ms>] [--skip-anki-install | --addon-only] [--update-anki | --force] [--yes] [--check] [--json]
+Install Anki (if missing) and AnkiConnect 2055492159, then run doctor.
+   --skip-anki-install, --addon-only  Skip Anki binary check, only install addon
+   --update-anki, --force             Allow updating Anki if version too old
+   --yes, -y                          Skip confirmation prompt
+   --check                            Dry run (show what would be done)
+   --timeout <ms>                     Wait for AnkiConnect after restart (default 60000)
+   --url <url>                        AnkiConnect URL (default http://127.0.0.1:8765)`,
     mcp: `Usage: ${BIN_NAME} mcp
 Start the MCP server for AI agents.`,
   };

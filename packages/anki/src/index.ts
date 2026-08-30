@@ -1,6 +1,8 @@
 export * from "./ankiconnect.ts";
 export * from "./abort.ts";
 export * from "./launch.ts";
+export * from "./detect.ts";
+export * from "./addon.ts";
 export {
   classifyConnectError,
   ANKICONNECT_ADDON_CODE,

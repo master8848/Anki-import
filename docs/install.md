@@ -1,22 +1,9 @@
 # Install
 
-## Quick start: `anki-import init` (primary path)
+## Quick start
 
-`init` is the primary setup path — `anki-import init` with **no flags already
-installs and enables AnkiConnect 2055492159** and verifies the connection.
-Run it before anything else:
-
-```sh
-npx anki-xml init                     # default: installs+enables AnkiConnect (zero-click)
-node dist/cli.js init                 # from source checkout (same default)
-npx anki-xml init --install-anki      # also auto-install Anki binary if missing
-```
-
-`--addon-only` is just a shortcut that skips the Anki binary check when you
-know Anki is already installed — plain `init` does the same addon work.
-`--install-anki` is only needed to auto-install the Anki app itself.
-
-See [`docs/init.md`](init.md) for per-OS details, flags, and troubleshooting.
+Set up everything with `npx anki-xml init` — it installs AnkiConnect (2055492159) automatically.
+See [`docs/init.md`](init.md) for options and details.
 
 ---
 

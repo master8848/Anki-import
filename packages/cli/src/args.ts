@@ -38,6 +38,11 @@ const GLOBAL_BOOL = new Set([
   "no-auto-create-deck",
   "keep-checkpoint",
   "yes",
+  "check",
+  "skip-anki-install",
+  "update-anki",
+  "force",
+  "addon-only",
 ]);
 
 const GLOBAL_VALUE = new Set([
@@ -50,6 +55,7 @@ const GLOBAL_VALUE = new Set([
   "query",
   "as",
   "out",
+  "timeout",
 ]);
 
 export function parseArgs(argv: string[]): ParsedArgs {
@@ -77,6 +83,23 @@ export function parseArgs(argv: string[]): ParsedArgs {
     if (arg === "-V" || arg === "--version") {
       flags.version = true;
       continue;
+    }
+    if (arg === "-y") {
+      rest["yes"] = true;
+      continue;
+    }
+    // short -y combined? handle -y as part of combined short flags if needed
+    if (arg.startsWith("-") && !arg.startsWith("--") && arg.length > 1) {
+      // handle single-char combined flags like -yh etc (only -y for now)
+      const chars = arg.slice(1).split("");
+      let handled = true;
+      for (const c of chars) {
+        if (c === "y") rest["yes"] = true;
+        else if (c === "h") flags.help = true;
+        else if (c === "V") flags.version = true;
+        else handled = false;
+      }
+      if (handled) continue;
     }
 
     if (arg.startsWith("--")) {

@@ -46,7 +46,7 @@ export async function handleMessage(
 
   if (req.method === "initialize") {
     return success(req.id, {
-      protocolVersion: "2024-11-05",
+      protocolVersion: "2025-06-18",
       capabilities: { tools: { listChanged: false } },
       serverInfo: { name: "anki-xml", version: MCP_VERSION },
     });
@@ -58,9 +58,11 @@ export async function handleMessage(
     return success(req.id, {
       tools: [...toolsByName.values()].map((t) => ({
         name: t.name,
-        tier: t.tier,
         description: t.description,
+        ...(t.title ? { title: t.title } : {}),
+        ...(t.annotations ? { annotations: t.annotations } : {}),
         inputSchema: t.inputSchema,
+        _meta: { tier: t.tier },
       })),
     });
   }

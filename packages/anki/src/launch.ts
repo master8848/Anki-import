@@ -44,7 +44,7 @@ export interface AnkiLaunchResult {
   detail: string;
 }
 
-const WIN32_EXE_CANDIDATES = [
+export const WIN32_EXE_CANDIDATES = [
   "C:\\Program Files\\Anki\\anki.exe",
   "C:\\Program Files (x86)\\Anki\\anki.exe",
   process.env.LOCALAPPDATA ? `${process.env.LOCALAPPDATA}\\Anki\\anki.exe` : "",

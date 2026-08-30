@@ -19,6 +19,7 @@ import { runModelsCommand } from "./commands/models.ts";
 import { runMediaCommand } from "./commands/media.ts";
 import { runWatchCommand } from "./commands/watch.ts";
 import { runMcpCommand } from "./commands/mcp.ts";
+import { runInitCommand } from "./commands/init.ts";
 
 export async function main(argv: string[] = process.argv.slice(2)): Promise<number> {
   let args;
@@ -112,6 +113,8 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
         return await runWatchCommand(requireFile("watch", args), args, log);
       case "mcp":
         return await runMcpCommand();
+      case "init":
+        return await runInitCommand(args.flags, args.rest, log);
       default:
         console.error(`Unknown command: '${args.command}'`);
         console.error(`Run '${BIN_NAME} --help' to see available commands.`);
