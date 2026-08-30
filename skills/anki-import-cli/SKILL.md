@@ -1,16 +1,12 @@
 ---
 name: anki-import-cli
 description: Manage Anki flashcards as code via the anki-import CLI. Use when the user wants to add/update flashcards, import XML/YAML/JSON/Markdown/CSV files, validate, plan/diff, sync, rollback, watch files, manage tags/media/stats, or run doctor. The CLI is the main way to use it.
-metadata:
-  author: master8848
-  version: "0.0.4"
 ---
-
-# anki-import CLI
+anki-import CLI
 
 The main way to manage Anki cards as code. Simple, safe, scriptable.
 
-Install: `npm i -g anki-xml` → you get `anki-import` and `anki-xml`. Needs Node 20+ and Anki open with AnkiConnect add-on `2055492159` (or `2036732292` Plus — either is ok, default install is `2055492159` more stable).
+Install: `npm i -g anki-xml` → you get `anki-import` and `anki-xml`. Needs Node or bun 
 
 ## Quick start
 
@@ -23,9 +19,6 @@ anki-import import cards.xml      # add new cards
 anki-import sync cards.xml        # add + update cards
 anki-import rollback <id>         # undo last import
 ```
-
-Always `plan` before `import`. Use `sync` to update. Use `rollback` to undo.
-
 ## Commands
 
 | Command | What it does |
@@ -42,7 +35,7 @@ Always `plan` before `import`. Use `sync` to update. Use `rollback` to undo.
 | `tags` / `models` / `stats` / `media` | Manage tags, types, stats, files |
 | `mcp` | Start MCP server (for AI agents) |
 
-Flags: `--json` (for scripts), `--dry-run`, `--deck NAME`, `--model NAME`, `--batch-size N`, `--yes`, `--url http://127.0.0.1:8765`.
+Flags:  `--dry-run`, `--deck NAME`, `--model NAME`, `--batch-size N`, `--yes`, `--url http://127.0.0.1:8765`.
 
 ## How to write cards
 
@@ -58,49 +51,29 @@ XML is the main format. YAML, JSON, CSV, Markdown all work — they become the s
 ```
 
 - Root is `<anki deck="...">`, each card is `<note type="..." deck="..." tags="...">`
-- `br`, `img`, `hr` don't need closing tags
 - Every card needs a deck
 
 ### Formatting: when to use CDATA
 
 Keep it simple:
 
-- **Formatting you want to see** (bold, line break) → no CDATA
-- **Code or tags you want to show as text** → CDATA
 
-```xml
-<!-- 1. Real formatting — no CDATA -->
+1. Real formatting — no CDATA 
 <field name="Back">Line one<br>Line two</field>
 <field name="Back"><b>Bold</b> and <u>underline</u></field>
 
-<!-- 2. Show code as text — use CDATA -->
+2. Show code as text — use CDATA  
 <field name="Front"><![CDATA[What does <div> do?]]></field>
 <field name="Back"><![CDATA[Use <div class="box">Hi</div>]]></field>
+Important : Do not cdata unless creating node for learning html or php or need to show user literal <div> and <br> insted of styling
+Tip: using &lt;br&gt; is better if styling mix is required
 
-<!-- 3. Mix — split CDATA -->
+3. Mix — split CDATA
 <field name="Text"><![CDATA[Code: ]]><b><![CDATA[{{c1::answer}}]]></b><![CDATA[ here]]></field>
-```
-
-Why? Inside CDATA, `<br>` becomes `&lt;br&gt;` and shows as text — not a line break. So don't wrap real formatting in CDATA.
-
-| You want | Do |
-|---|---|
-| Line break / bold | `<field>hi<br>there</field>` — no CDATA |
-| Show `<br>` as text | `<![CDATA[<br>]]>` |
-| Math `\(x^2\)` | `<![CDATA[\(x^2\)]]>` — easier |
-| Cloze `{{c1::...}}` | Either is fine |
 
 Check: `anki-import validate file.xml` — bare `&` must be `&amp;`.
 
 Examples: `all-note-types.xml`, `code-and-escapes.xml`, `latex.xml`, `spanish-greetings.xml` (in `skills/anki-import-cli/examples/`).
-
-## Tips for agents
-
-- If Anki is not reachable → run `open`, then `doctor`.
-- For scripts use `--json` and check `error.code` (`VALIDATION_ERROR`, `XML_PARSE_ERROR`, `ANKICONNECT_ERROR`).
-- `import` blocks `id=` — use `sync` for updates.
-
-## Example
 
 ```bash
 anki-import import examples/basic.xml --dry-run --json

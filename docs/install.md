@@ -7,15 +7,14 @@ See [`docs/init.md`](init.md) for options and details.
 
 ---
 
-Two active install methods (npm is **not published yet** — build from
-source until the first npm release; see `docs/release-checklist.md`):
+Two install methods:
 
 | Method | Prerequisite | Bundle | Best for |
 |---|---|---|---|
-| `npm install -g` or `npx` (when published) | Node ≥ 20 | single ESM bundle (`dist/cli.js`) | Most users, CI, agents |
+| `npm install -g` or `npx` | Node ≥ 20 | single ESM bundle (`dist/cli.js`) | Most users, CI, agents |
 | Build from source | Node ≥ 20 + bun ≥ 10 | source + `dist/cli.js` | Contributors, unreleased features |
 
-## npm / npx (recommended — once published)
+## npm / npx (recommended)
 
 ```sh
 npm install -g anki-xml
@@ -27,11 +26,11 @@ with two bins: `anki-import` and `anki-xml`. All dependencies are
 inlined; no `node_modules` install, no native bindings. Verify:
 
 ```sh
-npx anki-xml --version        # anki-xml v0.0.4
+npx anki-xml --version        # anki-xml v0.0.5
 npx anki-xml doctor           # verify environment
 ```
 
-## Build from source (current way)
+## Build from source (for contributors / unreleased features)
 
 ```sh
 git clone https://github.com/master8848/Anki-import
@@ -49,9 +48,8 @@ Useful when:
 
 ## Choosing between methods
 
-- **Just want to use it now?** Build from source, then use
-  `node dist/cli.js` or `bun run start` during development.
-- **CI / agents / scripting?** Once published: `npm install -g anki-xml`.
+- **Just want to use it?** `npm install -g anki-xml` or `npx anki-xml`.
+- **CI / agents / scripting?** `npm install -g anki-xml` or `npx -y anki-xml`.
 - **Developing?** Clone + `bun install` + `bun run start`
   (or `bun run doctor`).
 

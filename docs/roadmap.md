@@ -122,7 +122,7 @@ In order:
 | M18 | Bun standalone-binary build | ⏸ superseded — monorepo ships a Node rslib bundle |
 | M19 | Top-level `README.md` help surface grouped by category | ✅ shipped |
 | M20 | Per-command help with positional argument + examples | ✅ shipped |
-| M21 | npm distribution (Node ≥ 18 CommonJS bundle; `npm i -g` and `npx`) | ⏸ not active — see `docs/release-checklist.md` |
+| M21 | npm distribution (Node ≥ 20 ESM bundle; `npm i -g` and `npx`) | ✅ shipped — [`anki-xml@0.0.5`](https://www.npmjs.com/package/anki-xml) |
 | M22 | `addon` command + `doctor` add-on checks + MathJax detection | ✅ shipped |
 
 ## Original commit log (Phase 1..4)
@@ -149,8 +149,7 @@ All 11 priority commits shipped. See `git log`.
 **16 commands ship** — see `docs/cli-design.md` for the canonical
 surface. **178 tests pass** (`bun run test`). MCP serves **18 tools**
 — see `docs/mcp-design.md`. The v0.0.4 monorepo restructure is
-complete; npm distribution is **not active yet** (see
-`docs/release-checklist.md`). These are the only three numbers that
+complete; npm distribution is **live** ([`anki-xml@0.0.5`](https://www.npmjs.com/package/anki-xml)). These are the only three numbers that
 describe today's code; milestone rows above are historical.
 
 **Deferred items:**

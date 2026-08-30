@@ -6,7 +6,7 @@ toolkit for managing Anki collections through structured data files.
 Flashcards are treated as code: validate → plan → diff → apply →
 checkpoint → rollback → sync.
 
-**Current release: `0.0.4`**
+**Current release: `0.0.5`** — published to npm as [`anki-xml`](https://www.npmjs.com/package/anki-xml)
 
 This project is *not* an Anki replacement, a review app, or a GUI
 automation tool. It speaks to Anki through
@@ -14,15 +14,14 @@ automation tool. It speaks to Anki through
 
 ## Install
 
-> **npm publishing is not active yet** — build from source for now
-> (`bun install && bun run build && node dist/cli.js`); see
-> [docs/install.md](docs/install.md). Once published:
-
 ```bash
-npm install -g anki-xml@0.0.4
-# or
-npx anki-xml@0.0.4 doctor
+npm install -g anki-xml          # install globally
+npx anki-xml doctor              # or run without installing
+# pin a version
+npx anki-xml@0.0.5 doctor
 ```
+
+See [docs/install.md](docs/install.md) for other methods (build from source).
 
 Bins: `anki-import` and `anki-xml`. Requires **Node 20+**.
 

@@ -33,8 +33,7 @@ The user-facing landing page is the repo root
   mock-all-AnkiConnect principle, the 20 test files, fixtures/
   goldens/snapshots, coverage areas, quality gates, CI matrix.
 - [**release-checklist.md**](./release-checklist.md) — step-by-step
-  release flow (no npm publishing yet), version sync, smoke tests, git
-  tag, future npm steps.
+  release flow (version sync, smoke tests, git tag, npm publish).
 - [**migration-strategy.md**](./migration-strategy.md) — v0.0.3 →
   v0.0.4 file mapping and behavior changes; moving real collections
   into anki-xml; AI-agent adoption path.

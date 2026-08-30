@@ -4,8 +4,7 @@
 > first time; the repo now exists at `master8848/Anki-import`. The
 > Bun-based build and publish steps below describe the old setup and
 > **do not apply** — the current build is `bun run build` (rslib) and
-> the current release flow is `docs/release-checklist.md` (npm
-> publishing is not active yet). Only sections 1–2 (repo creation)
+> the current release flow is `docs/release-checklist.md` (npm is published as [`anki-xml`](https://www.npmjs.com/package/anki-xml) since `v0.0.5`). Only sections 1–2 (repo creation)
 > remain relevant, and only if you fork.
 
 Before pushing `anki-xml` to GitHub for the first time, do these

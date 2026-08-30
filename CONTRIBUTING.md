@@ -315,20 +315,20 @@ and `docs/mcp-design.md` instead.
 
 ## 8. Releasing
 
-We are **not publishing to npm yet** (v0.0.4 is a restructure release).
-When publishing begins, follow `docs/release-checklist.md`. Cut a
+Releases are published to npm as [`anki-xml`](https://www.npmjs.com/package/anki-xml) (since `v0.0.5`). Follow `docs/release-checklist.md`. Cut a
 release only from `main`, only after the quality gates pass:
 
 1. Move the `[Unreleased]` content to a dated `[x.y.z]` section in
    [`CHANGELOG.md`](CHANGELOG.md).
 2. Bump `version` in root `package.json` **and** every
-   `packages/*/package.json` + `apps/playground/package.json`.
-3. Update `VERSION` in `packages/cli/src/help.ts`.
-4. Run the gates once more: `bun run test && bun run typecheck && bun
+   `packages/*/package.json` + `apps/playground/package.json` (`node scripts/version-sync.mjs X.Y.Z`).
+3. Update `VERSION` in `packages/cli/src/help.ts` (also done by `version-sync.mjs`) and `metadata: version` in both `skills/*/SKILL.md`.
+4. Run the gates once more: `bun run test && bun run typecheck && bun run
    build && node dist/cli.js --version`.
 5. Commit with message `chore: release vX.Y.Z`.
 6. Tag: `git tag -a vX.Y.Z -m "..."`.
 7. Push: `git push --follow-tags`.
+8. Publish: `npm publish --access public` (see `docs/release-checklist.md` §6) and verify with `npx anki-xml --version`.
 
 The minor version (`X.Y.0`) bumps when:
 - A new command is added.

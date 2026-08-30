@@ -1,8 +1,6 @@
-# Release checklist (no npm publishing yet)
+# Release checklist
 
-`anki-xml` is **not published to npm yet** — releases are git tags plus
-a changelog. This checklist covers that flow, plus the (future) npm
-publish steps.
+`anki-xml` is published to npm as [`anki-xml`](https://www.npmjs.com/package/anki-xml) — releases are git tags plus npm publish plus a changelog.
 
 ## 0. Pre-flight
 
@@ -28,7 +26,7 @@ publish steps.
   packages/*/package.json apps/playground/package.json` and
   `grep VERSION packages/cli/src/help.ts packages/mcp/src/version.ts`.
 - [ ] **Manual:** both `skills/anki-import-cli/SKILL.md` and
-  `skills/anki-import-mcp/SKILL.md` carry `metadata: version: "0.0.4"`
+  `skills/anki-import-mcp/SKILL.md` carry `metadata: version: "0.0.5"`
   — `version-sync.mjs` does **not** touch them. Update by hand if the
   skills ship version metadata.
 - [ ] Rebuild so `dist/cli.js` contains the new version:
@@ -91,9 +89,9 @@ bun run test && bun run typecheck && bun run build && node dist/cli.js --version
   branch) **and** `git push origin vX.Y.Z`.
 - [ ] CI on the branch runs the node 20/22 matrix — confirm green.
 
-## 6. (Future) npm publish — not active yet
+## 6. npm publish
 
-When publishing starts, in addition to the above:
+In addition to the above, for every release:
 
 - [ ] `.npmrc`: keep `minimum-release-age=20160` (14 days — recorded in
   the v0.0.3 changelog) and the other publish guards from
@@ -104,7 +102,7 @@ When publishing starts, in addition to the above:
   (`npm pack --dry-run`).
 - [ ] Bin entries point at `./dist/cli.js` for both names:
   `anki-import` and `anki-xml`.
-- [ ] `npm publish` with `--workspaces=false` (single root package; the
-  `packages/*` workspaces are internal, not published separately) —
-  **confirm the intended publishing shape before enabling**, since
-  `@anki-xml/*` packages are workspace-only today.
+- [ ] `npm publish --access public` (single root package; the
+  `packages/*` workspaces are internal `@anki-xml/*` packages, not published separately).
+  Verify with `npm view anki-xml version` after publish.
+- [ ] Push the tag triggers no CI publish (manual `npm publish` for now) — confirm `dist/cli.js` is built before publishing (`bun run build`).

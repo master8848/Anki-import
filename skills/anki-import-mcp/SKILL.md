@@ -3,7 +3,7 @@ name: anki-import-mcp
 description: Manage Anki via AI — MCP server over stdio (5 tools). Use when MCP tools are available; for shell use anki-import-cli.
 metadata:
   author: master8848
-  version: "0.0.4"
+  version: "0.0.5"
 ---
 
 # anki-import MCP
