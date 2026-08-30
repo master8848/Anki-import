@@ -1,6 +1,6 @@
 {
   "name": "anki-xml",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Git + Terraform for Anki knowledge. XML-first infrastructure-as-code toolkit for Anki collections.",
   "keywords": [
     "anki",
@@ -36,7 +36,7 @@
     "skills"
   ],
   "scripts": {
-    "build": "node scripts/build.mjs",
+    "build": "rslib build && chmod +x dist/cli.js",
     "start": "tsx packages/cli/src/index.ts",
     "import": "tsx packages/cli/src/index.ts import",
     "test": "vitest run",
@@ -55,7 +55,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.15.0",
-    "esbuild": "^0.25.0",
+    "@rslib/core": "^0.20.0",
     "tsx": "^4.19.0",
     "typescript": "^5.8.0",
     "vitest": "^3.1.0",
@@ -78,16 +78,16 @@
     "@anki-xml/utils": "workspace:*",
     "@anki-xml/validation": "workspace:*"
   },
-  "packageManager": "pnpm@10.33.0",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "packageManager": "bun@1.4.0",
   "engines": {
     "node": ">=20.0.0",
-    "pnpm": ">=10.0.0"
+    "bun": ">=1.1.0"
   },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild"
-    ]
-  },
+  "trustedDependencies": [],
   "repository": {
     "type": "git",
     "url": "https://github.com/master8848/Anki-import.git"

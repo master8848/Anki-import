@@ -1,6 +1,6 @@
 import { DEFAULT_URL } from "@anki-xml/anki";
 
-export const VERSION = "0.0.4";
+export const VERSION = "0.0.5";
 export const BIN_NAME = "anki-import";
 
 export function printHelp(): void {

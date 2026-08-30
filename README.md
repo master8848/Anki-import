@@ -15,7 +15,7 @@ automation tool. It speaks to Anki through
 ## Install
 
 > **npm publishing is not active yet** — build from source for now
-> (`pnpm install && pnpm build && node dist/cli.js`); see
+> (`bun install && bun run build && node dist/cli.js`); see
 > [docs/install.md](docs/install.md). Once published:
 
 ```bash
@@ -108,13 +108,13 @@ Every AnkiConnect failure (CLI and MCP) carries the same stable
 
 ## Development
 
-Monorepo (pnpm workspaces, 18 packages):
+Monorepo (bun workspaces, 18 packages):
 
 ```sh
-pnpm install
-pnpm test        # vitest — 90+ tests, all AnkiConnect traffic mocked
-pnpm typecheck
-pnpm build       # single-file esbuild bundle → dist/cli.js (~25 ms startup)
+bun install
+bun run test        # vitest — 90+ tests, all AnkiConnect traffic mocked
+bun run typecheck
+bun run build       # single-file rslib bundle → dist/cli.js (~25 ms startup)
 node dist/cli.js --version
 ```
 

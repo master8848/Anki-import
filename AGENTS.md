@@ -3,7 +3,7 @@
 Git + Terraform for Anki knowledge. XML-first infrastructure-as-code
 toolkit for Anki collections, driven by AnkiConnect.
 
-## Architecture (pnpm monorepo)
+## Architecture (bun monorepo)
 
 ```
 packages/
@@ -59,7 +59,7 @@ AnkiConnect add-on (2055492159) not installed, wrong URL, hung Anki.
 ## Quality gates
 
 ```sh
-pnpm test && pnpm typecheck && pnpm build && node dist/cli.js --version
+bun run test && bun run typecheck && bun run build && node dist/cli.js --version
 ```
 
 ## Skill

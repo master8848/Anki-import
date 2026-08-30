@@ -1,8 +1,8 @@
 # Monorepo architecture (v0.0.4)
 
-`anki-xml` is a pnpm 10 monorepo (pnpm-workspace.yaml globs `packages/*`
+`anki-xml` is a bun 1.4 monorepo (bun-workspace.yaml globs `packages/*`
 and `apps/*`) with 18 packages, one dev app, and root-level tests. The
-single build artifact is `dist/cli.js` — a bundled esbuild ESM binary
+single build artifact is `dist/cli.js` — a bundled rslib ESM binary
 (`bin: anki-import` / `anki-xml`) built from `packages/cli/src/index.ts`.
 
 ## 1. Folder structure
@@ -10,11 +10,11 @@ single build artifact is `dist/cli.js` — a bundled esbuild ESM binary
 ```
 ankiXML/
 ├── package.json            # root; version 0.0.4, bin entries, workspace deps
-├── pnpm-workspace.yaml     # packages/*, apps/*
+├── package.json workspaces     # packages/*, apps/*
 ├── vitest.config.ts        # tests/**/*.test.ts + packages/**/tests/**/*.test.ts
 ├── tsconfig.json
 ├── scripts/
-│   ├── build.mjs           # esbuild single-bundle build → dist/cli.js
+│   ├── build.mjs           # rslib single-bundle build → dist/cli.js
 │   ├── version-sync.mjs    # sync version across root/packages/apps/help.ts
 │   └── smoke-mcp.mjs       # MCP stdio handshake smoke test
 ├── dist/cli.js             # built artifact (~153 KB)
@@ -235,8 +235,8 @@ it, and it depends on nothing.
 
 | Target | How it is met |
 |---|---|
-| Fast startup (≈25 ms) | One esbuild bundle (`dist/cli.js`, ≈153 KB); heavy deps (`yaml`, `csv-parse`) are `external` and lazy-imported inside the functions that need them |
+| Fast startup (≈25 ms) | One rslib bundle (`dist/cli.js`, ≈153 KB); heavy deps (`yaml`, `csv-parse`) are `external` and lazy-imported inside the functions that need them |
 | Constant-memory large imports | `--stream` uses `parseXmlStream`: a CDATA-aware scanner finds `<note>` spans in a rolling buffer (bounded to ~2 MB), each fragment parsed with the same tokenizer, notes batched (default 500) and flushed to AnkiConnect |
 | No double parsing | The stream path validates per note without ever building the full document AST |
-| Measurable | `benchmark <file>` measures parse+validate throughput (`cards`, `memoryMb`, `timeSec`, `rate`); `pnpm build` prints the bundle size |
+| Measurable | `benchmark <file>` measures parse+validate throughput (`cards`, `memoryMb`, `timeSec`, `rate`); `bun run build` prints the bundle size |
 | Reproducible imports | Atomic operations, batch defaults, `--dry-run` everywhere, checkpoints before mutation |

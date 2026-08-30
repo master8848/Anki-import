@@ -1,6 +1,6 @@
 {
   "name": "@anki-xml/parser",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "XML, YAML, JSON, Markdown, CSV parsers",
   "type": "module",
   "exports": {

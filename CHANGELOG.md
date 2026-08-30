@@ -4,6 +4,11 @@ All notable changes to `anki-xml` / `anki-import` are documented here.
 
 ## [Unreleased]
 
+### Changed
+- No unreleased changes yet.
+
+## [0.0.5] — 2026-08-30
+
 ### Added
 - **`open` command** — launch the Anki desktop app from the CLI
   (macOS: `open -a Anki`, Windows: `start "" "Anki"` / `anki.exe`,
@@ -19,6 +24,9 @@ All notable changes to `anki-xml` / `anki-import` are documented here.
   P2 to P1 so agents can reconcile (create + update) directly.
 
 ### Changed
+- **Package manager: pnpm → bun.** `pnpm-workspace.yaml` and `pnpm-lock.yaml` removed; `package.json` now declares `workspaces` and `packageManager: bun@1.4.0` with `bun.lock`. All docs, `CONTRIBUTING.md`, `AGENTS.md`, and install instructions updated to `bun install` / `bun run build` / `bun run test`.
+- **Build: esbuild → rslib.** `esbuild` removed; `@rslib/core` added with `rslib.config.ts` (bundle ESM via Rspack, banner shebang, external `yaml` + `csv-parse`, target `node`, syntax `es2022`). `scripts/build.mjs` removed; `package.json` `build` now `rslib build && chmod +x dist/cli.js`.
+- **CI removed.** `.github/workflows/test.yml` deleted; project is deployed manually (`npm publish`) for now.
 - **Skills split into two:** `skills/anki-import-cli/` (CLI — the
   recommended interface) and `skills/anki-import-mcp/` (MCP subset
   with the tool table and MCP-vs-CLI gaps). Both kept small and
@@ -26,7 +34,7 @@ All notable changes to `anki-xml` / `anki-import` are documented here.
   `skills/anki-import-cli/examples/`.
 - **Docs conflict cleanup** — canonical counts fixed everywhere
   (16 commands, 18 tools, 20 test files, 178 tests); `docs/install.md`
-  rewritten for the monorepo (Node 20+, esbuild ESM bundle, npm not
+  rewritten for the monorepo (Node 20+, rslib ESM bundle, npm not
   published yet); legacy docs (`docs/cli.md`, `docs/commands.md`,
   `docs/roadmap.md`, `docs/ai-integration.md`, `REPO_SETUP.md`) now
   carry banners pointing at the canonical docs; `CONTRIBUTING.md` §4

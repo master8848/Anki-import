@@ -1,6 +1,6 @@
 {
   "name": "@anki-xml/media",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Media upload, retrieval, deletion",
   "type": "module",
   "exports": {

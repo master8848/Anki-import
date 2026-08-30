@@ -119,7 +119,7 @@ In order:
 | M15 | Top-level `README.md` | ✅ shipped |
 | M16 | `CHANGELOG.md`, `LICENSE`, `CONTRIBUTING.md` | ✅ shipped |
 | M17 | Watch mode | ✅ shipped (as `watch`, in the monorepo CLI) |
-| M18 | Bun standalone-binary build | ⏸ superseded — monorepo ships a Node esbuild bundle |
+| M18 | Bun standalone-binary build | ⏸ superseded — monorepo ships a Node rslib bundle |
 | M19 | Top-level `README.md` help surface grouped by category | ✅ shipped |
 | M20 | Per-command help with positional argument + examples | ✅ shipped |
 | M21 | npm distribution (Node ≥ 18 CommonJS bundle; `npm i -g` and `npx`) | ⏸ not active — see `docs/release-checklist.md` |
@@ -147,7 +147,7 @@ All 11 priority commits shipped. See `git log`.
 ## Status (current)
 
 **16 commands ship** — see `docs/cli-design.md` for the canonical
-surface. **178 tests pass** (`pnpm test`). MCP serves **18 tools**
+surface. **178 tests pass** (`bun run test`). MCP serves **18 tools**
 — see `docs/mcp-design.md`. The v0.0.4 monorepo restructure is
 complete; npm distribution is **not active yet** (see
 `docs/release-checklist.md`). These are the only three numbers that

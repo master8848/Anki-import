@@ -1,6 +1,6 @@
 {
   "name": "@anki-xml/sync",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Reconcile files with collections",
   "type": "module",
   "exports": {

@@ -32,7 +32,7 @@ publish steps.
   — `version-sync.mjs` does **not** touch them. Update by hand if the
   skills ship version metadata.
 - [ ] Rebuild so `dist/cli.js` contains the new version:
-  `pnpm build`.
+  `bun run build`.
 
 ## 2. CHANGELOG
 
@@ -48,12 +48,12 @@ publish steps.
 Run all of:
 
 ```sh
-pnpm test && pnpm typecheck && pnpm build && node dist/cli.js --version
+bun run test && bun run typecheck && bun run build && node dist/cli.js --version
 ```
 
-- [ ] `pnpm test` — full vitest suite (15 files, no network).
-- [ ] `pnpm typecheck` (`= pnpm lint`) — `tsc --noEmit` clean.
-- [ ] `pnpm build` — esbuild bundle succeeds; note the size in the
+- [ ] `bun run test` — full vitest suite (15 files, no network).
+- [ ] `bun run typecheck` (`= bun run lint`) — `tsc --noEmit` clean.
+- [ ] `bun run build` — rslib bundle succeeds; note the size in the
   changelog when it changes materially.
 - [ ] `node dist/cli.js --version` prints `anki-import vX.Y.Z`.
 - [ ] `node dist/cli.js --help` renders the command table.
@@ -73,7 +73,7 @@ pnpm test && pnpm typecheck && pnpm build && node dist/cli.js --version
   `plan examples/cards.md` — each prints `Plan: …` and exits 0.
 - [ ] **MCP handshake**: `node scripts/smoke-mcp.mjs` — prints
   `ok initialize: anki-xml 2024-11-05`, `ok tools/list: <N> tools`,
-  `ok validate_xml: …` (also runnable via `pnpm smoke:mcp`).
+  `ok validate_xml: …` (also runnable via `bun run smoke:mcp`).
 - [ ] **Rollback dry-run**: `checkpoint list`; for a checkpoint,
   `rollback <id> --dry-run` prints "Dry run: would delete N notes"
   and leaves the checkpoint file in place.

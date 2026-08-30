@@ -87,22 +87,22 @@ points themselves have no dedicated test file yet).
 Every change must pass, in order:
 
 ```sh
-pnpm test && pnpm typecheck && pnpm build && node dist/cli.js --version
+bun run test && bun run typecheck && bun run build && node dist/cli.js --version
 ```
 
 (`lint` is an alias of `typecheck`.) The build gate verifies the
-esbuild bundle still produces a working `dist/cli.js`.
+rslib bundle still produces a working `dist/cli.js`.
 
 ## CI matrix
 
 `.github/workflows/test.yml` runs on **all branches** (push + PR):
-Ubuntu, Node **20 and 22** (matrix), pnpm 10.33.0. Steps:
+Ubuntu, Node **20 and 22** (matrix), bun 1.4.33.0. Steps:
 
-1. checkout → pnpm setup → node setup (pnpm cache)
-2. `pnpm install --frozen-lockfile`
-3. `pnpm test`
-4. `pnpm typecheck`
-5. `pnpm build`
+1. checkout → bun setup → node setup (bun cache)
+2. `bun install --frozen-lockfile`
+3. `bun run test`
+4. `bun run typecheck`
+5. `bun run build`
 6. `node dist/cli.js --version`
 7. `node dist/cli.js --help`
 8. `node dist/cli.js plan examples/cards.yaml --dry-run --json` (smoke

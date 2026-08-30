@@ -122,14 +122,14 @@ install: `Basic`, `Basic (and reversed card)`,
 ## Development
 
 ```bash
-pnpm install
-pnpm test                # vitest (15 files, no network)
-pnpm typecheck           # tsc --noEmit (= pnpm lint)
-pnpm build               # esbuild → dist/cli.js
+bun install
+bun run test                # vitest (15 files, no network)
+bun run typecheck           # tsc --noEmit (= bun run lint)
+bun run build               # rslib → dist/cli.js
 node dist/cli.js --version
 ```
 
-Requires Node ≥ 20 and pnpm ≥ 10.
+Requires Node ≥ 20 and bun ≥ 10.
 
 ## License
 

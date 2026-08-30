@@ -1,6 +1,6 @@
 {
   "name": "@anki-xml/anki",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "AnkiConnect HTTP client — the only package that talks to AnkiConnect",
   "type": "module",
   "exports": {

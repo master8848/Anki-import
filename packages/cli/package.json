@@ -1,6 +1,6 @@
 {
   "name": "@anki-xml/cli",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "CLI entry point — argv parsing and command wrappers only",
   "type": "module",
   "exports": {

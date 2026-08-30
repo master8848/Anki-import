@@ -1,6 +1,6 @@
 {
   "name": "@anki-xml/diff",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Note, deck, and tag diffs",
   "type": "module",
   "exports": {

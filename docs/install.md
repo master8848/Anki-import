@@ -13,7 +13,7 @@ source until the first npm release; see `docs/release-checklist.md`):
 | Method | Prerequisite | Bundle | Best for |
 |---|---|---|---|
 | `npm install -g` or `npx` (when published) | Node ≥ 20 | single ESM bundle (`dist/cli.js`) | Most users, CI, agents |
-| Build from source | Node ≥ 20 + pnpm ≥ 10 | source + `dist/cli.js` | Contributors, unreleased features |
+| Build from source | Node ≥ 20 + bun ≥ 10 | source + `dist/cli.js` | Contributors, unreleased features |
 
 ## npm / npx (recommended — once published)
 
@@ -36,8 +36,8 @@ npx anki-xml doctor           # verify environment
 ```sh
 git clone https://github.com/master8848/Anki-import
 cd Anki-import
-pnpm install
-pnpm build              # esbuild → dist/cli.js (ESM, Node ≥ 20)
+bun install
+bun run build              # rslib → dist/cli.js (ESM, Node ≥ 20)
 node dist/cli.js --version
 ```
 
@@ -50,10 +50,10 @@ Useful when:
 ## Choosing between methods
 
 - **Just want to use it now?** Build from source, then use
-  `node dist/cli.js` or `pnpm start` during development.
+  `node dist/cli.js` or `bun run start` during development.
 - **CI / agents / scripting?** Once published: `npm install -g anki-xml`.
-- **Developing?** Clone + `pnpm install` + `pnpm start`
-  (or `pnpm doctor`).
+- **Developing?** Clone + `bun install` + `bun run start`
+  (or `bun run doctor`).
 
 ## Updating
 

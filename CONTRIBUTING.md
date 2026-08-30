@@ -29,7 +29,7 @@ If you're an AI agent writing code in this repo, see
 | Tool | Version | Notes |
 |---|---|---|
 | [Node.js](https://nodejs.org) | ≥ 20 | Runtime for CLI and Vitest |
-| [pnpm](https://pnpm.io) | ≥ 10 | Package manager (`packageManager` in `package.json`) |
+| [bun](https://bun.io) | ≥ 10 | Package manager (`packageManager` in `package.json`) |
 | Git | latest | PRs land via GitHub |
 | Anki + AnkiConnect | Anki 2.1.49+, AnkiConnect 5+ | Optional — only for manual smoke tests |
 
@@ -40,19 +40,19 @@ Installs enforce a **14-day minimum release age** (see `.npmrc`).
 ```sh
 git clone https://github.com/master8848/Anki-import
 cd Anki-import
-pnpm install
+bun install
 ```
 
 You're done. Verify with:
 
 ```sh
 node --version     # ≥ 20
-pnpm --version     # ≥ 10
-pnpm test          # all tests pass
-pnpm build && node dist/cli.js --version
+bun --version     # ≥ 10
+bun run test          # all tests pass
+bun run build && node dist/cli.js --version
 ```
 
-If `pnpm install` refuses a package, it may be newer than 14 days —
+If `bun install` refuses a package, it may be newer than 14 days —
 that is intentional (`minimum-release-age=20160` minutes).
 
 ---
@@ -78,9 +78,9 @@ that is intentional (`minimum-release-age=20160` minutes).
 Run **all** of these locally before you push:
 
 ```sh
-pnpm test                  # all tests pass
-pnpm typecheck             # 0 type errors
-pnpm build                 # dist/cli.js
+bun run test                  # all tests pass
+bun run typecheck             # 0 type errors
+bun run build                 # dist/cli.js
 ```
 
 If any fails, fix and re-run. Do not skip.
@@ -97,15 +97,15 @@ wastes cycles; run them locally first.
 ### 3.1 Standard commands
 
 ```sh
-pnpm test                      # all tests
-pnpm test tests/foo.test.ts    # one file
-pnpm test:watch                # re-run on change
+bun run test                      # all tests
+bun run test tests/foo.test.ts    # one file
+bun run test:watch                # re-run on change
 ```
 
 ### 3.2 Single test focus
 
 ```sh
-pnpm test tests/import.test.ts -t "duplicates"   # only tests whose name matches "duplicates"
+bun run test tests/import.test.ts -t "duplicates"   # only tests whose name matches "duplicates"
 ```
 
 ### 3.3 Network tests
@@ -126,12 +126,12 @@ const client = new AnkiClient({ url: "...", fetchImpl });
 
 ### 3.4 The quality gates
 
-`pnpm test && pnpm typecheck && pnpm build && node dist/cli.js --version`
+`bun run test && bun run typecheck && bun run build && node dist/cli.js --version`
 is the canonical "is the build safe to ship" harness. It:
 
-1. Runs `pnpm test` (vitest, all AnkiConnect traffic mocked).
-2. Runs `pnpm typecheck` (strict `tsc --noEmit`, monorepo-wide).
-3. Builds the single-file bundle (`node scripts/build.mjs`).
+1. Runs `bun run test` (vitest, all AnkiConnect traffic mocked).
+2. Runs `bun run typecheck` (strict `tsc --noEmit`, monorepo-wide).
+3. Builds the single-file bundle (`rslib build` → `dist/cli.js`).
 4. Runs the resulting `dist/cli.js` with `node` (`--version`).
 
 It exits non-zero on any failure.
@@ -220,7 +220,7 @@ export async function runMyCmd(
    - `docs/commands.md` — legacy surface; only update if the command
      exists there (historical, not canonical).
 
-9. **Run the gates** — `pnpm test && pnpm typecheck && pnpm build &&
+9. **Run the gates** — `bun run test && bun run typecheck && bun run build &&
    node dist/cli.js --version`.
 
 ### 4.3 Adding a subcommand
@@ -250,7 +250,7 @@ Steps:
    test), `skills/anki-import-mcp/SKILL.md` (tool table), `README.md`
    (`mcp` bullet tool count), `docs/js-interfaces.md` (`TOOLS`
    count), `CHANGELOG.md` `[Unreleased]`.
-6. **Run the gates** — `pnpm test && pnpm typecheck && pnpm build`.
+6. **Run the gates** — `bun run test && bun run typecheck && bun run build`.
 
 ---
 
@@ -324,7 +324,7 @@ release only from `main`, only after the quality gates pass:
 2. Bump `version` in root `package.json` **and** every
    `packages/*/package.json` + `apps/playground/package.json`.
 3. Update `VERSION` in `packages/cli/src/help.ts`.
-4. Run the gates once more: `pnpm test && pnpm typecheck && pnpm
+4. Run the gates once more: `bun run test && bun run typecheck && bun
    build && node dist/cli.js --version`.
 5. Commit with message `chore: release vX.Y.Z`.
 6. Tag: `git tag -a vX.Y.Z -m "..."`.
@@ -350,9 +350,9 @@ Major version (`X.0.0`) bumps when:
 
 Use this when reviewing your own or another's PR:
 
-- [ ] **`pnpm test` passes locally.**
-- [ ] **`pnpm typecheck` is clean.**
-- [ ] **`pnpm build` + `node dist/cli.js --version` works.**
+- [ ] **`bun run test` passes locally.**
+- [ ] **`bun run typecheck` is clean.**
+- [ ] **`bun run build` + `node dist/cli.js --version` works.**
 - [ ] **Every new public function** has a test.
 - [ ] **No new global mutable state** introduced.
 - [ ] **No new dependencies** without discussion in an issue first.
@@ -401,10 +401,10 @@ privately.
 
 | Script | Purpose |
 |---|---|
-| `pnpm test` | Run all tests (Vitest) |
-| `pnpm typecheck` | Type-check only |
-| `pnpm start` | Run the CLI from source (`tsx`) |
-| `pnpm build` | Build `dist/cli.js` (Node ≥ 20) |
+| `bun run test` | Run all tests (Vitest) |
+| `bun run typecheck` | Type-check only |
+| `bun run start` | Run the CLI from source (`tsx`) |
+| `bun run build` | Build `dist/cli.js` (Node ≥ 20) |
 
 The build produces `dist/cli.js` — a self-contained ESM bundle for Node 20+.
 
