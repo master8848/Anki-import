@@ -1,6 +1,6 @@
 ---
-name: anki-import-cli
-description: Manage Anki flashcards as code via the anki-import CLI. Use when the user wants to add/update flashcards, import XML/YAML/JSON/Markdown/CSV files, validate, plan/diff, sync, rollback, watch files, manage tags/media/stats, or run doctor. The CLI is the main way to use it.
+name: anki-import
+description: Manage Anki flashcards as code via the anki-import.Any thing anki.
 ---
 anki-import CLI
 
